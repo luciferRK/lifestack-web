@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { spendingService } from '../services/spending';
-import type { TransactionCreate, TransactionType } from '../types/spending';
+import type { TransactionCreate, TransactionType, BudgetCreate, BudgetUpdate, Budget } from '../types/spending';
 import { 
   Wallet, 
   ArrowUpCircle, 
@@ -10,7 +10,9 @@ import {
   Trash2, 
   Tag,
   Calendar,
-  X
+  X,
+  Target,
+  Edit2
 } from 'lucide-react';
 
 export const SpendingPage: React.FC = () => {
@@ -22,6 +24,20 @@ export const SpendingPage: React.FC = () => {
   const [categoryId, setCategoryId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets'>('transactions');
+
+  // Budget Modal
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [budgetAmount, setBudgetAmount] = useState('');
+  const [budgetCategoryId, setBudgetCategoryId] = useState('');
+  const [budgetMonth, setBudgetMonth] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0];
+  });
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+
   const { data: categories, isLoading: isCatsLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: () => spendingService.getCategories()
@@ -32,7 +48,7 @@ export const SpendingPage: React.FC = () => {
     queryFn: () => spendingService.getTransactions()
   });
 
-  const { isLoading: isBudgetsLoading } = useQuery({
+  const { data: budgets, isLoading: isBudgetsLoading } = useQuery({
     queryKey: ['budgets'],
     queryFn: () => spendingService.getBudgets()
   });
@@ -54,6 +70,26 @@ export const SpendingPage: React.FC = () => {
     }
   });
 
+  const createBudgetMutation = useMutation({
+    mutationFn: (newBudget: BudgetCreate) => spendingService.createBudget(newBudget),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      setIsBudgetModalOpen(false);
+      setBudgetAmount('');
+      setEditingBudgetId(null);
+    }
+  });
+
+  const updateBudgetMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: BudgetUpdate }) => spendingService.updateBudget(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      setIsBudgetModalOpen(false);
+      setBudgetAmount('');
+      setEditingBudgetId(null);
+    }
+  });
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !categoryId || !type || !date) return;
@@ -65,6 +101,32 @@ export const SpendingPage: React.FC = () => {
       occurred_at: new Date(date).toISOString(),
       description: description || null
     });
+  };
+
+  const handleSaveBudget = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!budgetAmount || !budgetCategoryId || !budgetMonth) return;
+    
+    if (editingBudgetId) {
+      updateBudgetMutation.mutate({
+        id: editingBudgetId,
+        data: { amount: parseFloat(budgetAmount) }
+      });
+    } else {
+      createBudgetMutation.mutate({
+        category_id: budgetCategoryId,
+        amount: parseFloat(budgetAmount),
+        month_start: budgetMonth
+      });
+    }
+  };
+
+  const openBudgetModalForEdit = (b: Budget) => {
+    setEditingBudgetId(b.public_id);
+    setBudgetCategoryId(b.category_id);
+    setBudgetMonth(b.month_start);
+    setBudgetAmount(b.amount.toString());
+    setIsBudgetModalOpen(true);
   };
 
   const getCategoryTheme = (catId: string) => {
@@ -95,14 +157,28 @@ export const SpendingPage: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm">Spending Overview</h1>
           <p className="mt-2 text-slate-400">Track your finances across the workspace.</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-105 hover:shadow-blue-500/40 active:scale-95"
-        >
-          <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
-          <Plus className="h-5 w-5" />
-          <span>New Transaction</span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              setEditingBudgetId(null);
+              setBudgetAmount('');
+              setBudgetCategoryId('');
+              setIsBudgetModalOpen(true);
+            }}
+            className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-slate-800 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95 border border-slate-700/50"
+          >
+            <Target className="h-5 w-5" />
+            <span>Set Budget</span>
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-105 hover:shadow-blue-500/40 active:scale-95"
+          >
+            <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+            <Plus className="h-5 w-5" />
+            <span>New Transaction</span>
+          </button>
+        </div>
       </header>
 
       {/* Summary Cards */}
@@ -147,12 +223,27 @@ export const SpendingPage: React.FC = () => {
         </div>
       </div>
 
+      <div className="mb-6 flex gap-2 border-b border-slate-700/50 pb-px">
+        <button
+          onClick={() => setActiveTab('transactions')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'transactions' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+        >
+          Transactions
+        </button>
+        <button
+          onClick={() => setActiveTab('budgets')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'budgets' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+        >
+          Budgets
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="flex h-32 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-blue-500" />
         </div>
-      ) : (
-        <div className="space-y-4">
+      ) : activeTab === 'transactions' ? (
+        <div className="space-y-4 animate-in fade-in duration-300">
           <h3 className="text-xl font-semibold text-white">Recent Transactions</h3>
           {transactions?.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-800/30 p-12 text-center">
@@ -220,6 +311,75 @@ export const SpendingPage: React.FC = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4 animate-in fade-in duration-300">
+          <h3 className="text-xl font-semibold text-white">Category Budgets</h3>
+          {budgets?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-800/30 p-12 text-center">
+              <div className="mb-4 rounded-full bg-slate-800 p-4">
+                <Target className="h-8 w-8 text-slate-500" />
+              </div>
+              <h3 className="mb-2 text-lg font-medium text-white">No budgets set</h3>
+              <p className="text-slate-400">Set a budget to track your limits.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {budgets?.map((b) => {
+                const catTheme = getCategoryTheme(b.category_id);
+                // Calculate total spent for this category (for the budget month roughly)
+                const monthPrefix = b.month_start.substring(0, 7); // YYYY-MM
+                const spent = transactions?.filter(t => 
+                  t.category_id === b.category_id && 
+                  t.type === 'expense' &&
+                  t.occurred_at.startsWith(monthPrefix)
+                ).reduce((acc, t) => acc + parseFloat(t.amount.toString()), 0) || 0;
+                
+                const bAmount = parseFloat(b.amount.toString());
+                const progress = Math.min(100, Math.max(0, (spent / bAmount) * 100));
+                
+                return (
+                  <div key={b.public_id} className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5 transition-all hover:border-slate-600">
+                    <div className="mb-4 flex items-center justify-between">
+                      <span 
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                        style={{ backgroundColor: `${catTheme.color}20`, color: catTheme.color }}
+                      >
+                        {catTheme.icon && <span>{catTheme.icon}</span>}
+                        {!catTheme.icon && <Tag className="h-3 w-3" />}
+                        {catTheme.name}
+                      </span>
+                      <button
+                        onClick={() => openBudgetModalForEdit(b)}
+                        className="rounded p-1 text-slate-500 transition-colors hover:bg-slate-700 hover:text-slate-300"
+                        title="Edit Budget"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="mb-1 flex items-end justify-between">
+                      <div>
+                        <p className="text-xs text-slate-400">Spent ({monthPrefix})</p>
+                        <p className="text-lg font-bold text-white">${spent.toFixed(2)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-400">Budget</p>
+                        <p className="font-semibold text-slate-300">${bAmount.toFixed(2)}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-900/50">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-1000 ${progress >= 100 ? 'bg-red-500' : progress > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -339,6 +499,107 @@ export const SpendingPage: React.FC = () => {
                   className="flex-1 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-blue-500/40 disabled:opacity-50"
                 >
                   {createMutation.isPending ? 'Saving...' : 'Save Transaction'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Modal */}
+      {isBudgetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+          <div 
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" 
+            onClick={() => setIsBudgetModalOpen(false)}
+          />
+          
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">{editingBudgetId ? 'Edit Budget' : 'Set Budget'}</h3>
+              <button 
+                onClick={() => setIsBudgetModalOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveBudget} className="p-6">
+              {createBudgetMutation.isError && (
+                <div className="mb-4 rounded-xl relative border bg-red-500/10 border-red-500/50 p-3 text-sm text-red-500 font-medium">
+                  {/* Provide friendly fallback message for creation errors like duplicates */}
+                  <p>Failed to create or update budget. You may already have a budget for this category and month.</p>
+                </div>
+              )}
+              <div className="space-y-5">
+                {/* Category */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Category</label>
+                  <select
+                    required
+                    disabled={!!editingBudgetId} // Cannot change category when editing
+                    value={budgetCategoryId}
+                    onChange={(e) => setBudgetCategoryId(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                  >
+                    <option value="" disabled>Select category</option>
+                    {categories?.map((c) => (
+                      <option key={c.public_id} value={c.public_id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date / Month */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Month Start (YYYY-MM-DD)</label>
+                  <input
+                    type="date"
+                    required
+                    disabled={!!editingBudgetId} // Cannot change month when editing
+                    value={budgetMonth}
+                    onChange={(e) => setBudgetMonth(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">Usually set to the 1st of the month.</p>
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Budget Limit</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      required
+                      value={budgetAmount}
+                      onChange={(e) => setBudgetAmount(e.target.value)}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/50 py-3 pl-8 pr-4 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBudgetModalOpen(false)}
+                  className="flex-1 rounded-xl bg-slate-800 px-4 py-3 font-medium text-slate-300 transition-colors hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createBudgetMutation.isPending || updateBudgetMutation.isPending || !budgetAmount || !budgetCategoryId || !budgetMonth}
+                  className="flex-1 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-blue-500/40 disabled:opacity-50"
+                >
+                  {(createBudgetMutation.isPending || updateBudgetMutation.isPending) ? 'Saving...' : 'Save Budget'}
                 </button>
               </div>
             </form>
