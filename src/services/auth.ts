@@ -1,5 +1,12 @@
 import api from './api';
 
+export interface AuthUser {
+  public_id: string;
+  email: string;
+  username: string;
+  is_active: boolean;
+}
+
 export const authService = {
   login: async (email: string, password: string) => {
     const formData = new URLSearchParams();
@@ -24,17 +31,12 @@ export const authService = {
     return response.data;
   },
 
-  checkAuth: async () => {
-    try {
-      const response = await api.get('/users/me'); // Assuming there is a me endpoint
-      return response.data;
-    } catch {
-      return null;
-    }
+  checkAuth: async (): Promise<AuthUser> => {
+    const response = await api.get('/auth/me');
+    return response.data;
   },
   
   logout: async () => {
-    // Call backend logout endpoint if it exists to clear cookies, 
-    // or just rely on local state clearing for now
+    await api.post('/auth/logout');
   }
 };

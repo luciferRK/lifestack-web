@@ -1,8 +1,17 @@
 import React from 'react';
 import { useAuthStore } from '../store/authStore';
+import { authService } from '../services/auth';
 
 export const DashboardPage: React.FC = () => {
-  const logout = useAuthStore((state) => state.logout);
+  const clearSession = useAuthStore((state) => state.clearSession);
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } finally {
+      clearSession();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-8">
@@ -10,7 +19,7 @@ export const DashboardPage: React.FC = () => {
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <button 
-            onClick={logout}
+            onClick={handleLogout}
             className="rounded-lg bg-slate-800 px-4 py-2 hover:bg-slate-700 transition"
           >
             Logout

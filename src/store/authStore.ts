@@ -1,19 +1,26 @@
 import { create } from 'zustand';
+import type { AuthUser } from '../services/auth';
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: any | null;
-  login: (user: any) => void;
-  logout: () => void;
+  isAuthResolved: boolean;
+  user: AuthUser | null;
+  setAuthResolved: (value: boolean) => void;
+  setSession: (user: AuthUser | null) => void;
+  clearSession: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false, // In a real app, initialize this maybe by pinging an auth check endpoint
+  isAuthenticated: false,
+  isAuthResolved: false,
   user: null,
-  login: (user) => {
-    set({ isAuthenticated: true, user });
+  setAuthResolved: (value) => {
+    set({ isAuthResolved: value });
   },
-  logout: () => {
-    set({ isAuthenticated: false, user: null });
+  setSession: (user) => {
+    set({ isAuthenticated: true, isAuthResolved: true, user });
+  },
+  clearSession: () => {
+    set({ isAuthenticated: false, isAuthResolved: true, user: null });
   },
 }));
