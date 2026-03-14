@@ -1,0 +1,350 @@
+import React, { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { spendingService } from '../services/spending';
+import type { TransactionCreate, TransactionType } from '../types/spending';
+import { 
+  Wallet, 
+  ArrowUpCircle, 
+  ArrowDownCircle, 
+  Plus, 
+  Trash2, 
+  Tag,
+  Calendar,
+  X
+} from 'lucide-react';
+
+export const SpendingPage: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [type, setType] = useState<TransactionType>('expense');
+  const [categoryId, setCategoryId] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const { data: categories, isLoading: isCatsLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => spendingService.getCategories()
+  });
+
+  const { data: transactions, isLoading: isTxLoading } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: () => spendingService.getTransactions()
+  });
+
+  const { isLoading: isBudgetsLoading } = useQuery({
+    queryKey: ['budgets'],
+    queryFn: () => spendingService.getBudgets()
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (newTx: TransactionCreate) => spendingService.createTransaction(newTx),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      setIsModalOpen(false);
+      setAmount('');
+      setDescription('');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => spendingService.deleteTransaction(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    }
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || !categoryId || !type || !date) return;
+    
+    createMutation.mutate({
+      amount: parseFloat(amount),
+      category_id: categoryId,
+      type,
+      occurred_at: new Date(date).toISOString(),
+      description: description || null
+    });
+  };
+
+  const getCategoryTheme = (catId: string) => {
+    const cat = categories?.find(c => c.public_id === catId);
+    return cat ? { name: cat.name, color: cat.color || '#3b82f6', icon: cat.icon } : { name: 'Unknown', color: '#64748b', icon: '' };
+  };
+
+  // Summaries
+  const summary = useMemo(() => {
+    if (!transactions) return { income: 0, expense: 0, net: 0 };
+    const result = transactions.reduce((acc, tx) => {
+      const amt = parseFloat(tx.amount.toString());
+      if (tx.type === 'income') acc.income += amt;
+      else acc.expense += amt;
+      return acc;
+    }, { income: 0, expense: 0, net: 0 });
+    
+    result.net = result.income - result.expense;
+    return result;
+  }, [transactions]);
+
+  const isLoading = isCatsLoading || isTxLoading || isBudgetsLoading;
+
+  return (
+    <div className="mx-auto max-w-5xl p-8 animate-in fade-in duration-500">
+      <header className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm">Spending Overview</h1>
+          <p className="mt-2 text-slate-400">Track your finances across the workspace.</p>
+        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-105 hover:shadow-blue-500/40 active:scale-95"
+        >
+          <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+          <Plus className="h-5 w-5" />
+          <span>New Transaction</span>
+        </button>
+      </header>
+
+      {/* Summary Cards */}
+      <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/80 p-6 backdrop-blur-xl transition-all hover:border-slate-600">
+          <div className="absolute -right-4 -top-4 rounded-full bg-emerald-500/10 p-8 blur-2xl" />
+          <div className="flex items-center gap-4">
+            <div className="rounded-xl bg-emerald-500/20 p-3 text-emerald-400">
+              <ArrowUpCircle className="h-8 w-8" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-400">Total Income</p>
+              <h2 className="text-2xl font-bold text-white">${summary.income.toFixed(2)}</h2>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/80 p-6 backdrop-blur-xl transition-all hover:border-slate-600">
+          <div className="absolute -right-4 -top-4 rounded-full bg-rose-500/10 p-8 blur-2xl" />
+          <div className="flex items-center gap-4">
+            <div className="rounded-xl bg-rose-500/20 p-3 text-rose-400">
+              <ArrowDownCircle className="h-8 w-8" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-400">Total Expenses</p>
+              <h2 className="text-2xl font-bold text-white">${summary.expense.toFixed(2)}</h2>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-800 to-slate-800/80 p-6 backdrop-blur-xl transition-all hover:border-slate-600">
+          <div className={`absolute -right-4 -top-4 rounded-full p-8 blur-2xl ${summary.net >= 0 ? 'bg-blue-500/10' : 'bg-red-500/10'}`} />
+          <div className="flex items-center gap-4">
+            <div className={`rounded-xl p-3 ${summary.net >= 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
+              <Wallet className="h-8 w-8" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-400">Net Balance</p>
+              <h2 className="text-2xl font-bold text-white">${summary.net.toFixed(2)}</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex h-32 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-blue-500" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold text-white">Recent Transactions</h3>
+          {transactions?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-800/30 p-12 text-center">
+              <div className="mb-4 rounded-full bg-slate-800 p-4">
+                <Wallet className="h-8 w-8 text-slate-500" />
+              </div>
+              <h3 className="mb-2 text-lg font-medium text-white">No transactions yet</h3>
+              <p className="text-slate-400">Start tracking your spending by adding a new transaction.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+              <table className="w-full text-left text-sm text-slate-300">
+                <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
+                  <tr>
+                    <th className="px-6 py-4 font-medium">Date</th>
+                    <th className="px-6 py-4 font-medium">Category</th>
+                    <th className="px-6 py-4 font-medium">Description</th>
+                    <th className="px-6 py-4 text-right font-medium">Amount</th>
+                    <th className="px-6 py-4 text-right font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {transactions?.map((tx) => {
+                    const catTheme = getCategoryTheme(tx.category_id);
+                    const isIncome = tx.type === 'income';
+                    const dateObj = new Date(tx.occurred_at);
+                    
+                    return (
+                      <tr key={tx.public_id} className="group transition-colors hover:bg-slate-700/30">
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-slate-500" />
+                            {dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span 
+                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                            style={{ backgroundColor: `${catTheme.color}20`, color: catTheme.color }}
+                          >
+                            {catTheme.icon && <span>{catTheme.icon}</span>}
+                            {!catTheme.icon && <Tag className="h-3 w-3" />}
+                            {catTheme.name}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="truncate max-w-[200px] text-slate-200">{tx.description || '-'}</p>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className={`font-semibold ${isIncome ? 'text-emerald-400' : 'text-slate-200'}`}>
+                            {isIncome ? '+' : '-'}${parseFloat(tx.amount.toString()).toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => deleteMutation.mutate(tx.public_id)}
+                            className="inline-flex rounded-lg p-2 text-slate-500 opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                            title="Delete transaction"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Transaction Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+          <div 
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" 
+            onClick={() => setIsModalOpen(false)}
+          />
+          
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">New Transaction</h3>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreate} className="p-6">
+              <div className="space-y-5">
+                {/* Type Selection */}
+                <div className="flex gap-2 rounded-xl bg-slate-800/50 p-1 border border-slate-700/50">
+                  <button
+                    type="button"
+                    onClick={() => setType('expense')}
+                    className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all ${type === 'expense' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    Expense
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setType('income')}
+                    className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all ${type === 'income' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    Income
+                  </button>
+                </div>
+                
+                {/* Amount */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Amount</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      required
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/50 py-3 pl-8 pr-4 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                
+                {/* Category */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Category</label>
+                  <select
+                    required
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="" disabled>Select category</option>
+                    {categories?.map((c) => (
+                      <option key={c.public_id} value={c.public_id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Description (Optional)</label>
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="What did you spend on?"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 rounded-xl bg-slate-800 px-4 py-3 font-medium text-slate-300 transition-colors hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending || !amount || !categoryId || !type || !date}
+                  className="flex-1 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-blue-500/40 disabled:opacity-50"
+                >
+                  {createMutation.isPending ? 'Saving...' : 'Save Transaction'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

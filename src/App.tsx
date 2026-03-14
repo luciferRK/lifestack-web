@@ -4,6 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TodoPage } from './pages/TodoPage';
+import { SpendingPage } from './pages/SpendingPage';
 import { useAuthStore } from './store/authStore';
 import { authService } from './services/auth';
 
@@ -31,6 +32,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           </li>
           <li>
             <Link to="/todo" className="hover:text-white transition-colors">Todos</Link>
+          </li>
+          <li>
+            <Link to="/spending" className="hover:text-white transition-colors">Spending</Link>
           </li>
         </ul>
       </nav>
@@ -106,6 +110,15 @@ function App() {
           element={
             <ProtectedRoute>
               <TodoPage />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/spending" 
+          element={
+            <ProtectedRoute>
+              <SpendingPage />
             </ProtectedRoute>
           } 
         />
