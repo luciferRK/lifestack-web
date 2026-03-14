@@ -1,0 +1,77 @@
+import React, { useState } from 'react';
+import { useAuthStore } from '../store/authStore';
+import { authService } from '../services/auth';
+
+export const LoginPage: React.FC = () => {
+  const login = useAuthStore((state) => state.login);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      // The API expects username to be the email for password grant flow
+      await authService.login(email, password);
+      login({ email }); // Just setting a mocked user object for now since we rely on cookies
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
+      <div className="w-full max-w-md space-y-8 rounded-xl bg-slate-800 p-10 shadow-2xl">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-white tracking-tight">Lifestack</h2>
+          <p className="mt-2 text-sm text-slate-400">Sign in to your account</p>
+        </div>
+        
+        {error && (
+          <div className="rounded-md bg-red-500/10 p-4">
+            <p className="text-sm font-medium text-red-500">{error}</p>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <input 
+                type="email" 
+                placeholder="Email address" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-blue-500 transition-all"
+              />
+            </div>
+            <div>
+              <input 
+                type="password" 
+                placeholder="Password" 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-blue-500 transition-all"
+              />
+            </div>
+          </div>
+          
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full rounded-lg bg-blue-600 p-3.5 font-semibold text-white shadow-lg hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all disabled:opacity-50"
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
