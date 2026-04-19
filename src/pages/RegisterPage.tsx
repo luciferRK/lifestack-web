@@ -18,6 +18,7 @@ export const RegisterPage: React.FC = () => {
     try {
       await authService.register(email, password, username);
       navigate('/login', { state: { message: 'Registration successful. Please log in.' } });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {

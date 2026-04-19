@@ -21,6 +21,7 @@ export const LoginPage: React.FC = () => {
       const user = await authService.checkAuth();
       setSession(user);
       navigate('/', { replace: true });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to login');
     } finally {
