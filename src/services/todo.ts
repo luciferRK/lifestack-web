@@ -24,7 +24,7 @@ export type TodoUpdate = Partial<TodoCreate>;
 
 export const todoService = {
   getTodos: async (completed?: boolean, limit: number = 50, offset: number = 0): Promise<PaginatedResponse<Todo>> => {
-    const params: Record<string, any> = { limit, offset };
+    const params: Record<string, string | number | boolean> = { limit, offset };
     if (completed !== undefined) {
       params.completed = completed;
     }
