@@ -9,11 +9,12 @@ import type {
   BudgetCreate,
   BudgetUpdate,
 } from '../types/spending';
+import type { PaginatedResponse } from '../types/common';
 
 export const spendingService = {
   // Categories
-  getCategories: async (): Promise<Category[]> => {
-    const response = await api.get('/spending/categories');
+  getCategories: async (limit: number = 50, offset: number = 0): Promise<PaginatedResponse<Category>> => {
+    const response = await api.get('/spending/categories', { params: { limit, offset } });
     return response.data;
   },
 
@@ -27,9 +28,8 @@ export const spendingService = {
   },
 
   // Transactions
-  getTransactions: async (): Promise<Transaction[]> => {
-    // If month filtering is needed later, we can pass it as a param. Right now the API gets all.
-    const response = await api.get('/spending/transactions');
+  getTransactions: async (limit: number = 50, offset: number = 0): Promise<PaginatedResponse<Transaction>> => {
+    const response = await api.get('/spending/transactions', { params: { limit, offset } });
     return response.data;
   },
 
@@ -53,8 +53,8 @@ export const spendingService = {
   },
 
   // Budgets
-  getBudgets: async (): Promise<Budget[]> => {
-    const response = await api.get('/spending/budgets');
+  getBudgets: async (limit: number = 50, offset: number = 0): Promise<PaginatedResponse<Budget>> => {
+    const response = await api.get('/spending/budgets', { params: { limit, offset } });
     return response.data;
   },
 

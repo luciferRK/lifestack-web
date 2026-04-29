@@ -14,6 +14,7 @@ import {
   Target,
   Edit2
 } from 'lucide-react';
+import { Pagination } from '../components/Pagination';
 
 export const SpendingPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -38,20 +39,27 @@ export const SpendingPage: React.FC = () => {
   });
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
 
-  const { data: categories, isLoading: isCatsLoading } = useQuery({
+  const [txOffset, setTxOffset] = useState(0);
+  const [budgetOffset, setBudgetOffset] = useState(0);
+  const limit = 50;
+
+  const { data: categoriesResponse, isLoading: isCatsLoading } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => spendingService.getCategories()
+    queryFn: () => spendingService.getCategories(200, 0)
   });
+  const categories = categoriesResponse?.items;
 
-  const { data: transactions, isLoading: isTxLoading } = useQuery({
-    queryKey: ['transactions'],
-    queryFn: () => spendingService.getTransactions()
+  const { data: transactionsResponse, isLoading: isTxLoading } = useQuery({
+    queryKey: ['transactions', txOffset],
+    queryFn: () => spendingService.getTransactions(limit, txOffset)
   });
+  const transactions = transactionsResponse?.items;
 
-  const { data: budgets, isLoading: isBudgetsLoading } = useQuery({
-    queryKey: ['budgets'],
-    queryFn: () => spendingService.getBudgets()
+  const { data: budgetsResponse, isLoading: isBudgetsLoading } = useQuery({
+    queryKey: ['budgets', budgetOffset],
+    queryFn: () => spendingService.getBudgets(limit, budgetOffset)
   });
+  const budgets = budgetsResponse?.items;
 
   const createMutation = useMutation({
     mutationFn: (newTx: TransactionCreate) => spendingService.createTransaction(newTx),
@@ -313,6 +321,14 @@ export const SpendingPage: React.FC = () => {
               </table>
             </div>
           )}
+          {transactionsResponse && (
+            <Pagination 
+              total={transactionsResponse.total} 
+              limit={transactionsResponse.limit} 
+              offset={transactionsResponse.offset} 
+              onPageChange={setTxOffset} 
+            />
+          )}
         </div>
       ) : (
         <div className="space-y-4 animate-in fade-in duration-300">
@@ -381,6 +397,14 @@ export const SpendingPage: React.FC = () => {
                 );
               })}
             </div>
+          )}
+          {budgetsResponse && (
+            <Pagination 
+              total={budgetsResponse.total} 
+              limit={budgetsResponse.limit} 
+              offset={budgetsResponse.offset} 
+              onPageChange={setBudgetOffset} 
+            />
           )}
         </div>
       )}

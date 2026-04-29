@@ -1,4 +1,5 @@
 import api from './api';
+import type { PaginatedResponse } from '../types/common';
 
 export interface Todo {
   public_id: string;
@@ -7,7 +8,6 @@ export interface Todo {
   due_date: string | null;
   priority: 'low' | 'medium' | 'high';
   completed: boolean;
-  workspace_id: number;
   created_at: string;
   updated_at: string;
 }
@@ -23,8 +23,11 @@ export interface TodoCreate {
 export type TodoUpdate = Partial<TodoCreate>;
 
 export const todoService = {
-  getTodos: async (completed?: boolean): Promise<Todo[]> => {
-    const params = completed !== undefined ? { completed } : {};
+  getTodos: async (completed?: boolean, limit: number = 50, offset: number = 0): Promise<PaginatedResponse<Todo>> => {
+    const params: Record<string, any> = { limit, offset };
+    if (completed !== undefined) {
+      params.completed = completed;
+    }
     const response = await api.get('/todo/', { params });
     return response.data;
   },

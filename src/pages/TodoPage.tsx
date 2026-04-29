@@ -4,13 +4,17 @@ import { todoService } from '../services/todo';
 import type { Todo, TodoCreate } from '../services/todo';
 import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
 
+import { Pagination } from '../components/Pagination';
+
 export const TodoPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [newTodoTitle, setNewTodoTitle] = useState('');
+  const [offset, setOffset] = useState(0);
+  const limit = 50;
 
-  const { data: todos, isLoading } = useQuery({
-    queryKey: ['todos'],
-    queryFn: () => todoService.getTodos()
+  const { data: todosResponse, isLoading } = useQuery({
+    queryKey: ['todos', offset],
+    queryFn: () => todoService.getTodos(undefined, limit, offset)
   });
 
   const createMutation = useMutation({
@@ -70,12 +74,13 @@ export const TodoPage: React.FC = () => {
         <div className="text-center text-slate-400">Loading tasks...</div>
       ) : (
         <div className="space-y-3">
-          {todos?.length === 0 ? (
+          {todosResponse?.items.length === 0 ? (
             <div className="rounded-xl border border-slate-800 bg-slate-800/30 p-8 text-center text-slate-400">
               No tasks yet. Add one above!
             </div>
           ) : (
-            todos?.map((todo) => (
+            <>
+            {todosResponse?.items.map((todo) => (
               <div 
                 key={todo.public_id} 
                 className={`group flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/50 p-4 transition-all hover:border-slate-600 ${todo.completed ? 'opacity-60' : ''}`}
@@ -105,7 +110,16 @@ export const TodoPage: React.FC = () => {
                   <Trash2 className="h-5 w-5" />
                 </button>
               </div>
-            ))
+            ))}
+            {todosResponse && (
+              <Pagination 
+                total={todosResponse.total} 
+                limit={todosResponse.limit} 
+                offset={todosResponse.offset} 
+                onPageChange={setOffset} 
+              />
+            )}
+            </>
           )}
         </div>
       )}

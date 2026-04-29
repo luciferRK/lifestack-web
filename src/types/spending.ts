@@ -1,6 +1,5 @@
 export interface Category {
   public_id: string;
-  workspace_id: number;
   name: string;
   is_system: boolean;
   color: string | null;
@@ -25,7 +24,6 @@ export type TransactionType = 'income' | 'expense';
 
 export interface Transaction {
   public_id: string;
-  workspace_id: number;
   category_id: string;
   amount: number | string;
   type: TransactionType;
@@ -53,7 +51,6 @@ export interface TransactionUpdate {
 
 export interface Budget {
   public_id: string;
-  workspace_id: number;
   category_id: string;
   amount: number | string;
   month_start: string;
