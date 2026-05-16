@@ -15,6 +15,7 @@ import {
   Edit2
 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
+import { DropdownSelect } from '../components/DropdownSelect';
 
 export const SpendingPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -34,8 +35,9 @@ export const SpendingPage: React.FC = () => {
   const [budgetCategoryId, setBudgetCategoryId] = useState('');
   const [budgetMonth, setBudgetMonth] = useState(() => {
     const d = new Date();
-    d.setDate(1);
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}-01`;
   });
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
 
@@ -48,6 +50,10 @@ export const SpendingPage: React.FC = () => {
     queryFn: () => spendingService.getCategories(200, 0)
   });
   const categories = categoriesResponse?.items;
+  const categoryOptions = useMemo(() => categories?.map((category) => ({
+    value: category.public_id,
+    label: category.name,
+  })) ?? [], [categories]);
 
   const { data: transactionsResponse, isLoading: isTxLoading } = useQuery({
     queryKey: ['transactions', txOffset],
@@ -65,6 +71,7 @@ export const SpendingPage: React.FC = () => {
     mutationFn: (newTx: TransactionCreate) => spendingService.createTransaction(newTx),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setIsModalOpen(false);
       setAmount('');
       setDescription('');
@@ -75,6 +82,7 @@ export const SpendingPage: React.FC = () => {
     mutationFn: (id: string) => spendingService.deleteTransaction(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }
   });
 
@@ -82,6 +90,7 @@ export const SpendingPage: React.FC = () => {
     mutationFn: (newBudget: BudgetCreate) => spendingService.createBudget(newBudget),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setIsBudgetModalOpen(false);
       setBudgetAmount('');
       setEditingBudgetId(null);
@@ -92,6 +101,7 @@ export const SpendingPage: React.FC = () => {
     mutationFn: ({ id, data }: { id: string, data: BudgetUpdate }) => spendingService.updateBudget(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setIsBudgetModalOpen(false);
       setBudgetAmount('');
       setEditingBudgetId(null);
@@ -115,6 +125,10 @@ export const SpendingPage: React.FC = () => {
     e.preventDefault();
     if (!budgetAmount || !budgetCategoryId || !budgetMonth) return;
     
+    // Normalize to the first of the month as required by the backend
+    const [year, month] = budgetMonth.split('-');
+    const monthStart = `${year}-${month}-01`;
+    
     if (editingBudgetId) {
       updateBudgetMutation.mutate({
         id: editingBudgetId,
@@ -124,9 +138,21 @@ export const SpendingPage: React.FC = () => {
       createBudgetMutation.mutate({
         category_id: budgetCategoryId,
         amount: parseFloat(budgetAmount),
-        month_start: budgetMonth
+        month_start: monthStart
       });
     }
+  };
+
+  const openBudgetModalForNew = () => {
+    setEditingBudgetId(null);
+    setBudgetAmount('');
+    setBudgetCategoryId('');
+    // Ensure we start at the first of the month
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    setBudgetMonth(`${year}-${month}-01`);
+    setIsBudgetModalOpen(true);
   };
 
   const openBudgetModalForEdit = (b: Budget) => {
@@ -167,12 +193,7 @@ export const SpendingPage: React.FC = () => {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => {
-              setEditingBudgetId(null);
-              setBudgetAmount('');
-              setBudgetCategoryId('');
-              setIsBudgetModalOpen(true);
-            }}
+            onClick={openBudgetModalForNew}
             className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-slate-800 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95 border border-slate-700/50"
           >
             <Target className="h-5 w-5" />
@@ -417,7 +438,7 @@ export const SpendingPage: React.FC = () => {
             onClick={() => setIsModalOpen(false)}
           />
           
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
               <h3 className="text-lg font-semibold text-white">New Transaction</h3>
               <button 
@@ -469,19 +490,12 @@ export const SpendingPage: React.FC = () => {
                 {/* Category */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Category</label>
-                  <select
-                    required
+                  <DropdownSelect
                     value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full appearance-none rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="" disabled>Select category</option>
-                    {categories?.map((c) => (
-                      <option key={c.public_id} value={c.public_id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setCategoryId}
+                    options={categoryOptions}
+                    placeholder="Select category"
+                  />
                 </div>
 
                 {/* Date */}
@@ -538,7 +552,7 @@ export const SpendingPage: React.FC = () => {
             onClick={() => setIsBudgetModalOpen(false)}
           />
           
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
               <h3 className="text-lg font-semibold text-white">{editingBudgetId ? 'Edit Budget' : 'Set Budget'}</h3>
               <button 
@@ -550,30 +564,27 @@ export const SpendingPage: React.FC = () => {
             </div>
             
             <form onSubmit={handleSaveBudget} className="p-6">
-              {createBudgetMutation.isError && (
+              {(createBudgetMutation.isError || updateBudgetMutation.isError) && (
                 <div className="mb-4 rounded-xl relative border bg-red-500/10 border-red-500/50 p-3 text-sm text-red-500 font-medium">
-                  {/* Provide friendly fallback message for creation errors like duplicates */}
-                  <p>Failed to create or update budget. You may already have a budget for this category and month.</p>
+                  <p>
+                    {createBudgetMutation.isError 
+                      ? "Failed to create budget. You may already have a budget for this category and month."
+                      : "Failed to update budget. Please try again."
+                    }
+                  </p>
                 </div>
               )}
               <div className="space-y-5">
                 {/* Category */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Category</label>
-                  <select
-                    required
-                    disabled={!!editingBudgetId} // Cannot change category when editing
+                  <DropdownSelect
                     value={budgetCategoryId}
-                    onChange={(e) => setBudgetCategoryId(e.target.value)}
-                    className="w-full appearance-none rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
-                  >
-                    <option value="" disabled>Select category</option>
-                    {categories?.map((c) => (
-                      <option key={c.public_id} value={c.public_id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setBudgetCategoryId}
+                    options={categoryOptions}
+                    placeholder="Select category"
+                    disabled={!!editingBudgetId}
+                  />
                 </div>
 
                 {/* Date / Month */}
