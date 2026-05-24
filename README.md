@@ -114,6 +114,13 @@ export default defineConfig([
   - `npm run test:e2e`
   - E2E spec: `e2e/investing-lookthrough.spec.ts`
 
+### Coverage vs E2E
+- CI coverage enforcement currently uses `vitest` line coverage thresholds.
+- Playwright E2E tests improve behavioral confidence but do not automatically increase the Vitest/Istanbul coverage numbers used by the coverage gate.
+- Keep both tracks healthy:
+  - unit/integration (`vitest`) for coverage thresholds
+  - E2E (`playwright`) for user-flow validation
+
 ### E2E Strategy (Scope Item)
 - Current frontend Playwright tests mock API responses for fast UI regression checks.
 - A true full-stack FE+BE+DB E2E suite is recommended as a dedicated integration repo because FE and BE are separate repositories.
