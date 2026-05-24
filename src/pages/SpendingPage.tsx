@@ -52,6 +52,16 @@ const getCurrentMonthValue = () => {
 const monthStartToMonthValue = (monthStart: string) => monthStart.slice(0, 7);
 
 const monthValueToDateRange = (monthValue: string) => {
+  if (!monthValue || !/^\d{4}-\d{2}$/.test(monthValue)) {
+    return {
+      fromDate: '',
+      toDate: '',
+      monthStart: '',
+      label: 'Invalid Month',
+      isValid: false,
+    };
+  }
+
   const [yearStr, monthStr] = monthValue.split('-');
   const year = Number(yearStr);
   const month = Number(monthStr);
@@ -61,7 +71,8 @@ const monthValueToDateRange = (monthValue: string) => {
     fromDate: start.toISOString(),
     toDate: end.toISOString(),
     monthStart: `${monthValue}-01`,
-    label: start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+    label: start.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }),
+    isValid: true,
   };
 };
 
@@ -132,7 +143,8 @@ export const SpendingPage: React.FC = () => {
       categoryId: selectedCategoryFilter || undefined,
       fromDate: monthRange.fromDate,
       toDate: monthRange.toDate,
-    })
+    }),
+    enabled: monthRange.isValid,
   });
   const transactions = transactionsResponse?.items;
 
@@ -141,12 +153,14 @@ export const SpendingPage: React.FC = () => {
     queryFn: () => spendingService.getTransactionSummary({
       fromDate: monthRange.fromDate,
       toDate: monthRange.toDate,
-    })
+    }),
+    enabled: monthRange.isValid,
   });
 
   const { data: budgetsResponse, isLoading: isBudgetsLoading } = useQuery({
     queryKey: ['budgets', budgetOffset, selectedMonth],
-    queryFn: () => spendingService.getBudgets(limit, budgetOffset, monthRange.monthStart)
+    queryFn: () => spendingService.getBudgets(limit, budgetOffset, monthRange.monthStart),
+    enabled: monthRange.isValid,
   });
   const budgets = useMemo(
     () => budgetsResponse?.items.filter((budget) => monthStartToMonthValue(budget.month_start) === selectedMonth) ?? [],
