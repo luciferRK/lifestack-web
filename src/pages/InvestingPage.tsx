@@ -83,6 +83,10 @@ export const InvestingPage: React.FC = () => {
     queryKey: ['investing', 'summary'],
     queryFn: () => investingService.getSummary(),
   });
+  const { data: performanceSummary, isLoading: performanceLoading } = useQuery({
+    queryKey: ['investing', 'performance', 'summary'],
+    queryFn: () => investingService.getPerformanceSummary(),
+  });
   const { data: instruments = [], isLoading: instrumentsLoading } = useQuery({
     queryKey: ['investing', 'instruments'],
     queryFn: () => investingService.getInstruments(),
@@ -165,6 +169,13 @@ export const InvestingPage: React.FC = () => {
   });
 
   const isLoading = holdingsLoading || cashLoading || summaryLoading;
+  const performancePctRaw =
+    performanceSummary?.total_gain_loss_pct != null
+      ? Number(performanceSummary.total_gain_loss_pct)
+      : Number.NaN;
+  const performancePctLabel = Number.isNaN(performancePctRaw)
+    ? 'N/A'
+    : `${performancePctRaw.toFixed(2)}%`;
   const holdings = useMemo(() => holdingsRes?.items ?? [], [holdingsRes]);
   const cashBalances = useMemo(() => cashRes?.items ?? [], [cashRes]);
   const accounts = accountsRes?.items ?? [];
@@ -308,6 +319,14 @@ export const InvestingPage: React.FC = () => {
         <p className="mt-1">
           <span className="font-semibold text-slate-100">Valuation status:</span>{' '}
           {statusLabel(summary?.valuation_status)}
+        </p>
+        <p className="mt-1">
+          <span className="font-semibold text-slate-100">Performance (gain/loss):</span>{' '}
+          {performanceLoading
+            ? 'Loading...'
+            : performanceSummary
+              ? `${formatCurrency(performanceSummary.total_gain_loss, performanceSummary.currency)} (${performancePctLabel})`
+              : 'N/A'}
         </p>
       </div>
 
