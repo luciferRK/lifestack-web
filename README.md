@@ -69,6 +69,10 @@ Today the web app focuses on the personal OS foundation:
 - Todo management
 - Spending tracking
 - Investing tracking
+- Notifications inbox and unread indicators
+- Weekly summaries view
+- Quick capture flow (todo + spending)
+- Recurring rules UX for todo and spending
 - Authentication and session handling
 
 The current implementation is intentionally centered on a single-user personal workflow before expanding into later-stage domains.
@@ -136,6 +140,23 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
   - constituent seeding for manual bootstrap
   - exposure table and overlap summary
 - Analytics responses may be partial; UI surfaces `analysis_status`, coverage, and warnings.
+
+### Phase 1.1 surfaces
+- Notifications page:
+  - list
+  - unread count
+  - mark-read + mark-all-read
+  - preferences update
+- Weekly summaries page:
+  - list and latest summary surfaces
+- Capture page:
+  - single input routing to todo/spending via backend capture API
+- Todo page:
+  - recurring todo rule CRUD (create/list/delete)
+  - explicit due-date support in create flow
+- Spending page:
+  - recurring transaction rule management
+  - upcoming recurring preview support from backend
 
 ### Dashboard budget remaining
 - The dashboard `Budget remaining` card is computed from:
