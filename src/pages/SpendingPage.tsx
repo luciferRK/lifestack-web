@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { DropdownSelect } from '../components/DropdownSelect';
+import { DatePicker } from '../components/DatePicker';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -112,6 +113,32 @@ const getCurrentMonthValue = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 };
 
+const monthLabelFormatter = new Intl.DateTimeFormat(undefined, {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+const formatMonthLabel = (monthValue: string) => {
+  if (!/^\d{4}-\d{2}$/.test(monthValue)) return monthValue;
+  const [yearStr, monthStr] = monthValue.split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  if (!year || month < 1 || month > 12) return monthValue;
+  return monthLabelFormatter.format(new Date(Date.UTC(year, month - 1, 1)));
+};
+
+const buildMonthOptions = (pastCount = 24, futureCount = 12) => {
+  const options: Array<{ value: string; label: string }> = [];
+  const now = new Date();
+  for (let offset = futureCount; offset >= -pastCount; offset -= 1) {
+    const monthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+    const value = `${monthDate.getUTCFullYear()}-${String(monthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    options.push({ value, label: formatMonthLabel(value) });
+  }
+  return options;
+};
+
 const monthStartToMonthValue = (monthStart: string) => monthStart.slice(0, 7);
 
 const monthValueToDateRange = (monthValue: string) => {
@@ -167,6 +194,7 @@ export const SpendingPage: React.FC = () => {
   const [recurringOffset, setRecurringOffset] = useState(0);
   const limit = 50;
   const monthRange = useMemo(() => monthValueToDateRange(selectedMonth), [selectedMonth]);
+  const monthFilterOptions = useMemo(() => buildMonthOptions(), []);
 
   // Recurring modal state
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
@@ -185,10 +213,7 @@ export const SpendingPage: React.FC = () => {
     value: category.public_id,
     label: category.name,
   })) ?? [], [categories]);
-  const categoryFilterOptions = useMemo(
-    () => [{ value: '', label: 'All categories' }, ...categoryOptions],
-    [categoryOptions]
-  );
+  const categoryFilterOptions = categoryOptions;
 
   const {
     control: budgetControl,
@@ -608,15 +633,16 @@ export const SpendingPage: React.FC = () => {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label htmlFor="spending-month" className="mb-2 block">Month</Label>
-                <Input
+                <DropdownSelect
                   id="spending-month"
-                  type="month"
                   value={selectedMonth}
-                  onChange={(e) => {
-                    setSelectedMonth(e.target.value);
+                  onChange={(value) => {
+                    setSelectedMonth(value);
                     setTxOffset(0);
                     setBudgetOffset(0);
                   }}
+                  options={monthFilterOptions}
+                  placeholder="Select month"
                 />
               </div>
               <div>
@@ -629,6 +655,7 @@ export const SpendingPage: React.FC = () => {
                   }}
                   options={categoryFilterOptions}
                   placeholder="All categories"
+                  clearLabel="All categories"
                 />
               </div>
             </div>
@@ -1275,12 +1302,11 @@ export const SpendingPage: React.FC = () => {
                 {/* Date */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Date</label>
-                  <input
-                    type="date"
-                    required
+                  <DatePicker
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={setDate}
+                    placeholder="Select date"
+                    required
                   />
                 </div>
 
@@ -1373,12 +1399,19 @@ export const SpendingPage: React.FC = () => {
                 {/* Budget Month */}
                 <div>
                   <Label htmlFor="budget-month" className="mb-2 block">Budget Month</Label>
-                  <Input
-                    id="budget-month"
-                    type="month"
-                    required
-                    disabled={!!editingBudgetId} // Cannot change month when editing
-                    {...registerBudgetField('month')}
+                  <Controller
+                    control={budgetControl}
+                    name="month"
+                    render={({ field }) => (
+                      <DropdownSelect
+                        id="budget-month"
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={monthFilterOptions}
+                        placeholder="Select month"
+                        disabled={!!editingBudgetId}
+                      />
+                    )}
                   />
                   {budgetErrors.month ? (
                     <p className="mt-2 text-sm text-rose-400">{budgetErrors.month.message}</p>

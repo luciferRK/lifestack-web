@@ -110,6 +110,40 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
 
 ---
 
+## Frontend Notes
+
+### Investing module behavior
+- Investing forms now use backend-managed finance references:
+  - `GET /v1/finance/accounts`
+  - `GET /v1/finance/currencies`
+- Holdings and cash creation should use selector-driven values from those endpoints, not free-text currency/account inputs.
+- Investing summary supports valuation-state semantics:
+  - `single_currency_native`
+  - `multi_currency_unconverted`
+  - `conversion_required`
+  - `converted_available`
+- When conversion is unavailable, totals may be `null`; UI should display `N/A` and show `valuation_status` plus `reporting_currency`.
+
+### Look-through analytics (Spec 012)
+- Frontend now supports:
+  - `GET /v1/investing/instruments`
+  - `POST /v1/investing/instruments`
+  - `POST /v1/investing/instruments/{instrument_id}/constituents`
+  - `GET /v1/investing/analytics/exposure?as_of=YYYY-MM-DD`
+  - `GET /v1/investing/analytics/overlap?as_of=YYYY-MM-DD`
+- Investing page includes a `Look-through Analytics` tab with:
+  - instrument creation
+  - constituent seeding for manual bootstrap
+  - exposure table and overlap summary
+- Analytics responses may be partial; UI surfaces `analysis_status`, coverage, and warnings.
+
+### Dashboard budget remaining
+- The dashboard `Budget remaining` card is computed from:
+  - `spending.month_budget - spending.month_spent`
+- `month_budget` is sourced from monthly budgets for the current month. If no monthly budget exists, UI should show `N/A`.
+
+---
+
 ## Testing
 
 - Unit/integration tests:
@@ -118,8 +152,21 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
   - `npm run test:coverage`
 - Browser E2E:
   - `npm run test:e2e`
+- Key page-level tests:
+  - `src/pages/InvestingPage.test.tsx`
+  - `src/pages/DashboardPage.test.tsx`
+- E2E spec:
+  - `e2e/investing-lookthrough.spec.ts`
 
 The current browser E2E suite focuses on frontend behavior. A true full-stack end-to-end harness across frontend, backend, and database is still a later integration step.
+
+### E2E Strategy (Scope Item)
+- Current frontend Playwright tests mock API responses for fast UI regression checks.
+- A true full-stack FE+BE+DB E2E suite is recommended as a dedicated integration repo because FE and BE are separate repositories.
+- Proposed future setup:
+  - integration repo with compose orchestration for frontend + backend + postgres
+  - real API contracts, with no route mocks
+  - seeded deterministic test data and cross-repo CI gate
 
 ---
 
