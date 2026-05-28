@@ -11,10 +11,11 @@ const MODULE_OPTIONS: Array<{ value: ImportModule; label: string }> = [
 
 export const ImportsPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const [module, setModule] = useState<ImportModule>('spending-transactions');
+  const [module, setModule] = useState<ImportModule | ''>('');
   const [file, setFile] = useState<File | null>(null);
   const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
   const [latestValidation, setLatestValidation] = useState<ImportValidateResponse | null>(null);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
 
   const { data: importsResponse, isLoading: isLoadingImports } = useQuery({
     queryKey: ['imports', 'list'],
@@ -34,7 +35,12 @@ export const ImportsPage: React.FC = () => {
   }, [detailQuery.data, latestValidation, selectedImportId]);
 
   const uploadMutation = useMutation({
-    mutationFn: () => importsService.uploadAndValidate(module, file as File),
+    mutationFn: () => {
+      if (!module) {
+        throw new Error('Module is required');
+      }
+      return importsService.uploadAndValidate(module, file as File);
+    },
     onSuccess: (data) => {
       setLatestValidation(data);
       setSelectedImportId(data.import_batch.public_id);
@@ -54,16 +60,24 @@ export const ImportsPage: React.FC = () => {
   });
 
   const handleTemplateDownload = async () => {
-    const content = await importsService.downloadTemplate(module);
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${module}-template.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    if (!module || isDownloadingTemplate) {
+      return;
+    }
+    try {
+      setIsDownloadingTemplate(true);
+      const content = await importsService.downloadTemplate(module);
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${module}-template.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
   };
 
   const errors: ImportErrorItem[] = activeDetail?.errors ?? [];
@@ -83,6 +97,9 @@ export const ImportsPage: React.FC = () => {
             onChange={(e) => setModule(e.target.value as ImportModule)}
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
           >
+            <option value="" disabled>
+              Select module
+            </option>
             {MODULE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -100,15 +117,16 @@ export const ImportsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => void handleTemplateDownload()}
+            disabled={!module || isDownloadingTemplate}
             className="rounded-lg border border-slate-600 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800"
           >
-            Download template
+            {isDownloadingTemplate ? 'Downloading...' : 'Download template'}
           </button>
 
           <button
             type="button"
             onClick={() => file && uploadMutation.mutate()}
-            disabled={!file || uploadMutation.isPending}
+            disabled={!module || !file || uploadMutation.isPending}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {uploadMutation.isPending ? 'Validating...' : 'Upload + validate'}
