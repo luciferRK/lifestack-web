@@ -72,6 +72,7 @@ Today the web app focuses on the personal OS foundation:
 - Notifications inbox and unread indicators
 - Weekly summaries view
 - Quick capture flow (todo + spending)
+- Bulk CSV imports flow (transactions, budgets, holdings)
 - Recurring rules UX for todo and spending
 - Authentication and session handling
 
