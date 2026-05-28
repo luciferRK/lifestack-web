@@ -1,0 +1,45 @@
+export type ImportModule = 'spending-transactions' | 'spending-budgets' | 'investing-holdings';
+
+export type ImportStatus =
+  | 'uploaded'
+  | 'validated'
+  | 'failed_validation'
+  | 'committing'
+  | 'completed'
+  | 'failed_commit';
+
+export interface ImportBatch {
+  public_id: string;
+  module: ImportModule;
+  status: ImportStatus;
+  filename: string;
+  content_type: string | null;
+  file_size_bytes: number;
+  file_sha256: string;
+  storage_backend: string;
+  storage_key: string | null;
+  total_rows: number;
+  valid_rows: number;
+  error_rows: number;
+  started_at: string;
+  validated_at: string | null;
+  committed_at: string | null;
+}
+
+export interface ImportErrorItem {
+  row_number: number;
+  field_name: string | null;
+  error_code: string;
+  message: string;
+  raw_value: string | null;
+}
+
+export interface ImportValidateResponse {
+  import_batch: ImportBatch;
+  errors: ImportErrorItem[];
+}
+
+export interface ImportCommitResponse {
+  import_batch: ImportBatch;
+  inserted_rows: number;
+}
