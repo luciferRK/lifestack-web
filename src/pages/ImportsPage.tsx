@@ -108,6 +108,7 @@ export const ImportsPage: React.FC = () => {
           </select>
 
           <input
+            key={file ? `selected-${file.name}-${file.lastModified}` : 'no-file-selected'}
             type="file"
             accept=".csv,text/csv"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
@@ -181,6 +182,11 @@ export const ImportsPage: React.FC = () => {
               >
                 {commitMutation.isPending ? 'Committing...' : 'Commit import'}
               </button>
+              {commitMutation.isError ? (
+                <p className="mb-4 text-sm text-rose-300">
+                  Commit failed. Refresh import details and retry.
+                </p>
+              ) : null}
 
               {errors.length > 0 ? (
                 <div className="max-h-72 overflow-auto rounded-lg border border-rose-900/60 bg-rose-950/20">

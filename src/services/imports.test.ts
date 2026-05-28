@@ -39,12 +39,7 @@ describe('importsService', () => {
     expect(api.post).toHaveBeenNthCalledWith(
       1,
       '/imports',
-      expect.any(FormData),
-      expect.objectContaining({
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
+      expect.any(FormData)
     );
     expect(api.post).toHaveBeenNthCalledWith(2, '/imports/imp_2/commit');
   });

@@ -17,11 +17,7 @@ export const importsService = {
     const form = new FormData();
     form.append('module', module);
     form.append('file', file);
-    const response = await api.post('/imports', form, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await api.post('/imports', form);
     return response.data;
   },
 
