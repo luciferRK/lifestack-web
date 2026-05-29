@@ -8,11 +8,12 @@ import { SpendingPage } from './pages/SpendingPage';
 import { InvestingPage } from './pages/InvestingPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { WeeklySummariesPage } from './pages/WeeklySummariesPage';
-import { CapturePage } from './pages/CapturePage';
 import { ImportsPage } from './pages/ImportsPage';
+import { MasterConfigPage } from './pages/MasterConfigPage';
 import { useAuthStore } from './store/authStore';
 import { authService } from './services/auth';
 import { onUnauthorized } from './services/api';
+import { VoiceAgentWidget } from './components/VoiceAgentWidget';
 
 import { Link } from 'react-router-dom';
 
@@ -45,9 +46,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           <li>
             <Link to="/investing" className="hover:text-white transition-colors">Investing</Link>
           </li>
-          <li>
-            <Link to="/capture" className="hover:text-white transition-colors">Quick Capture</Link>
-          </li>
+
           <li>
             <Link to="/notifications" className="hover:text-white transition-colors">Notifications</Link>
           </li>
@@ -57,11 +56,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           <li>
             <Link to="/imports" className="hover:text-white transition-colors">Bulk Imports</Link>
           </li>
+          <li>
+            <Link to="/settings" className="hover:text-white transition-colors">Master Config</Link>
+          </li>
         </ul>
       </nav>
       <main className="flex-1 text-slate-100">
         {children}
       </main>
+      <VoiceAgentWidget />
     </div>
   );
 };
@@ -161,14 +164,6 @@ function App() {
           } 
         />
         <Route 
-          path="/capture" 
-          element={
-            <ProtectedRoute>
-              <CapturePage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
           path="/notifications" 
           element={
             <ProtectedRoute>
@@ -189,6 +184,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ImportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <MasterConfigPage />
             </ProtectedRoute>
           }
         />

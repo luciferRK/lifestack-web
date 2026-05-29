@@ -4,6 +4,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { spendingService } from '../services/spending';
+import { financeService } from '../services/finance';
 import type {
   Budget,
   BudgetCreate,
@@ -33,6 +34,7 @@ import {
   RefreshCw,
   Clock,
   ToggleLeft,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { DropdownSelect } from '../components/DropdownSelect';
@@ -40,6 +42,7 @@ import { DatePicker } from '../components/DatePicker';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { formatCurrency } from '../utils/numberFormat';
 
 const budgetFormSchema = z.object({
   categoryId: z.string().min(1, 'Select a category'),
@@ -174,12 +177,13 @@ export const SpendingPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
   const [categoryId, setCategoryId] = useState('');
+  const [accountId, setAccountId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'recurring'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'recurring' | 'transfers'>('transactions');
 
   // Budget Modal
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
@@ -192,6 +196,7 @@ export const SpendingPage: React.FC = () => {
   const [txOffset, setTxOffset] = useState(0);
   const [budgetOffset, setBudgetOffset] = useState(0);
   const [recurringOffset, setRecurringOffset] = useState(0);
+  const [transferOffset, setTransferOffset] = useState(0);
   const limit = 50;
   const monthRange = useMemo(() => monthValueToDateRange(selectedMonth), [selectedMonth]);
   const monthFilterOptions = useMemo(() => buildMonthOptions(), []);
@@ -199,6 +204,16 @@ export const SpendingPage: React.FC = () => {
   // Recurring modal state
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transferFromAccountId, setTransferFromAccountId] = useState('');
+  const [transferToAccountId, setTransferToAccountId] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferFxRate, setTransferFxRate] = useState('');
+  const [transferFxFee, setTransferFxFee] = useState('0');
+  const [transferPlatformFee, setTransferPlatformFee] = useState('0');
+  const [transferTax, setTransferTax] = useState('0');
+  const [transferNotes, setTransferNotes] = useState('');
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
 
   const { data: categoriesResponse, isLoading: isCatsLoading } = useQuery({
     queryKey: ['categories'],
@@ -214,6 +229,25 @@ export const SpendingPage: React.FC = () => {
     label: category.name,
   })) ?? [], [categories]);
   const categoryFilterOptions = categoryOptions;
+  const { data: accountsResponse } = useQuery({
+    queryKey: ['finance', 'accounts', 'spending'],
+    queryFn: () => financeService.getAccounts(200, 0),
+  });
+  const spendingAccounts = useMemo(
+    () =>
+      (accountsResponse?.items ?? []).filter((account) =>
+        ['bank', 'wallet', 'card', 'gift_card'].includes(account.account_type)
+      ),
+    [accountsResponse?.items]
+  );
+  const accountOptions = useMemo(
+    () =>
+      spendingAccounts.map((account) => ({
+          value: account.public_id,
+          label: `${account.name} (${account.account_type.replace('_', ' ')})`,
+        })),
+    [spendingAccounts]
+  );
 
   const {
     control: budgetControl,
@@ -335,7 +369,17 @@ export const SpendingPage: React.FC = () => {
     queryKey: ['recurring', recurringOffset],
     queryFn: () => spendingService.getRecurring(limit, recurringOffset, true),
   });
+  const { data: transfersResponse, isLoading: isTransfersLoading } = useQuery({
+    queryKey: ['finance', 'transfers', transferOffset],
+    queryFn: () => financeService.getTransfers(limit, transferOffset),
+  });
+  const { data: financeSettings } = useQuery({
+    queryKey: ['finance', 'settings'],
+    queryFn: () => financeService.getSettings(),
+  });
+  const displayCurrency = financeSettings?.reporting_currency_code ?? 'USD';
   const recurringItems = recurringResponse?.items ?? [];
+  const transferItems = transfersResponse?.items ?? [];
 
   const {
     control: recurringControl,
@@ -384,15 +428,71 @@ export const SpendingPage: React.FC = () => {
       alert('Failed to deactivate recurring rule. Please try again.');
     },
   });
+  const createTransferMutation = useMutation({
+    mutationFn: () => {
+      const from = spendingAccounts.find((a) => a.public_id === transferFromAccountId);
+      const to = spendingAccounts.find((a) => a.public_id === transferToAccountId);
+      if (!from || !to) {
+        throw new Error('Transfer accounts are required');
+      }
+      const gross = Number(transferAmount) || 0;
+      const fxFee = Number(transferFxFee) || 0;
+      const platformFee = Number(transferPlatformFee) || 0;
+      const tax = Number(transferTax) || 0;
+      const net = Math.max(0, gross - fxFee - platformFee - tax);
+      const parsedTransferDate = new Date(transferDate);
+      if (Number.isNaN(parsedTransferDate.getTime())) {
+        throw new Error('Invalid transfer date');
+      }
+
+      return financeService.createTransfer({
+        from_module: 'spending',
+        to_module: 'spending',
+        from_account_id: from.public_id,
+        to_account_id: to.public_id,
+        from_currency_code: from.default_currency_code,
+        to_currency_code: to.default_currency_code,
+        gross_amount: gross.toFixed(2),
+        fx_rate_used: transferFxRate ? Number(transferFxRate).toFixed(10) : null,
+        fx_fee_amount: fxFee.toFixed(2),
+        platform_fee_amount: platformFee.toFixed(2),
+        tax_amount: tax.toFixed(2),
+        net_amount_received: net.toFixed(2),
+        occurred_at: parsedTransferDate.toISOString(),
+        notes: transferNotes || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'transfers'] });
+      setIsTransferModalOpen(false);
+      setTransferFromAccountId('');
+      setTransferToAccountId('');
+      setTransferAmount('');
+      setTransferFxRate('');
+      setTransferFxFee('0');
+      setTransferPlatformFee('0');
+      setTransferTax('0');
+      setTransferNotes('');
+      setTransferDate(new Date().toISOString().split('T')[0]);
+      setTransferOffset(0);
+    },
+  });
 
   const handleSaveTransaction = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !categoryId || !type || !date) return;
+    const parsedTransactionDate = new Date(date);
+    if (Number.isNaN(parsedTransactionDate.getTime())) {
+      alert('Please enter a valid transaction date.');
+      return;
+    }
     const payload: TransactionCreate = {
       amount: parseFloat(amount),
       category_id: categoryId,
+      account_id: accountId || null,
       type,
-      occurred_at: new Date(date).toISOString(),
+      occurred_at: parsedTransactionDate.toISOString(),
       description: description || null
     };
 
@@ -423,6 +523,7 @@ export const SpendingPage: React.FC = () => {
     setDescription('');
     setType('expense');
     setCategoryId('');
+    setAccountId('');
     setDate(new Date().toISOString().split('T')[0]);
     setIsModalOpen(true);
   };
@@ -437,6 +538,7 @@ export const SpendingPage: React.FC = () => {
     setDescription(tx.description ?? '');
     setType(tx.type);
     setCategoryId(tx.category_id);
+    setAccountId(tx.account_id ?? '');
     setDate(new Date(tx.occurred_at).toISOString().split('T')[0]);
     setIsModalOpen(true);
   };
@@ -448,6 +550,7 @@ export const SpendingPage: React.FC = () => {
     setDescription('');
     setType('expense');
     setCategoryId('');
+    setAccountId('');
     setDate(new Date().toISOString().split('T')[0]);
   };
 
@@ -582,97 +685,98 @@ export const SpendingPage: React.FC = () => {
   const isLoading = isCatsLoading || isTxLoading || isBudgetsLoading || isSummaryLoading;
 
   return (
-    <div className="mx-auto max-w-5xl p-8 animate-in fade-in duration-500">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
+    <div className="w-full px-8 py-8 animate-in fade-in duration-500">
+      <header className="mb-8 space-y-4">
+        <div className="max-w-2xl">
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm">Spending Overview</h1>
           <p className="mt-2 text-slate-400">
             Track your finances across the workspace for {monthRange.label}.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={openCategoryModal}
-            className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-slate-900 px-6 py-3 font-semibold text-slate-200 shadow-lg transition-all hover:bg-slate-800 active:scale-95 border border-slate-700/50"
-          >
-            <Brush className="h-5 w-5" />
-            <span>Manage Categories</span>
-          </button>
-          <button
-            onClick={openBudgetModalForNew}
-            className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-slate-800 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95 border border-slate-700/50"
-          >
-            <Target className="h-5 w-5" />
-            <span>Set Budget</span>
-          </button>
-          <button
-            onClick={openRecurringModalForNew}
-            className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-slate-800 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95 border border-slate-700/50"
-          >
-            <RefreshCw className="h-5 w-5" />
-            <span>Add Recurring</span>
-          </button>
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <button
             onClick={openTransactionModalForNew}
-            className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-105 hover:shadow-blue-500/40 active:scale-95"
+            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.01] hover:shadow-blue-500/40 active:scale-95"
           >
             <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
             <Plus className="h-5 w-5" />
-            <span>New Transaction</span>
+            <span className="whitespace-nowrap">New Transaction</span>
+          </button>
+          <button
+            onClick={openCategoryModal}
+            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900 px-5 font-semibold text-slate-200 shadow-lg transition-all hover:bg-slate-800 active:scale-95"
+          >
+            <Brush className="h-5 w-5" />
+            <span className="whitespace-nowrap">Manage Categories</span>
+          </button>
+          <button
+            onClick={openBudgetModalForNew}
+            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
+          >
+            <Target className="h-5 w-5" />
+            <span className="whitespace-nowrap">Set Budget</span>
+          </button>
+          <button
+            onClick={openRecurringModalForNew}
+            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
+          >
+            <RefreshCw className="h-5 w-5" />
+            <span className="whitespace-nowrap">Add Recurring</span>
+          </button>
+          <button
+            onClick={() => setIsTransferModalOpen(true)}
+            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
+          >
+            <ArrowRightLeft className="h-5 w-5" />
+            <span className="whitespace-nowrap">Transfer</span>
           </button>
         </div>
       </header>
 
       <div className="mb-6 rounded-2xl border border-slate-700/50 bg-slate-900/50 p-4 backdrop-blur-xl">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-400">
-              <Filter className="h-4 w-4" />
-              Filters
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="spending-month" className="mb-2 block">Month</Label>
-                <DropdownSelect
-                  id="spending-month"
-                  value={selectedMonth}
-                  onChange={(value) => {
-                    setSelectedMonth(value);
-                    setTxOffset(0);
-                    setBudgetOffset(0);
-                  }}
-                  options={monthFilterOptions}
-                  placeholder="Select month"
-                />
-              </div>
-              <div>
-                <Label className="mb-2 block">Category</Label>
-                <DropdownSelect
-                  value={selectedCategoryFilter}
-                  onChange={(value) => {
-                    setSelectedCategoryFilter(value);
-                    setTxOffset(0);
-                  }}
-                  options={categoryFilterOptions}
-                  placeholder="All categories"
-                  clearLabel="All categories"
-                />
-              </div>
-            </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex h-10 items-center gap-2 pr-1 text-sm font-medium text-slate-400">
+            <Filter className="h-4 w-4" />
+            <span>Filters</span>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setSelectedMonth(getCurrentMonthValue());
-                setSelectedCategoryFilter('');
+          <div className="min-w-[220px] flex-1">
+            <Label htmlFor="spending-month" className="mb-1 block text-xs text-slate-400">Month</Label>
+            <DropdownSelect
+              id="spending-month"
+              value={selectedMonth}
+              onChange={(value) => {
+                setSelectedMonth(value);
                 setTxOffset(0);
                 setBudgetOffset(0);
               }}
-              className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800"
-            >
-              Reset filters
-            </button>
+              options={monthFilterOptions}
+              placeholder="Select month"
+            />
           </div>
+          <div className="min-w-[220px] flex-1">
+            <Label className="mb-1 block text-xs text-slate-400">Category</Label>
+            <DropdownSelect
+              value={selectedCategoryFilter}
+              onChange={(value) => {
+                setSelectedCategoryFilter(value);
+                setTxOffset(0);
+              }}
+              options={categoryFilterOptions}
+              placeholder="All categories"
+              clearLabel="All categories"
+            />
+          </div>
+          <button
+            onClick={() => {
+              setSelectedMonth(getCurrentMonthValue());
+              setSelectedCategoryFilter('');
+              setTxOffset(0);
+              setBudgetOffset(0);
+            }}
+            className="h-10 rounded-xl border border-slate-700 px-4 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800"
+          >
+            Reset filters
+          </button>
         </div>
       </div>
 
@@ -686,7 +790,7 @@ export const SpendingPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-400">Total Income</p>
-              <h2 className="text-2xl font-bold text-white">${summary.income.toFixed(2)}</h2>
+              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.income, displayCurrency)}</h2>
             </div>
           </div>
         </div>
@@ -699,7 +803,7 @@ export const SpendingPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-400">Total Expenses</p>
-              <h2 className="text-2xl font-bold text-white">${summary.expense.toFixed(2)}</h2>
+              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.expense, displayCurrency)}</h2>
             </div>
           </div>
         </div>
@@ -712,7 +816,7 @@ export const SpendingPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-400">Net Balance</p>
-              <h2 className="text-2xl font-bold text-white">${summary.net.toFixed(2)}</h2>
+              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.net, displayCurrency)}</h2>
             </div>
           </div>
         </div>
@@ -737,9 +841,19 @@ export const SpendingPage: React.FC = () => {
         >
           Recurring
         </button>
+        <button
+          onClick={() => setActiveTab('transfers')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'transfers' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+        >
+          Transfers
+        </button>
       </div>
 
       {isRecurringLoading && activeTab === 'recurring' ? (
+        <div className="flex h-32 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-blue-500" />
+        </div>
+      ) : isTransfersLoading && activeTab === 'transfers' ? (
         <div className="flex h-32 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-blue-500" />
         </div>
@@ -799,7 +913,7 @@ export const SpendingPage: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <span className={`font-semibold ${isIncome ? 'text-emerald-400' : 'text-slate-200'}`}>
-                            {isIncome ? '+' : '-'}${parseFloat(tx.amount.toString()).toFixed(2)}
+                            {isIncome ? '+' : '-'}{formatCurrency(parseFloat(tx.amount.toString()), displayCurrency)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -877,11 +991,11 @@ export const SpendingPage: React.FC = () => {
                     <div className="mb-1 flex items-end justify-between">
                       <div>
                         <p className="text-xs text-slate-400">Spent ({monthStartToMonthValue(b.month_start)})</p>
-                        <p className="text-lg font-bold text-white">${spent.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-white">{formatCurrency(spent, displayCurrency)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-slate-400">Budget</p>
-                        <p className="font-semibold text-slate-300">${bAmount.toFixed(2)}</p>
+                        <p className="font-semibold text-slate-300">{formatCurrency(bAmount, displayCurrency)}</p>
                       </div>
                     </div>
                     
@@ -959,7 +1073,7 @@ export const SpendingPage: React.FC = () => {
                           isIncome ? 'text-emerald-400' : 'text-white'
                         }`}
                       >
-                        {isIncome ? '+' : '-'}${Number(r.amount).toFixed(2)}
+                        {isIncome ? '+' : '-'}{formatCurrency(Number(r.amount), displayCurrency)}
                       </p>
                       {r.description && (
                         <p className="mt-0.5 text-sm text-slate-400 truncate">{r.description}</p>
@@ -1024,6 +1138,71 @@ export const SpendingPage: React.FC = () => {
               limit={recurringResponse.limit}
               offset={recurringResponse.offset}
               onPageChange={setRecurringOffset}
+            />
+          )}
+        </div>
+      ) : activeTab === 'transfers' ? (
+        <div className="space-y-4 animate-in fade-in duration-300">
+          <h3 className="text-xl font-semibold text-white">Transfer History</h3>
+          {transferItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-800/30 p-12 text-center">
+              <div className="mb-4 rounded-full bg-slate-800 p-4">
+                <ArrowRightLeft className="h-8 w-8 text-slate-500" />
+              </div>
+              <h3 className="mb-2 text-lg font-medium text-white">No transfers yet</h3>
+              <p className="text-slate-400">Create an account-to-account transfer from the Transfer button above.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+              <table className="w-full text-left text-sm text-slate-300">
+                <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
+                  <tr>
+                    <th className="px-6 py-4 font-medium">Date</th>
+                    <th className="px-6 py-4 font-medium">Flow</th>
+                    <th className="px-6 py-4 text-right font-medium">Gross</th>
+                    <th className="px-6 py-4 text-right font-medium">Net</th>
+                    <th className="px-6 py-4 font-medium">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {transferItems.map((t) => (
+                    <tr key={t.public_id} className="transition-colors hover:bg-slate-700/30">
+                      <td className="whitespace-nowrap px-6 py-4">
+                        {t.occurred_at && !Number.isNaN(Date.parse(t.occurred_at))
+                          ? new Date(t.occurred_at).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              timeZone: 'UTC',
+                            })
+                          : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-slate-200">
+                          Account #{t.from_account_id} → Account #{t.to_account_id}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {formatCurrency(Number(t.gross_amount), t.from_currency_code)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {formatCurrency(Number(t.net_amount_received), t.to_currency_code)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="truncate max-w-[280px] text-slate-400">{t.notes || '-'}</p>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {transfersResponse && (
+            <Pagination
+              total={transfersResponse.total}
+              limit={transfersResponse.limit}
+              offset={transfersResponse.offset}
+              onPageChange={setTransferOffset}
             />
           )}
         </div>
@@ -1176,10 +1355,17 @@ export const SpendingPage: React.FC = () => {
               {!editingRecurring && (
                 <div>
                   <Label htmlFor="rec-anchor" className="mb-2 block">Start Date</Label>
-                  <Input
-                    id="rec-anchor"
-                    type="date"
-                    {...registerRecurringField('anchor_date')}
+                  <Controller
+                    control={recurringControl}
+                    name="anchor_date"
+                    render={({ field }) => (
+                      <DatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select start date"
+                        required
+                      />
+                    )}
                   />
                   {recurringErrors.anchor_date && (
                     <p className="mt-2 text-sm text-rose-400">{recurringErrors.anchor_date.message}</p>
@@ -1190,11 +1376,20 @@ export const SpendingPage: React.FC = () => {
               {/* End date (optional) */}
               <div>
                 <Label htmlFor="rec-end" className="mb-2 block">End Date <span className="text-slate-500">(optional)</span></Label>
-                <Input
-                  id="rec-end"
-                  type="date"
-                  {...registerRecurringField('end_date')}
+                <Controller
+                  control={recurringControl}
+                  name="end_date"
+                  render={({ field }) => (
+                    <DatePicker
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      placeholder="Select end date"
+                    />
+                  )}
                 />
+                {recurringErrors.end_date && (
+                  <p className="mt-2 text-sm text-rose-400">{recurringErrors.end_date.message}</p>
+                )}
               </div>
 
               {/* Description */}
@@ -1274,7 +1469,7 @@ export const SpendingPage: React.FC = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Amount</label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{displayCurrency}</span>
                     <input
                       type="number"
                       step="0.01"
@@ -1296,6 +1491,17 @@ export const SpendingPage: React.FC = () => {
                     onChange={setCategoryId}
                     options={categoryOptions}
                     placeholder="Select category"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">Wallet / Account (Optional)</label>
+                  <DropdownSelect
+                    value={accountId}
+                    onChange={setAccountId}
+                    options={accountOptions}
+                    placeholder="Unassigned"
+                    clearLabel="Unassigned"
                   />
                 </div>
 
@@ -1588,6 +1794,93 @@ export const SpendingPage: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isTransferModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" onClick={() => setIsTransferModalOpen(false)} />
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">Transfer Between Wallets/Accounts</h3>
+              <button
+                onClick={() => setIsTransferModalOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form
+              className="space-y-4 p-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!transferFromAccountId || !transferToAccountId || !transferAmount) return;
+                createTransferMutation.mutate();
+              }}
+            >
+              <div>
+                <Label className="mb-2 block">From</Label>
+                <DropdownSelect value={transferFromAccountId} onChange={setTransferFromAccountId} options={accountOptions} placeholder="Select source account" />
+              </div>
+              <div>
+                <Label className="mb-2 block">To</Label>
+                <DropdownSelect value={transferToAccountId} onChange={setTransferToAccountId} options={accountOptions} placeholder="Select destination account" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label className="mb-2 block">Amount</Label>
+                  <Input type="number" min="0.01" step="0.01" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" required />
+                </div>
+                <div>
+                  <Label className="mb-2 block">Date</Label>
+                  <DatePicker value={transferDate} onChange={setTransferDate} required />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <Label className="mb-2 block">FX Rate (optional)</Label>
+                  <Input type="number" min="0" step="0.0000000001" value={transferFxRate} onChange={(e) => setTransferFxRate(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="mb-2 block">FX Fee</Label>
+                  <Input type="number" min="0" step="0.01" value={transferFxFee} onChange={(e) => setTransferFxFee(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="mb-2 block">Platform Fee</Label>
+                  <Input type="number" min="0" step="0.01" value={transferPlatformFee} onChange={(e) => setTransferPlatformFee(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="mb-2 block">Tax</Label>
+                  <Input type="number" min="0" step="0.01" value={transferTax} onChange={(e) => setTransferTax(e.target.value)} />
+                </div>
+              </div>
+              <p className="text-xs text-slate-400">
+                Same-currency transfer: FX rate can be empty. Cross-currency transfer: provide FX rate and optional fee/tax charges.
+              </p>
+              <div>
+                <Label className="mb-2 block">Notes (optional)</Label>
+                <Input value={transferNotes} onChange={(e) => setTransferNotes(e.target.value)} placeholder="e.g. Top-up to wallet" />
+              </div>
+              <div className="mt-6 flex gap-3">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setIsTransferModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={
+                    createTransferMutation.isPending ||
+                    !transferFromAccountId ||
+                    !transferToAccountId ||
+                    !transferAmount ||
+                    transferFromAccountId === transferToAccountId
+                  }
+                >
+                  {createTransferMutation.isPending ? 'Transferring...' : 'Create Transfer'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
