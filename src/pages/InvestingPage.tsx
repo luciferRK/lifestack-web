@@ -261,7 +261,7 @@ export const InvestingPage: React.FC = () => {
       holdings.filter((holding) => {
         const accountMatch = !holdingsAccountFilter || holding.account_name === holdingsAccountFilter;
         const currencyMatch =
-          !holdingsCurrencyFilter || holding.currency.toUpperCase() === holdingsCurrencyFilter.toUpperCase();
+          !holdingsCurrencyFilter || holding.currency?.toUpperCase() === holdingsCurrencyFilter.toUpperCase();
         return accountMatch && currencyMatch;
       }),
     [holdings, holdingsAccountFilter, holdingsCurrencyFilter]
@@ -271,7 +271,7 @@ export const InvestingPage: React.FC = () => {
       cashBalances.filter((balance) => {
         const accountMatch = !cashAccountFilter || balance.account_name === cashAccountFilter;
         const currencyMatch =
-          !cashCurrencyFilter || balance.currency.toUpperCase() === cashCurrencyFilter.toUpperCase();
+          !cashCurrencyFilter || balance.currency?.toUpperCase() === cashCurrencyFilter.toUpperCase();
         return accountMatch && currencyMatch;
       }),
     [cashBalances, cashAccountFilter, cashCurrencyFilter]
@@ -567,7 +567,7 @@ export const InvestingPage: React.FC = () => {
                       <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</td>
                       <td className="px-4 py-3">{formatCurrency(toNumber(h.quantity) * toNumber(h.avg_cost), h.currency, currencyDisplayPreference)}</td>
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => deleteHoldingMutation.mutate(h.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
+                        <button disabled={deleteHoldingMutation.isPending} onClick={() => deleteHoldingMutation.mutate(h.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </td>
@@ -669,7 +669,7 @@ export const InvestingPage: React.FC = () => {
                       <td className="px-4 py-3">{formatCurrency(c.balance, c.currency, currencyDisplayPreference)}</td>
                       <td className="px-4 py-3">{Number.isNaN(new Date(c.as_of).getTime()) ? "N/A" : new Date(c.as_of).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => deleteCashMutation.mutate(c.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
+                        <button disabled={deleteCashMutation.isPending} onClick={() => deleteCashMutation.mutate(c.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </td>

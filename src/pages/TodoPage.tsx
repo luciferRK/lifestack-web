@@ -212,7 +212,8 @@ export const TodoPage: React.FC = () => {
                           data-testid={`todo-toggle-${todo.public_id}`}
                           aria-label={todo.completed ? `Mark todo as incomplete: ${todo.title}` : `Mark todo as complete: ${todo.title}`}
                           onClick={() => toggleMutation.mutate(todo)}
-                          className="text-slate-400 hover:text-blue-500 transition-colors"
+                          disabled={toggleMutation.isPending}
+                          className="text-slate-400 hover:text-blue-500 transition-colors disabled:opacity-50"
                         >
                           {todo.completed ? <CheckCircle2 className="h-6 w-6 text-blue-500" /> : <Circle className="h-6 w-6" />}
                         </button>

@@ -82,7 +82,22 @@ export const VoiceAgentWidget: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [launcherPos, setLauncherPos] = useState<{ x: number; y: number }>(() => getDefaultLauncherPos());
+  const [launcherPos, setLauncherPos] = useState<{ x: number; y: number }>(() => {
+    const defaultPos = getDefaultLauncherPos();
+    if (typeof window === 'undefined') return defaultPos;
+    try {
+      const saved = window.localStorage.getItem(launcherStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { x?: number; y?: number };
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return clampLauncherPos({ x: parsed.x, y: parsed.y });
+        }
+      }
+    } catch {
+      // Ignore
+    }
+    return defaultPos;
+  });
   
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -100,19 +115,7 @@ export const VoiceAgentWidget: React.FC = () => {
     }
   }, [messages, isOpen]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const saved = window.localStorage.getItem(launcherStorageKey);
-    if (!saved) return;
-    try {
-      const parsed = JSON.parse(saved) as { x?: number; y?: number };
-      if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
-        setLauncherPos(clampLauncherPos({ x: parsed.x, y: parsed.y }));
-      }
-    } catch {
-      // Ignore invalid cached values and keep defaults.
-    }
-  }, []);
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
