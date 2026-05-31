@@ -1272,9 +1272,23 @@ export const SpendingPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-1">
-                          <span className="text-slate-200">
-                            Account #{t.from_account_id} → Account #{t.to_account_id}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex max-w-[160px] truncate rounded-full bg-slate-700/60 px-2.5 py-1 text-xs text-slate-200">
+                              {t.from_account_name ?? `Account #${t.from_account_id}`}
+                            </span>
+                            {t.from_account_type ? <AccountTypeBadge type={t.from_account_type} /> : null}
+                            <span className="rounded-full border border-slate-600 bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
+                              {t.from_module}
+                            </span>
+                            <span className="text-slate-500">→</span>
+                            <span className="inline-flex max-w-[160px] truncate rounded-full bg-slate-700/60 px-2.5 py-1 text-xs text-slate-200">
+                              {t.to_account_name ?? `Account #${t.to_account_id}`}
+                            </span>
+                            {t.to_account_type ? <AccountTypeBadge type={t.to_account_type} /> : null}
+                            <span className="rounded-full border border-slate-600 bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
+                              {t.to_module}
+                            </span>
+                          </div>
                           {t.fx_rate_used ? (
                             <div className="flex flex-wrap gap-1">
                               <span className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-300">

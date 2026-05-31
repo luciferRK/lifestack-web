@@ -78,6 +78,12 @@ export interface CapitalTransfer {
   to_module: 'spending' | 'investing';
   from_account_id: number;
   to_account_id: number;
+  from_account_public_id: string | null;
+  to_account_public_id: string | null;
+  from_account_name: string | null;
+  to_account_name: string | null;
+  from_account_type: 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card' | null;
+  to_account_type: 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card' | null;
   from_currency_code: string;
   to_currency_code: string;
   gross_amount: string;
