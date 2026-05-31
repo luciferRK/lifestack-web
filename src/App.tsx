@@ -78,98 +78,100 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         </ul>
       </nav>
       <main className="flex flex-1 flex-col text-slate-100">
-        <header className="flex items-center justify-between border-b border-slate-800/60 px-8 py-4">
-          <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
-              <span className="text-slate-400">Workspace</span>
-              <span className="font-semibold text-slate-100">Personal</span>
-            </div>
-            <div className="hidden items-center gap-2 lg:flex">
-              <Link
-                to="/todo"
-                data-testid="header-quick-todo"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Todo
-              </Link>
-              <Link
-                to="/spending"
-                data-testid="header-quick-spending"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Spending
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <NavLink
-              to="/notifications"
-              aria-label="Notifications"
-              data-testid="header-notifications"
-              className={({ isActive }) =>
-                `relative inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
-                  isActive
-                    ? 'border-cyan-500/60 bg-cyan-500/10 text-cyan-300'
-                    : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`
-              }
-              title="Notifications"
-            >
-              <Bell className="h-4 w-4" />
-              {(unread?.count ?? 0) > 0 ? (
-                <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold text-white">
-                  {unread?.count}
-                </span>
-              ) : null}
-            </NavLink>
-            <details className="relative hidden sm:block">
-              <summary
-                data-testid="header-profile-menu"
-                className="list-none inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
-              >
-                <UserCircle2 className="h-4 w-4 text-slate-400" />
-                <span className="max-w-[140px] truncate">{user?.username ?? user?.email ?? 'Profile'}</span>
-                <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
-              </summary>
-              <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-2xl shadow-black/40">
-                <div className="mb-2 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Signed In</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-slate-100">{user?.username ?? 'Profile'}</p>
-                  <p className="truncate text-xs text-slate-400">{user?.email ?? ''}</p>
-                </div>
-                <Link
-                  to="/settings"
-                  className="block rounded-lg px-3 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
-                >
-                  Workspace Settings
-                </Link>
-                <Link
-                  to="/notifications"
-                  className="block rounded-lg px-3 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
-                >
-                  Notifications
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-60"
-                >
-                  {isLoggingOut ? 'Logging out...' : 'Logout'}
-                </button>
+        <header className="border-b border-slate-800/60 py-4">
+          <div className="mx-auto w-full max-w-[var(--max-content-width)] px-[var(--page-padding-x)] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+                <span className="text-slate-400">Workspace</span>
+                <span className="font-semibold text-slate-100">Personal</span>
               </div>
-            </details>
-            <button
-              data-testid="header-logout"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
-            </button>
+              <div className="hidden items-center gap-2 lg:flex">
+                <Link
+                  to="/todo"
+                  data-testid="header-quick-todo"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Todo
+                </Link>
+                <Link
+                  to="/spending"
+                  data-testid="header-quick-spending"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Spending
+                </Link>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <NavLink
+                to="/notifications"
+                aria-label="Notifications"
+                data-testid="header-notifications"
+                className={({ isActive }) =>
+                  `relative inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
+                    isActive
+                      ? 'border-cyan-500/60 bg-cyan-500/10 text-cyan-300'
+                      : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`
+                }
+                title="Notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {(unread?.count ?? 0) > 0 ? (
+                  <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold text-white">
+                    {unread?.count}
+                  </span>
+                ) : null}
+              </NavLink>
+              <details className="relative hidden sm:block">
+                <summary
+                  data-testid="header-profile-menu"
+                  className="list-none inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
+                >
+                  <UserCircle2 className="h-4 w-4 text-slate-400" />
+                  <span className="max-w-[140px] truncate">{user?.username ?? user?.email ?? 'Profile'}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+                </summary>
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-2xl shadow-black/40">
+                  <div className="mb-2 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Signed In</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-slate-100">{user?.username ?? 'Profile'}</p>
+                    <p className="truncate text-xs text-slate-400">{user?.email ?? ''}</p>
+                  </div>
+                  <Link
+                    to="/settings"
+                    className="block rounded-lg px-3 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
+                  >
+                    Workspace Settings
+                  </Link>
+                  <Link
+                    to="/notifications"
+                    className="block rounded-lg px-3 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
+                  >
+                    Notifications
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-60"
+                  >
+                    {isLoggingOut ? 'Logging out...' : 'Logout'}
+                  </button>
+                </div>
+              </details>
+              <button
+                data-testid="header-logout"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+              </button>
+            </div>
           </div>
         </header>
         <div className="flex-1">

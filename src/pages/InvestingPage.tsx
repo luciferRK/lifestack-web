@@ -368,7 +368,7 @@ export const InvestingPage: React.FC = () => {
         subtitle="Manage holdings and cash balances for your workspace."
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
+      <div className="mb-6 grid gap-6 md:grid-cols-3">
         <SummaryCard
           label="Portfolio value"
           value={summary?.portfolio_value != null ? formatCurrency(summary.portfolio_value, summary.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}

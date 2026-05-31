@@ -46,22 +46,21 @@ export const DashboardPage: React.FC = () => {
       : null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <PageShell>
-        <PageHero
-          title="Dashboard"
-          subtitle="Live totals for tasks, spending, and portfolio activity."
-          actions={(
-            <button
-              onClick={() => void refetch()}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
-            >
-              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          )}
-        />
-        <p className="-mt-5 mb-6 text-xs uppercase tracking-[0.35em] text-slate-500">Workspace snapshot</p>
+    <PageShell>
+      <PageHero
+        title="Dashboard"
+        subtitle="Live totals for tasks, spending, and portfolio activity."
+        actions={(
+          <button
+            onClick={() => void refetch()}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        )}
+      />
+      <p className="mb-6 text-xs uppercase tracking-[0.35em] text-slate-500">Workspace snapshot</p>
 
         {isLoading ? (
           <div className="flex min-h-[320px] items-center justify-center rounded-3xl border border-slate-800 bg-slate-900/60">
@@ -149,7 +148,6 @@ export const DashboardPage: React.FC = () => {
           </>
         ) : null}
       </PageShell>
-    </div>
   );
 };
 

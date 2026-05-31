@@ -194,7 +194,7 @@ export const MasterConfigPage: React.FC = () => {
   };
 
   return (
-    <PageShell className="space-y-8">
+    <PageShell className="space-y-6">
       <PageHero
         title="Master Configuration"
         subtitle="Manage shared setup for spending and investing: currencies, accounts, categories, and recurrence anchors."

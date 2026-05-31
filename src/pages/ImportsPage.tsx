@@ -91,7 +91,7 @@ export const ImportsPage: React.FC = () => {
         subtitle="Upload CSV templates for transactions, budgets, and holdings."
       />
 
-      <section className="mb-8 rounded-xl border border-slate-800 bg-slate-800/30 p-5">
+      <section className="mb-6 rounded-xl border border-slate-800 bg-slate-800/30 p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">New import</h2>
         <div className="grid gap-3 md:grid-cols-[2fr,3fr,auto,auto]">
           <select

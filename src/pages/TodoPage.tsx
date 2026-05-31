@@ -134,7 +134,7 @@ export const TodoPage: React.FC = () => {
         )}
       />
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <section>
           <h2 className="mb-3 text-lg font-semibold text-white">New task</h2>
           <form data-testid="todo-new-form" onSubmit={handleCreate} className="mb-6 rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
@@ -167,7 +167,7 @@ export const TodoPage: React.FC = () => {
           </form>
 
           <CompactFilterBar
-            className="mb-4"
+            className="mb-6"
             title="Task filters"
             onReset={() => {
               setStatusFilter('all');

@@ -814,7 +814,7 @@ export const SpendingPage: React.FC = () => {
       </CompactFilterBar>
 
       {/* Summary Cards */}
-      <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
         <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/80 p-6 backdrop-blur-xl transition-all hover:border-slate-600">
           <div className="absolute -right-4 -top-4 rounded-full bg-emerald-500/10 p-8 blur-2xl" />
           <div className="flex items-center gap-4">
