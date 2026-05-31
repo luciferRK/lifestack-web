@@ -35,6 +35,7 @@ import {
   Clock,
   ToggleLeft,
   ArrowRightLeft,
+  Landmark,
 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { DropdownSelect } from '../components/DropdownSelect';
@@ -205,6 +206,10 @@ export const SpendingPage: React.FC = () => {
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isQuickAccountModalOpen, setIsQuickAccountModalOpen] = useState(false);
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountType, setNewAccountType] = useState<'bank' | 'wallet' | 'card' | 'gift_card'>('wallet');
+  const [newAccountCurrency, setNewAccountCurrency] = useState('USD');
   const [transferFromAccountId, setTransferFromAccountId] = useState('');
   const [transferToAccountId, setTransferToAccountId] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -248,6 +253,16 @@ export const SpendingPage: React.FC = () => {
         })),
     [spendingAccounts]
   );
+  const accountNameById = useMemo(
+    () => new Map(spendingAccounts.map((account) => [account.public_id, account.name])),
+    [spendingAccounts]
+  );
+  const accountTypeOptions: Array<{ value: 'bank' | 'wallet' | 'card' | 'gift_card'; label: string }> = [
+    { value: 'wallet', label: 'Wallet' },
+    { value: 'bank', label: 'Bank' },
+    { value: 'card', label: 'Card' },
+    { value: 'gift_card', label: 'Gift Card' },
+  ];
 
   const {
     control: budgetControl,
@@ -478,6 +493,24 @@ export const SpendingPage: React.FC = () => {
       setTransferOffset(0);
     },
   });
+  const createAccountMutation = useMutation({
+    mutationFn: () =>
+      financeService.createAccount({
+        name: newAccountName.trim(),
+        account_type: newAccountType,
+        default_currency_code: newAccountCurrency.trim().toUpperCase(),
+      }),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts', 'spending'] });
+      setAccountId(created.public_id);
+      if (!transferFromAccountId) setTransferFromAccountId(created.public_id);
+      setNewAccountName('');
+      setNewAccountType('wallet');
+      setNewAccountCurrency(created.default_currency_code);
+      setIsQuickAccountModalOpen(false);
+    },
+  });
 
   const handleSaveTransaction = (e: React.FormEvent) => {
     e.preventDefault();
@@ -693,10 +726,10 @@ export const SpendingPage: React.FC = () => {
             Track your finances across the workspace for {monthRange.label}.
           </p>
         </div>
-        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex w-full flex-wrap items-center gap-3 lg:flex-nowrap">
           <button
             onClick={openTransactionModalForNew}
-            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.01] hover:shadow-blue-500/40 active:scale-95"
+            className="group relative flex h-12 min-w-[170px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.01] hover:shadow-blue-500/40 active:scale-95"
           >
             <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
             <Plus className="h-5 w-5" />
@@ -704,28 +737,28 @@ export const SpendingPage: React.FC = () => {
           </button>
           <button
             onClick={openCategoryModal}
-            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900 px-5 font-semibold text-slate-200 shadow-lg transition-all hover:bg-slate-800 active:scale-95"
+            className="group relative flex h-12 min-w-[170px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900 px-5 font-semibold text-slate-200 shadow-lg transition-all hover:bg-slate-800 active:scale-95"
           >
             <Brush className="h-5 w-5" />
             <span className="whitespace-nowrap">Manage Categories</span>
           </button>
           <button
             onClick={openBudgetModalForNew}
-            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
+            className="group relative flex h-12 min-w-[150px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
           >
             <Target className="h-5 w-5" />
             <span className="whitespace-nowrap">Set Budget</span>
           </button>
           <button
             onClick={openRecurringModalForNew}
-            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
+            className="group relative flex h-12 min-w-[160px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
           >
             <RefreshCw className="h-5 w-5" />
             <span className="whitespace-nowrap">Add Recurring</span>
           </button>
           <button
             onClick={() => setIsTransferModalOpen(true)}
-            className="group relative flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
+            className="group relative flex h-12 min-w-[130px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
           >
             <ArrowRightLeft className="h-5 w-5" />
             <span className="whitespace-nowrap">Transfer</span>
@@ -879,7 +912,9 @@ export const SpendingPage: React.FC = () => {
                   <tr>
                     <th className="px-6 py-4 font-medium">Date</th>
                     <th className="px-6 py-4 font-medium">Category</th>
-                    <th className="px-6 py-4 font-medium">Description</th>
+                    <th className="px-6 py-4 font-medium">Details</th>
+                    <th className="px-6 py-4 font-medium">Wallet</th>
+                    <th className="px-6 py-4 font-medium">Tags</th>
                     <th className="px-6 py-4 text-right font-medium">Amount</th>
                     <th className="px-6 py-4 text-right font-medium">Action</th>
                   </tr>
@@ -909,7 +944,35 @@ export const SpendingPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <p className="truncate max-w-[200px] text-slate-200">{tx.description || '-'}</p>
+                          <p className="max-w-[240px] truncate text-slate-200">{tx.description || '-'}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex max-w-[180px] truncate rounded-full bg-slate-700/60 px-2.5 py-1 text-xs text-slate-200">
+                            {tx.wallet_name ||
+                              (tx.account_id ? accountNameById.get(tx.account_id) : null) ||
+                              '-'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {tx.labels ? (
+                            <div className="flex max-w-[220px] flex-wrap gap-1">
+                              {tx.labels
+                                .split(',')
+                                .map((label) => label.trim())
+                                .filter(Boolean)
+                                .slice(0, 3)
+                                .map((label, index) => (
+                                  <span
+                                    key={`${tx.public_id}-${label}-${index}`}
+                                    className="rounded-full border border-slate-600 bg-slate-800 px-2 py-0.5 text-xs text-slate-300"
+                                  >
+                                    {label}
+                                  </span>
+                                ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <span className={`font-semibold ${isIncome ? 'text-emerald-400' : 'text-slate-200'}`}>
@@ -919,14 +982,14 @@ export const SpendingPage: React.FC = () => {
                         <td className="px-6 py-4 text-right">
                           <button
                             onClick={() => openTransactionModalForEdit(tx)}
-                            className="inline-flex rounded-lg p-2 text-slate-500 opacity-0 transition-all hover:bg-blue-500/10 hover:text-blue-400 group-hover:opacity-100"
+                            className="inline-flex rounded-lg p-2 text-slate-500 transition-all hover:bg-blue-500/10 hover:text-blue-400"
                             title="Edit transaction"
                           >
                             <Edit2 className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => deleteMutation.mutate(tx.public_id)}
-                            className="ml-2 inline-flex rounded-lg p-2 text-slate-500 opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                            className="ml-2 inline-flex rounded-lg p-2 text-slate-500 transition-all hover:bg-red-500/10 hover:text-red-400"
                             title="Delete transaction"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1503,6 +1566,17 @@ export const SpendingPage: React.FC = () => {
                     placeholder="Unassigned"
                     clearLabel="Unassigned"
                   />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewAccountCurrency(displayCurrency || 'USD');
+                      setIsQuickAccountModalOpen(true);
+                    }}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300"
+                  >
+                    <Landmark className="h-3.5 w-3.5" />
+                    Create account
+                  </button>
                 </div>
 
                 {/* Date */}
@@ -1798,6 +1872,83 @@ export const SpendingPage: React.FC = () => {
         </div>
       )}
 
+      {isQuickAccountModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-0">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsQuickAccountModalOpen(false)}
+          />
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">Create Wallet / Account</h3>
+              <button
+                onClick={() => setIsQuickAccountModalOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form
+              className="space-y-4 p-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newAccountName.trim()) return;
+                createAccountMutation.mutate();
+              }}
+            >
+              <div>
+                <Label className="mb-2 block">Account Name</Label>
+                <Input
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  placeholder="e.g. Main Wallet"
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block">Type</Label>
+                <DropdownSelect
+                  value={newAccountType}
+                  onChange={(value) => setNewAccountType(value as 'bank' | 'wallet' | 'card' | 'gift_card')}
+                  options={accountTypeOptions}
+                  placeholder="Select account type"
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block">Default Currency</Label>
+                <Input
+                  value={newAccountCurrency}
+                  onChange={(e) => setNewAccountCurrency(e.target.value.toUpperCase())}
+                  placeholder="USD"
+                  maxLength={3}
+                />
+              </div>
+              {createAccountMutation.isError ? (
+                <p className="text-sm text-rose-400">
+                  Failed to create account. Check fields and try again.
+                </p>
+              ) : null}
+              <div className="mt-6 flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setIsQuickAccountModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={createAccountMutation.isPending || !newAccountName.trim() || newAccountCurrency.trim().length !== 3}
+                >
+                  {createAccountMutation.isPending ? 'Creating...' : 'Create Account'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isTransferModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" onClick={() => setIsTransferModalOpen(false)} />
@@ -1826,6 +1977,19 @@ export const SpendingPage: React.FC = () => {
               <div>
                 <Label className="mb-2 block">To</Label>
                 <DropdownSelect value={transferToAccountId} onChange={setTransferToAccountId} options={accountOptions} placeholder="Select destination account" />
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewAccountCurrency(displayCurrency || 'USD');
+                    setIsQuickAccountModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300"
+                >
+                  <Landmark className="h-3.5 w-3.5" />
+                  Need another account? Create one now
+                </button>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>

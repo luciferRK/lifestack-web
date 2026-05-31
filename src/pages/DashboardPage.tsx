@@ -1,51 +1,25 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '../store/authStore';
-import { authService } from '../services/auth';
 import { dashboardService } from '../services/dashboard';
-import { notificationsService } from '../services/notifications';
 import { summariesService } from '../services/summaries';
-import { spendingService } from '../services/spending';
 import { financeService } from '../services/finance';
 import { RefreshCw, AlertCircle, Clock3, CircleAlert, PiggyBank, Wallet, BriefcaseBusiness } from 'lucide-react';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
 
 export const DashboardPage: React.FC = () => {
-  const clearSession = useAuthStore((state) => state.clearSession);
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['dashboard', 'summary'],
     queryFn: () => dashboardService.getSummary(),
   });
-  const { data: unread } = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: () => notificationsService.unreadCount(),
-  });
   const { data: latestSummary } = useQuery({
     queryKey: ['summaries', 'weekly', 'latest'],
     queryFn: () => summariesService.latestWeekly(),
-  });
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const { data: trendData } = useQuery({
-    queryKey: ['spending', 'trends', currentMonth],
-    queryFn: () => spendingService.getTrends(currentMonth, currentMonth),
-  });
-  const { data: recurringData } = useQuery({
-    queryKey: ['spending', 'recurring', 'overview'],
-    queryFn: () => spendingService.getRecurring(50, 0),
   });
   const { data: financeSettings } = useQuery({
     queryKey: ['finance', 'settings'],
     queryFn: () => financeService.getSettings(),
   });
   const displayCurrency = financeSettings?.reporting_currency_code ?? 'USD';
-
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-    } finally {
-      clearSession();
-    }
-  };
 
   const generatedAt = data
     ? new Date(data.system.generated_at).toLocaleString(undefined, {
@@ -85,12 +59,6 @@ export const DashboardPage: React.FC = () => {
             >
               <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
               Refresh
-            </button>
-            <button
-              onClick={handleLogout}
-              className="rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white transition hover:bg-slate-700"
-            >
-              Logout
             </button>
           </div>
         </header>
@@ -138,13 +106,6 @@ export const DashboardPage: React.FC = () => {
                 icon={<BriefcaseBusiness className="h-5 w-5" />}
                 accent="from-amber-500/25 to-orange-500/10"
               />
-              <MetricCard
-                label="Unread notifications"
-                value={String(unread?.count ?? 0)}
-                note="In-app inbox"
-                icon={<AlertCircle className="h-5 w-5" />}
-                accent="from-rose-500/25 to-pink-500/10"
-              />
             </div>
 
             <div className="mt-6">
@@ -178,12 +139,8 @@ export const DashboardPage: React.FC = () => {
                     value={latestWeeklyStartLabel}
                   />
                   <StatRow
-                    label="This month transactions"
-                    value={String(trendData?.months?.[0]?.transaction_count ?? 0)}
-                  />
-                  <StatRow
-                    label="Active recurring rules"
-                    value={String(recurringData?.items?.filter((r) => r.is_active)?.length ?? 0)}
+                    label="Summary status"
+                    value={`${data.todos.status} / ${data.spending.status} / ${data.investing.status}`}
                   />
                 </div>
               </section>
