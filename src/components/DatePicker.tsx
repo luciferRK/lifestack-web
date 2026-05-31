@@ -14,6 +14,7 @@ type DatePickerProps = {
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  testId?: string;
 };
 
 const parseValue = (value: string | null | undefined) => {
@@ -29,6 +30,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   required = false,
   disabled = false,
   className,
+  testId,
 }) => {
   const [open, setOpen] = useState(false);
   const selectedDate = useMemo(() => parseValue(value), [value]);
@@ -38,6 +40,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          data-testid={testId}
           type="button"
           variant="secondary"
           disabled={disabled}

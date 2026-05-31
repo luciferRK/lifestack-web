@@ -3,7 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit2 } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { spendingService } from '../services/spending';
+import { AccountTypeBadge, CurrencyBadge, StatusBadge } from '../components/finance/Badges';
 import { DropdownSelect } from '../components/DropdownSelect';
+import { PageHero } from '../components/layout/PageHero';
+import { PageShell } from '../components/layout/PageShell';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
@@ -14,6 +17,9 @@ export const MasterConfigPage: React.FC = () => {
   const [newAccountType, setNewAccountType] = useState<'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'>('wallet');
   const [newAccountCurrency, setNewAccountCurrency] = useState('');
   const [reportingCurrency, setReportingCurrency] = useState('');
+  const [currencyDisplayPreference, setCurrencyDisplayPreference] = useState<'symbol' | 'code'>('symbol');
+  const [userReportingCurrencyOverride, setUserReportingCurrencyOverride] = useState('');
+  const [userDisplayPreferenceOverride, setUserDisplayPreferenceOverride] = useState('');
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editingAccountName, setEditingAccountName] = useState('');
   const [editingAccountType, setEditingAccountType] = useState<'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'>('wallet');
@@ -36,6 +42,10 @@ export const MasterConfigPage: React.FC = () => {
     queryKey: ['finance', 'settings', 'master-config'],
     queryFn: () => financeService.getSettings(),
   });
+  const { data: userSettings } = useQuery({
+    queryKey: ['finance', 'settings', 'user'],
+    queryFn: () => financeService.getUserSettings(),
+  });
   const { data: categoriesResponse } = useQuery({
     queryKey: ['categories', 'master-config'],
     queryFn: () => spendingService.getCategories(200, 0),
@@ -46,7 +56,12 @@ export const MasterConfigPage: React.FC = () => {
 
   React.useEffect(() => {
     setReportingCurrency(settings?.reporting_currency_code ?? '');
-  }, [settings?.reporting_currency_code]);
+    setCurrencyDisplayPreference(settings?.currency_display_preference ?? 'symbol');
+  }, [settings?.reporting_currency_code, settings?.currency_display_preference]);
+  React.useEffect(() => {
+    setUserReportingCurrencyOverride(userSettings?.reporting_currency_override_code ?? '');
+    setUserDisplayPreferenceOverride(userSettings?.currency_display_preference_override ?? '');
+  }, [userSettings?.reporting_currency_override_code, userSettings?.currency_display_preference_override]);
 
   const currencyOptions = useMemo(
     () => currencies.map((currency) => ({ value: currency.code, label: `${currency.code} ${currency.symbol ?? ''}`.trim() })),
@@ -59,6 +74,14 @@ export const MasterConfigPage: React.FC = () => {
     { value: 'card', label: 'Card' },
     { value: 'gift_card', label: 'Gift Card' },
     { value: 'brokerage', label: 'Brokerage' },
+  ] as const;
+  const currencyDisplayPreferenceOptions = [
+    { value: 'symbol', label: 'Symbol first ($1,250.00)' },
+    { value: 'code', label: 'Code first (USD 1,250.00)' },
+  ] as const;
+  const userDisplayPreferenceOptions = [
+    { value: 'symbol', label: 'Override: Symbol first' },
+    { value: 'code', label: 'Override: Code first' },
   ] as const;
 
   const createAccountMutation = useMutation({
@@ -129,12 +152,29 @@ export const MasterConfigPage: React.FC = () => {
     mutationFn: () =>
       financeService.updateSettings({
         reporting_currency_code: reportingCurrency || null,
+        currency_display_preference: currencyDisplayPreference,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['finance', 'settings'] });
       queryClient.invalidateQueries({ queryKey: ['finance', 'settings', 'master-config'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
+    },
+  });
+  const updateUserSettingsMutation = useMutation({
+    mutationFn: () =>
+      financeService.updateUserSettings({
+        reporting_currency_override_code: userReportingCurrencyOverride || null,
+        currency_display_preference_override:
+          userDisplayPreferenceOverride === ''
+            ? null
+            : (userDisplayPreferenceOverride as 'symbol' | 'code'),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance', 'settings', 'user'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['investing'] });
     },
   });
 
@@ -154,34 +194,83 @@ export const MasterConfigPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full px-8 py-8 space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-white">Master Configuration</h1>
-        <p className="mt-2 text-slate-400">
-          Manage shared setup for spending/investing: currencies, accounts, categories, and recurrence anchors.
-        </p>
-      </header>
+    <PageShell className="space-y-8">
+      <PageHero
+        title="Master Configuration"
+        subtitle="Manage shared setup for spending and investing: currencies, accounts, categories, and recurrence anchors."
+      />
 
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
+      <section data-testid="master-workspace-settings" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
         <h2 className="text-lg font-semibold text-white">Workspace Currency</h2>
         <p className="mt-1 text-sm text-slate-400">
           This reporting currency drives default display in dashboard and spending. Investing still supports native multi-currency holdings.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,auto]">
+        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
           <DropdownSelect
+            testId="master-workspace-currency"
             value={reportingCurrency}
             onChange={setReportingCurrency}
             options={currencyOptions}
             placeholder="Select reporting currency"
             clearLabel="Unset reporting currency"
           />
-          <Button type="button" onClick={() => updateSettingsMutation.mutate()} disabled={updateSettingsMutation.isPending}>
+          <DropdownSelect
+            testId="master-workspace-display-preference"
+            value={currencyDisplayPreference}
+            onChange={(value) => setCurrencyDisplayPreference(value as 'symbol' | 'code')}
+            options={[...currencyDisplayPreferenceOptions]}
+            placeholder="Display preference"
+          />
+          <Button
+            data-testid="master-workspace-save"
+            type="button"
+            onClick={() => updateSettingsMutation.mutate()}
+            disabled={updateSettingsMutation.isPending}
+          >
             {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
+      <section data-testid="master-user-overrides" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
+        <h2 className="text-lg font-semibold text-white">My Display Overrides</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Optional per-user overrides. Leave blank to inherit workspace defaults.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
+          <DropdownSelect
+            testId="master-user-currency-override"
+            value={userReportingCurrencyOverride}
+            onChange={setUserReportingCurrencyOverride}
+            options={currencyOptions}
+            placeholder="Inherit workspace currency"
+            clearLabel="Inherit workspace currency"
+          />
+          <DropdownSelect
+            testId="master-user-display-override"
+            value={userDisplayPreferenceOverride}
+            onChange={setUserDisplayPreferenceOverride}
+            options={[...userDisplayPreferenceOptions]}
+            placeholder="Inherit workspace display style"
+            clearLabel="Inherit workspace display style"
+          />
+          <Button
+            data-testid="master-user-save-override"
+            type="button"
+            onClick={() => updateUserSettingsMutation.mutate()}
+            disabled={updateUserSettingsMutation.isPending}
+          >
+            {updateUserSettingsMutation.isPending ? 'Saving...' : 'Save Override'}
+          </Button>
+        </div>
+        {userSettings ? (
+          <p className="mt-3 text-xs text-slate-500">
+            Effective now: {(userSettings.effective_reporting_currency_code ?? 'Unconfigured')} / {userSettings.effective_currency_display_preference}
+          </p>
+        ) : null}
+      </section>
+
+      <section data-testid="master-accounts-section" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
         <h2 className="text-lg font-semibold text-white">Accounts and Wallets</h2>
         <p className="mt-1 text-sm text-slate-400">
           Use these for spending source selection, transfer flows, and investing account linkage.
@@ -189,23 +278,27 @@ export const MasterConfigPage: React.FC = () => {
 
         <div className="mt-4 grid gap-3 lg:grid-cols-4">
           <Input
+            data-testid="master-account-name"
             value={newAccountName}
             onChange={(e) => setNewAccountName(e.target.value)}
             placeholder="Account name"
           />
           <DropdownSelect
+            testId="master-account-type"
             value={newAccountType}
             onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
             options={[...accountTypeOptions]}
             placeholder="Account type"
           />
           <DropdownSelect
+            testId="master-account-currency"
             value={newAccountCurrency}
             onChange={setNewAccountCurrency}
             options={currencyOptions}
             placeholder="Default currency"
           />
           <Button
+            data-testid="master-account-create"
             type="button"
             onClick={() => createAccountMutation.mutate()}
             disabled={
@@ -217,7 +310,7 @@ export const MasterConfigPage: React.FC = () => {
         </div>
 
         {editingAccountId ? (
-          <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
+          <div data-testid="master-account-editor" className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-white">Edit account</h3>
               <button
@@ -229,20 +322,28 @@ export const MasterConfigPage: React.FC = () => {
               </button>
             </div>
             <div className="grid gap-3 lg:grid-cols-5">
-              <Input value={editingAccountName} onChange={(e) => setEditingAccountName(e.target.value)} placeholder="Account name" />
+              <Input
+                data-testid="master-account-edit-name"
+                value={editingAccountName}
+                onChange={(e) => setEditingAccountName(e.target.value)}
+                placeholder="Account name"
+              />
               <DropdownSelect
+                testId="master-account-edit-type"
                 value={editingAccountType}
                 onChange={(value) => setEditingAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
                 options={[...accountTypeOptions]}
                 placeholder="Account type"
               />
               <DropdownSelect
+                testId="master-account-edit-currency"
                 value={editingAccountCurrency}
                 onChange={setEditingAccountCurrency}
                 options={currencyOptions}
                 placeholder="Default currency"
               />
               <DropdownSelect
+                testId="master-account-edit-status"
                 value={editingAccountIsActive ? 'active' : 'inactive'}
                 onChange={(value) => setEditingAccountIsActive(value === 'active')}
                 options={[
@@ -252,6 +353,7 @@ export const MasterConfigPage: React.FC = () => {
                 placeholder="Status"
               />
               <Button
+                data-testid="master-account-save"
                 type="button"
                 onClick={() => updateAccountMutation.mutate()}
                 disabled={
@@ -280,14 +382,19 @@ export const MasterConfigPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-800">
               {accounts.map((account) => (
-                <tr key={account.public_id}>
+                <tr key={account.public_id} data-testid={`master-account-row-${account.public_id}`}>
                   <td className="px-4 py-3">{account.name}</td>
-                  <td className="px-4 py-3 capitalize">{account.account_type.replace('_', ' ')}</td>
-                  <td className="px-4 py-3">{account.default_currency_code}</td>
+                  <td className="px-4 py-3">
+                    <AccountTypeBadge type={account.account_type} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <CurrencyBadge code={account.default_currency_code} />
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"
                       onClick={() => openAccountEditor(account)}
+                      data-testid={`master-account-edit-${account.public_id}`}
                       className="inline-flex items-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
                       title="Edit account"
                     >
@@ -310,20 +417,23 @@ export const MasterConfigPage: React.FC = () => {
                     </Button>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-9 px-3"
-                      onClick={() =>
-                        toggleAccountActiveMutation.mutate({
-                          publicId: account.public_id,
-                          isActive: !account.is_active,
-                        })
-                      }
-                      disabled={toggleAccountActiveMutation.isPending}
-                    >
-                      {account.is_active ? 'Active' : 'Inactive'}
-                    </Button>
+                    <div className="inline-flex items-center gap-2">
+                      <StatusBadge active={account.is_active} />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-9 px-3"
+                        onClick={() =>
+                          toggleAccountActiveMutation.mutate({
+                            publicId: account.public_id,
+                            isActive: !account.is_active,
+                          })
+                        }
+                        disabled={toggleAccountActiveMutation.isPending}
+                      >
+                        Toggle
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -339,7 +449,7 @@ export const MasterConfigPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
+      <section data-testid="master-categories-section" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
         <h2 className="text-lg font-semibold text-white">Categories and Recurrence</h2>
         <p className="mt-1 text-sm text-slate-400">
           Categories and recurring rule operations stay in Spending for now; this section gives quick visibility.
@@ -358,7 +468,7 @@ export const MasterConfigPage: React.FC = () => {
         </div>
 
         {editingCategoryId ? (
-          <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
+          <div data-testid="master-category-editor" className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-white">Edit category</h3>
               <button
@@ -370,10 +480,26 @@ export const MasterConfigPage: React.FC = () => {
               </button>
             </div>
             <div className="grid gap-3 md:grid-cols-4">
-              <Input value={editingCategoryName} onChange={(e) => setEditingCategoryName(e.target.value)} placeholder="Category name" />
-              <Input type="color" value={editingCategoryColor} onChange={(e) => setEditingCategoryColor(e.target.value)} />
-              <Input value={editingCategoryIcon} onChange={(e) => setEditingCategoryIcon(e.target.value)} placeholder="e.g. 🛒" />
+              <Input
+                data-testid="master-category-edit-name"
+                value={editingCategoryName}
+                onChange={(e) => setEditingCategoryName(e.target.value)}
+                placeholder="Category name"
+              />
+              <Input
+                data-testid="master-category-edit-color"
+                type="color"
+                value={editingCategoryColor}
+                onChange={(e) => setEditingCategoryColor(e.target.value)}
+              />
+              <Input
+                data-testid="master-category-edit-icon"
+                value={editingCategoryIcon}
+                onChange={(e) => setEditingCategoryIcon(e.target.value)}
+                placeholder="e.g. 🛒"
+              />
               <Button
+                data-testid="master-category-save"
                 type="button"
                 onClick={() => updateCategoryMutation.mutate()}
                 disabled={updateCategoryMutation.isPending || !editingCategoryName.trim()}
@@ -397,7 +523,7 @@ export const MasterConfigPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-800">
               {categories.map((category) => (
-                <tr key={category.public_id}>
+                <tr key={category.public_id} data-testid={`master-category-row-${category.public_id}`}>
                   <td className="px-4 py-3">{category.name}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-2">
@@ -411,6 +537,7 @@ export const MasterConfigPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => openCategoryEditor(category)}
+                      data-testid={`master-category-edit-${category.public_id}`}
                       className="inline-flex items-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
                       title="Edit category"
                     >
@@ -430,6 +557,6 @@ export const MasterConfigPage: React.FC = () => {
           </table>
         </div>
       </section>
-    </div>
+    </PageShell>
   );
 };

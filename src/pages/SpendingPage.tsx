@@ -29,7 +29,6 @@ import {
   X,
   Target,
   Edit2,
-  Filter,
   Brush,
   RefreshCw,
   Clock,
@@ -40,6 +39,10 @@ import {
 import { Pagination } from '../components/Pagination';
 import { DropdownSelect } from '../components/DropdownSelect';
 import { DatePicker } from '../components/DatePicker';
+import { CompactFilterBar, CompactFilterField } from '../components/filters/CompactFilterBar';
+import { AccountTypeBadge, CurrencyBadge } from '../components/finance/Badges';
+import { PageHero } from '../components/layout/PageHero';
+import { PageShell } from '../components/layout/PageShell';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -257,6 +260,10 @@ export const SpendingPage: React.FC = () => {
     () => new Map(spendingAccounts.map((account) => [account.public_id, account.name])),
     [spendingAccounts]
   );
+  const accountById = useMemo(
+    () => new Map(spendingAccounts.map((account) => [account.public_id, account])),
+    [spendingAccounts]
+  );
   const accountTypeOptions: Array<{ value: 'bank' | 'wallet' | 'card' | 'gift_card'; label: string }> = [
     { value: 'wallet', label: 'Wallet' },
     { value: 'bank', label: 'Bank' },
@@ -388,11 +395,13 @@ export const SpendingPage: React.FC = () => {
     queryKey: ['finance', 'transfers', transferOffset],
     queryFn: () => financeService.getTransfers(limit, transferOffset),
   });
-  const { data: financeSettings } = useQuery({
-    queryKey: ['finance', 'settings'],
-    queryFn: () => financeService.getSettings(),
+  const { data: userFinanceSettings } = useQuery({
+    queryKey: ['finance', 'settings', 'user'],
+    queryFn: () => financeService.getUserSettings(),
   });
-  const displayCurrency = financeSettings?.reporting_currency_code ?? 'USD';
+  const displayCurrency = userFinanceSettings?.effective_reporting_currency_code ?? 'USD';
+  const currencyDisplayPreference =
+    userFinanceSettings?.effective_currency_display_preference ?? 'symbol';
   const recurringItems = recurringResponse?.items ?? [];
   const transferItems = transfersResponse?.items ?? [];
 
@@ -718,17 +727,15 @@ export const SpendingPage: React.FC = () => {
   const isLoading = isCatsLoading || isTxLoading || isBudgetsLoading || isSummaryLoading;
 
   return (
-    <div className="w-full px-8 py-8 animate-in fade-in duration-500">
-      <header className="mb-8 space-y-4">
-        <div className="max-w-2xl">
-          <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm">Spending Overview</h1>
-          <p className="mt-2 text-slate-400">
-            Track your finances across the workspace for {monthRange.label}.
-          </p>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-3 lg:flex-nowrap">
+    <PageShell animated>
+      <PageHero
+        title="Spending Overview"
+        subtitle={`Track your finances across the workspace for ${monthRange.label}.`}
+        actions={(
+          <>
           <button
             onClick={openTransactionModalForNew}
+            data-testid="spending-open-new-transaction"
             className="group relative flex h-12 min-w-[170px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.01] hover:shadow-blue-500/40 active:scale-95"
           >
             <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -737,6 +744,7 @@ export const SpendingPage: React.FC = () => {
           </button>
           <button
             onClick={openCategoryModal}
+            data-testid="spending-open-manage-categories"
             className="group relative flex h-12 min-w-[170px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900 px-5 font-semibold text-slate-200 shadow-lg transition-all hover:bg-slate-800 active:scale-95"
           >
             <Brush className="h-5 w-5" />
@@ -744,6 +752,7 @@ export const SpendingPage: React.FC = () => {
           </button>
           <button
             onClick={openBudgetModalForNew}
+            data-testid="spending-open-set-budget"
             className="group relative flex h-12 min-w-[150px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
           >
             <Target className="h-5 w-5" />
@@ -751,6 +760,7 @@ export const SpendingPage: React.FC = () => {
           </button>
           <button
             onClick={openRecurringModalForNew}
+            data-testid="spending-open-add-recurring"
             className="group relative flex h-12 min-w-[160px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
           >
             <RefreshCw className="h-5 w-5" />
@@ -763,55 +773,45 @@ export const SpendingPage: React.FC = () => {
             <ArrowRightLeft className="h-5 w-5" />
             <span className="whitespace-nowrap">Transfer</span>
           </button>
-        </div>
-      </header>
+          </>
+        )}
+      />
 
-      <div className="mb-6 rounded-2xl border border-slate-700/50 bg-slate-900/50 p-4 backdrop-blur-xl">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex h-10 items-center gap-2 pr-1 text-sm font-medium text-slate-400">
-            <Filter className="h-4 w-4" />
-            <span>Filters</span>
-          </div>
-          <div className="min-w-[220px] flex-1">
-            <Label htmlFor="spending-month" className="mb-1 block text-xs text-slate-400">Month</Label>
-            <DropdownSelect
-              id="spending-month"
-              value={selectedMonth}
-              onChange={(value) => {
-                setSelectedMonth(value);
-                setTxOffset(0);
-                setBudgetOffset(0);
-              }}
-              options={monthFilterOptions}
-              placeholder="Select month"
-            />
-          </div>
-          <div className="min-w-[220px] flex-1">
-            <Label className="mb-1 block text-xs text-slate-400">Category</Label>
-            <DropdownSelect
-              value={selectedCategoryFilter}
-              onChange={(value) => {
-                setSelectedCategoryFilter(value);
-                setTxOffset(0);
-              }}
-              options={categoryFilterOptions}
-              placeholder="All categories"
-              clearLabel="All categories"
-            />
-          </div>
-          <button
-            onClick={() => {
-              setSelectedMonth(getCurrentMonthValue());
-              setSelectedCategoryFilter('');
+      <CompactFilterBar
+        className="mb-6"
+        onReset={() => {
+          setSelectedMonth(getCurrentMonthValue());
+          setSelectedCategoryFilter('');
+          setTxOffset(0);
+          setBudgetOffset(0);
+        }}
+      >
+        <CompactFilterField label="Month">
+          <DropdownSelect
+            id="spending-month"
+            value={selectedMonth}
+            onChange={(value) => {
+              setSelectedMonth(value);
               setTxOffset(0);
               setBudgetOffset(0);
             }}
-            className="h-10 rounded-xl border border-slate-700 px-4 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800"
-          >
-            Reset filters
-          </button>
-        </div>
-      </div>
+            options={monthFilterOptions}
+            placeholder="Select month"
+          />
+        </CompactFilterField>
+        <CompactFilterField label="Category">
+          <DropdownSelect
+            value={selectedCategoryFilter}
+            onChange={(value) => {
+              setSelectedCategoryFilter(value);
+              setTxOffset(0);
+            }}
+            options={categoryFilterOptions}
+            placeholder="All categories"
+            clearLabel="All categories"
+          />
+        </CompactFilterField>
+      </CompactFilterBar>
 
       {/* Summary Cards */}
       <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -823,7 +823,8 @@ export const SpendingPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-400">Total Income</p>
-              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.income, displayCurrency)}</h2>
+              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.income, displayCurrency, currencyDisplayPreference)}</h2>
+              <p className="mt-1 text-xs text-slate-500">Reporting: {displayCurrency}</p>
             </div>
           </div>
         </div>
@@ -836,7 +837,8 @@ export const SpendingPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-400">Total Expenses</p>
-              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.expense, displayCurrency)}</h2>
+              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.expense, displayCurrency, currencyDisplayPreference)}</h2>
+              <p className="mt-1 text-xs text-slate-500">Reporting: {displayCurrency}</p>
             </div>
           </div>
         </div>
@@ -849,32 +851,40 @@ export const SpendingPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-400">Net Balance</p>
-              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.net, displayCurrency)}</h2>
+              <h2 className="text-2xl font-bold text-white">{formatCurrency(summary.net, displayCurrency, currencyDisplayPreference)}</h2>
+              <p className="mt-1 text-xs text-slate-500">Reporting: {displayCurrency}</p>
             </div>
           </div>
         </div>
       </div>
+      <div className="mb-6 rounded-xl border border-slate-700/50 bg-slate-900/35 px-4 py-3 text-xs text-slate-300">
+        Transaction rows show their original source currency. Summary cards above are reported in {displayCurrency}.
+      </div>
 
       <div className="mb-6 flex gap-2 border-b border-slate-700/50 pb-px">
         <button
+          data-testid="spending-tab-transactions"
           onClick={() => setActiveTab('transactions')}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'transactions' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
         >
           Transactions
         </button>
         <button
+          data-testid="spending-tab-budgets"
           onClick={() => setActiveTab('budgets')}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'budgets' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
         >
           Budgets
         </button>
         <button
+          data-testid="spending-tab-recurring"
           onClick={() => setActiveTab('recurring')}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'recurring' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
         >
           Recurring
         </button>
         <button
+          data-testid="spending-tab-transfers"
           onClick={() => setActiveTab('transfers')}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'transfers' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
         >
@@ -913,9 +923,9 @@ export const SpendingPage: React.FC = () => {
                     <th className="px-6 py-4 font-medium">Date</th>
                     <th className="px-6 py-4 font-medium">Category</th>
                     <th className="px-6 py-4 font-medium">Details</th>
-                    <th className="px-6 py-4 font-medium">Wallet</th>
+                    <th className="px-6 py-4 font-medium">Source</th>
                     <th className="px-6 py-4 font-medium">Tags</th>
-                    <th className="px-6 py-4 text-right font-medium">Amount</th>
+                    <th className="px-6 py-4 text-right font-medium">Amount (Original)</th>
                     <th className="px-6 py-4 text-right font-medium">Action</th>
                   </tr>
                 </thead>
@@ -924,6 +934,11 @@ export const SpendingPage: React.FC = () => {
                     const catTheme = getCategoryTheme(tx.category_id);
                     const isIncome = tx.type === 'income';
                     const dateObj = new Date(tx.occurred_at);
+                    const linkedAccount = tx.account_id ? accountById.get(tx.account_id) : undefined;
+                    const sourceName =
+                      tx.wallet_name || linkedAccount?.name || (tx.account_id ? accountNameById.get(tx.account_id) : null) || '-';
+                    const sourceType = linkedAccount ? linkedAccount.account_type.replace('_', ' ') : tx.wallet_name ? 'wallet' : null;
+                    const sourceCurrency = linkedAccount?.default_currency_code ?? displayCurrency;
                     
                     return (
                       <tr key={tx.public_id} className="group transition-colors hover:bg-slate-700/30">
@@ -947,11 +962,13 @@ export const SpendingPage: React.FC = () => {
                           <p className="max-w-[240px] truncate text-slate-200">{tx.description || '-'}</p>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex max-w-[180px] truncate rounded-full bg-slate-700/60 px-2.5 py-1 text-xs text-slate-200">
-                            {tx.wallet_name ||
-                              (tx.account_id ? accountNameById.get(tx.account_id) : null) ||
-                              '-'}
-                          </span>
+                          <div className="flex max-w-[220px] flex-wrap gap-1">
+                            <span className="inline-flex max-w-[180px] truncate rounded-full bg-slate-700/60 px-2.5 py-1 text-xs text-slate-200">
+                              {sourceName}
+                            </span>
+                            {sourceType ? <AccountTypeBadge type={sourceType} /> : null}
+                            <CurrencyBadge code={sourceCurrency} />
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           {tx.labels ? (
@@ -975,9 +992,19 @@ export const SpendingPage: React.FC = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <span className={`font-semibold ${isIncome ? 'text-emerald-400' : 'text-slate-200'}`}>
-                            {isIncome ? '+' : '-'}{formatCurrency(parseFloat(tx.amount.toString()), displayCurrency)}
-                          </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`font-semibold ${isIncome ? 'text-emerald-400' : 'text-slate-200'}`}>
+                              {isIncome ? '+' : '-'}{formatCurrency(parseFloat(tx.amount.toString()), sourceCurrency, currencyDisplayPreference)}
+                            </span>
+                            {sourceCurrency !== displayCurrency ? (
+                              <span
+                                title={`Reporting currency is ${displayCurrency}. This row keeps source currency ${sourceCurrency}.`}
+                                className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-300"
+                              >
+                                Report {displayCurrency}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button
@@ -1054,11 +1081,11 @@ export const SpendingPage: React.FC = () => {
                     <div className="mb-1 flex items-end justify-between">
                       <div>
                         <p className="text-xs text-slate-400">Spent ({monthStartToMonthValue(b.month_start)})</p>
-                        <p className="text-lg font-bold text-white">{formatCurrency(spent, displayCurrency)}</p>
+                        <p className="text-lg font-bold text-white">{formatCurrency(spent, displayCurrency, currencyDisplayPreference)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-slate-400">Budget</p>
-                        <p className="font-semibold text-slate-300">{formatCurrency(bAmount, displayCurrency)}</p>
+                        <p className="font-semibold text-slate-300">{formatCurrency(bAmount, displayCurrency, currencyDisplayPreference)}</p>
                       </div>
                     </div>
                     
@@ -1109,6 +1136,7 @@ export const SpendingPage: React.FC = () => {
                 return (
                   <div
                     key={r.public_id}
+                    data-testid={`spending-recurring-rule-${r.public_id}`}
                     className="group flex flex-col gap-4 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-5 backdrop-blur-sm transition-all hover:border-slate-600 hover:bg-slate-800/60"
                   >
                     {/* Category + Type row */}
@@ -1136,7 +1164,7 @@ export const SpendingPage: React.FC = () => {
                           isIncome ? 'text-emerald-400' : 'text-white'
                         }`}
                       >
-                        {isIncome ? '+' : '-'}{formatCurrency(Number(r.amount), displayCurrency)}
+                        {isIncome ? '+' : '-'}{formatCurrency(Number(r.amount), displayCurrency, currencyDisplayPreference)}
                       </p>
                       {r.description && (
                         <p className="mt-0.5 text-sm text-slate-400 truncate">{r.description}</p>
@@ -1168,12 +1196,14 @@ export const SpendingPage: React.FC = () => {
                     {/* Actions */}
                     <div className="flex gap-2 border-t border-slate-700/50 pt-3">
                       <button
+                        data-testid={`spending-recurring-edit-${r.public_id}`}
                         onClick={() => openRecurringModalForEdit(r)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
                       >
                         <Edit2 className="h-3.5 w-3.5" /> Edit
                       </button>
                       <button
+                        data-testid="spending-recurring-deactivate"
                         onClick={() => {
                           if (
                             window.confirm(
@@ -1241,15 +1271,32 @@ export const SpendingPage: React.FC = () => {
                           : 'N/A'}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-slate-200">
-                          Account #{t.from_account_id} → Account #{t.to_account_id}
-                        </span>
+                        <div className="space-y-1">
+                          <span className="text-slate-200">
+                            Account #{t.from_account_id} → Account #{t.to_account_id}
+                          </span>
+                          {t.fx_rate_used ? (
+                            <div className="flex flex-wrap gap-1">
+                              <span className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-300">
+                                FX {t.fx_rate_used}
+                              </span>
+                              {(Number(t.fx_fee_amount) > 0 || Number(t.platform_fee_amount) > 0 || Number(t.tax_amount) > 0) ? (
+                                <span
+                                  title={`FX fee ${t.fx_fee_amount}, platform fee ${t.platform_fee_amount}, tax ${t.tax_amount}`}
+                                  className="rounded-full border border-slate-600 bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300"
+                                >
+                                  Fees metadata
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {formatCurrency(Number(t.gross_amount), t.from_currency_code)}
+                        {formatCurrency(Number(t.gross_amount), t.from_currency_code, currencyDisplayPreference)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {formatCurrency(Number(t.net_amount_received), t.to_currency_code)}
+                        {formatCurrency(Number(t.net_amount_received), t.to_currency_code, currencyDisplayPreference)}
                       </td>
                       <td className="px-6 py-4">
                         <p className="truncate max-w-[280px] text-slate-400">{t.notes || '-'}</p>
@@ -1307,6 +1354,7 @@ export const SpendingPage: React.FC = () => {
                     name="categoryId"
                     render={({ field }) => (
                       <DropdownSelect
+                        testId="spending-recurring-category"
                         value={field.value}
                         onChange={field.onChange}
                         options={categoryOptions}
@@ -1360,6 +1408,7 @@ export const SpendingPage: React.FC = () => {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
                   <Input
                     id="rec-amount"
+                    data-testid="spending-recurring-amount"
                     type="number"
                     step="0.01"
                     min="0.01"
@@ -1382,6 +1431,7 @@ export const SpendingPage: React.FC = () => {
                     name="frequency"
                     render={({ field }) => (
                       <DropdownSelect
+                        testId="spending-recurring-frequency"
                         value={field.value}
                         onChange={field.onChange}
                         options={[
@@ -1402,6 +1452,7 @@ export const SpendingPage: React.FC = () => {
                   <Label htmlFor="rec-interval" className="mb-2 block">Every N</Label>
                   <Input
                     id="rec-interval"
+                    data-testid="spending-recurring-interval"
                     type="number"
                     min="1"
                     step="1"
@@ -1423,6 +1474,7 @@ export const SpendingPage: React.FC = () => {
                     name="anchor_date"
                     render={({ field }) => (
                       <DatePicker
+                        testId="spending-recurring-anchor-date"
                         value={field.value}
                         onChange={field.onChange}
                         placeholder="Select start date"
@@ -1444,6 +1496,7 @@ export const SpendingPage: React.FC = () => {
                   name="end_date"
                   render={({ field }) => (
                     <DatePicker
+                      testId="spending-recurring-end-date"
                       value={field.value ?? ''}
                       onChange={field.onChange}
                       placeholder="Select end date"
@@ -1460,6 +1513,7 @@ export const SpendingPage: React.FC = () => {
                 <Label htmlFor="rec-desc" className="mb-2 block">Description <span className="text-slate-500">(optional)</span></Label>
                 <Input
                   id="rec-desc"
+                  data-testid="spending-recurring-description"
                   placeholder="e.g. Netflix subscription"
                   {...registerRecurringField('description')}
                 />
@@ -1475,6 +1529,7 @@ export const SpendingPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                  data-testid={editingRecurring ? 'spending-recurring-update' : 'spending-recurring-create'}
                   disabled={createRecurringMutation.isPending || updateRecurringMutation.isPending}
                   className="flex-1 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
@@ -1534,6 +1589,7 @@ export const SpendingPage: React.FC = () => {
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{displayCurrency}</span>
                     <input
+                      data-testid="spending-transaction-amount"
                       type="number"
                       step="0.01"
                       min="0.01"
@@ -1550,6 +1606,7 @@ export const SpendingPage: React.FC = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Category</label>
                   <DropdownSelect
+                    testId="spending-transaction-category"
                     value={categoryId}
                     onChange={setCategoryId}
                     options={categoryOptions}
@@ -1560,6 +1617,7 @@ export const SpendingPage: React.FC = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Wallet / Account (Optional)</label>
                   <DropdownSelect
+                    testId="spending-transaction-account"
                     value={accountId}
                     onChange={setAccountId}
                     options={accountOptions}
@@ -1583,6 +1641,7 @@ export const SpendingPage: React.FC = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Date</label>
                   <DatePicker
+                    testId="spending-transaction-date"
                     value={date}
                     onChange={setDate}
                     placeholder="Select date"
@@ -1594,6 +1653,7 @@ export const SpendingPage: React.FC = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Description (Optional)</label>
                   <input
+                    data-testid="spending-transaction-description"
                     type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -1613,6 +1673,7 @@ export const SpendingPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                  data-testid="spending-transaction-save"
                   disabled={(createMutation.isPending || updateMutation.isPending) || !amount || !categoryId || !type || !date}
                   className="flex-1 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-blue-500/40 disabled:opacity-50"
                 >
@@ -1663,6 +1724,7 @@ export const SpendingPage: React.FC = () => {
                     name="categoryId"
                     render={({ field }) => (
                       <DropdownSelect
+                        testId="spending-budget-category"
                         value={field.value}
                         onChange={field.onChange}
                         options={categoryOptions}
@@ -1707,6 +1769,7 @@ export const SpendingPage: React.FC = () => {
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
                     <Input
                       id="budget-amount"
+                      data-testid="spending-budget-amount"
                       type="number"
                       step="0.01"
                       min="0.01"
@@ -1734,6 +1797,7 @@ export const SpendingPage: React.FC = () => {
                 </Button>
                 <Button
                   type="submit"
+                  data-testid="spending-budget-save"
                   className="flex-1"
                   disabled={createBudgetMutation.isPending || updateBudgetMutation.isPending}
                 >
@@ -1765,6 +1829,7 @@ export const SpendingPage: React.FC = () => {
 
             <div className="space-y-6 p-6">
               <form
+                data-testid="spending-category-form"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!categoryName.trim()) return;
@@ -1779,6 +1844,7 @@ export const SpendingPage: React.FC = () => {
                 <div>
                   <Label className="mb-2 block">Name</Label>
                   <Input
+                    data-testid="spending-category-name"
                     value={categoryName}
                     onChange={(e) => setCategoryName(e.target.value)}
                     placeholder="e.g. Groceries"
@@ -1788,6 +1854,7 @@ export const SpendingPage: React.FC = () => {
                   <div>
                     <Label className="mb-2 block">Color</Label>
                     <Input
+                      data-testid="spending-category-color"
                       type="color"
                       value={categoryColor}
                       onChange={(e) => setCategoryColor(e.target.value)}
@@ -1797,6 +1864,7 @@ export const SpendingPage: React.FC = () => {
                   <div>
                     <Label className="mb-2 block">Icon</Label>
                     <Input
+                      data-testid="spending-category-icon"
                       value={categoryIcon}
                       onChange={(e) => setCategoryIcon(e.target.value)}
                       placeholder="🧾"
@@ -1814,6 +1882,7 @@ export const SpendingPage: React.FC = () => {
                     Cancel
                   </Button>
                   <Button
+                    data-testid="spending-category-create"
                     type="submit"
                     className="flex-1"
                     disabled={createCategoryMutation.isPending || !categoryName.trim()}
@@ -2048,6 +2117,6 @@ export const SpendingPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 };

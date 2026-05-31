@@ -5,8 +5,13 @@ import { financeService } from '../services/finance';
 import { investingService } from '../services/investing';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
 import { DatePicker } from '../components/DatePicker';
+import { DateTimePicker } from '../components/DateTimePicker';
+import { CompactFilterBar, CompactFilterField } from '../components/filters/CompactFilterBar';
 import { DropdownSelect } from '../components/DropdownSelect';
 import { Combobox } from '../components/Combobox';
+import { CurrencyBadge } from '../components/finance/Badges';
+import { PageHero } from '../components/layout/PageHero';
+import { PageShell } from '../components/layout/PageShell';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import type {
   CashBalanceCreate,
@@ -69,6 +74,10 @@ export const InvestingPage: React.FC = () => {
     name: '',
     instrument_type: 'etf',
   });
+  const [holdingsAccountFilter, setHoldingsAccountFilter] = useState('');
+  const [holdingsCurrencyFilter, setHoldingsCurrencyFilter] = useState('');
+  const [cashAccountFilter, setCashAccountFilter] = useState('');
+  const [cashCurrencyFilter, setCashCurrencyFilter] = useState('');
   const [selectedInstrumentId, setSelectedInstrumentId] = useState('');
   const [constituentRowsText, setConstituentRowsText] = useState('AAPL,0.60\nMSFT,0.40');
   const [constituentError, setConstituentError] = useState('');
@@ -115,9 +124,9 @@ export const InvestingPage: React.FC = () => {
     queryKey: ['finance', 'accounts'],
     queryFn: () => financeService.getAccounts(200, 0),
   });
-  const { data: financeSettings } = useQuery({
-    queryKey: ['finance', 'settings'],
-    queryFn: () => financeService.getSettings(),
+  const { data: userFinanceSettings } = useQuery({
+    queryKey: ['finance', 'settings', 'user'],
+    queryFn: () => financeService.getUserSettings(),
   });
 
   const refresh = () => {
@@ -220,10 +229,12 @@ export const InvestingPage: React.FC = () => {
   );
   const selectedHoldingAccount = holdingForm.account_name;
   const selectedCashAccount = cashForm.account_name;
+  const currencyDisplayPreference =
+    userFinanceSettings?.effective_currency_display_preference ?? 'symbol';
   const preferredWorkspaceCurrency =
-    (financeSettings?.reporting_currency_code &&
-    currencyOptions.includes(financeSettings.reporting_currency_code)
-      ? financeSettings.reporting_currency_code
+    (userFinanceSettings?.effective_reporting_currency_code &&
+    currencyOptions.includes(userFinanceSettings.effective_reporting_currency_code)
+      ? userFinanceSettings.effective_reporting_currency_code
       : null) ?? currencyOptions[0] ?? 'USD';
   const selectedHoldingCurrency =
     currencyOptions.includes(holdingForm.currency) ? holdingForm.currency : preferredWorkspaceCurrency;
@@ -245,14 +256,34 @@ export const InvestingPage: React.FC = () => {
     },
   });
 
+  const filteredHoldings = useMemo(
+    () =>
+      holdings.filter((holding) => {
+        const accountMatch = !holdingsAccountFilter || holding.account_name === holdingsAccountFilter;
+        const currencyMatch =
+          !holdingsCurrencyFilter || holding.currency.toUpperCase() === holdingsCurrencyFilter.toUpperCase();
+        return accountMatch && currencyMatch;
+      }),
+    [holdings, holdingsAccountFilter, holdingsCurrencyFilter]
+  );
+  const filteredCashBalances = useMemo(
+    () =>
+      cashBalances.filter((balance) => {
+        const accountMatch = !cashAccountFilter || balance.account_name === cashAccountFilter;
+        const currencyMatch =
+          !cashCurrencyFilter || balance.currency.toUpperCase() === cashCurrencyFilter.toUpperCase();
+        return accountMatch && currencyMatch;
+      }),
+    [cashBalances, cashAccountFilter, cashCurrencyFilter]
+  );
   const holdingsByCurrency = useMemo(() => {
-    return holdings.reduce<Record<string, number>>((acc, item) => {
+    return filteredHoldings.reduce<Record<string, number>>((acc, item) => {
       const currency = item.currency?.toUpperCase() || 'USD';
       const value = toNumber(item.quantity) * toNumber(item.avg_cost);
       acc[currency] = (acc[currency] ?? 0) + value;
       return acc;
     }, {});
-  }, [holdings]);
+  }, [filteredHoldings]);
   const holdingCurrencies = Object.keys(holdingsByCurrency);
   const totalBookCost = holdingCurrencies.length === 1 ? holdingsByCurrency[holdingCurrencies[0]] : null;
 
@@ -331,33 +362,43 @@ export const InvestingPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full px-8 py-8">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Investing</h1>
-          <p className="mt-2 text-slate-400">Manage holdings and cash balances for your workspace.</p>
-        </div>
-      </header>
+    <PageShell>
+      <PageHero
+        title="Investing"
+        subtitle="Manage holdings and cash balances for your workspace."
+      />
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <SummaryCard
           label="Portfolio value"
-          value={summary?.portfolio_value != null ? formatCurrency(summary.portfolio_value, summary.reporting_currency ?? preferredWorkspaceCurrency) : 'N/A'}
+          value={summary?.portfolio_value != null ? formatCurrency(summary.portfolio_value, summary.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
           icon={<Landmark className="h-5 w-5" />}
+          testId="investing-portfolio-value"
         />
         <SummaryCard
           label="Cash total"
-          value={summary?.cash_total != null ? formatCurrency(summary.cash_total, summary.reporting_currency ?? preferredWorkspaceCurrency) : 'N/A'}
+          value={summary?.cash_total != null ? formatCurrency(summary.cash_total, summary.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
           icon={<WalletCards className="h-5 w-5" />}
         />
         <SummaryCard label="Holdings" value={summary ? summary.holdings_count.toString() : '0'} icon={<Plus className="h-5 w-5" />} />
       </div>
 
       <div className="mb-6 rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3 text-sm text-slate-300">
-        <p>
+        <p data-testid="investing-reporting-currency">
           <span className="font-semibold text-slate-100">Reporting currency:</span>{' '}
           {summary?.reporting_currency ?? 'Not configured'}
         </p>
+        {summary?.currency_breakdown && Object.keys(summary.currency_breakdown).length > 0 ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-400">Original currency mix:</span>
+            {Object.entries(summary.currency_breakdown).map(([code, value]) => (
+              <span key={code} className="inline-flex items-center gap-1.5">
+                <CurrencyBadge code={code} title={`Book total in ${code}`} />
+                <span className="text-xs text-slate-300">{formatCurrency(value, code, currencyDisplayPreference)}</span>
+              </span>
+            ))}
+          </div>
+        ) : null}
         <p className="mt-1">
           <span className="font-semibold text-slate-100">Valuation status:</span>{' '}
           {statusLabel(summary?.valuation_status)}
@@ -367,29 +408,40 @@ export const InvestingPage: React.FC = () => {
           {performanceLoading
             ? 'Loading...'
             : performanceSummary
-              ? `${formatCurrency(performanceSummary.total_gain_loss, performanceSummary.currency)} (${performancePctLabel})`
+              ? `${formatCurrency(performanceSummary.total_gain_loss, performanceSummary.currency, currencyDisplayPreference)} (${performancePctLabel})`
               : 'N/A'}
         </p>
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as 'holdings' | 'cash' | 'analytics')}>
           <TabsList className="mb-6">
-            <TabsTrigger value="holdings">Holdings</TabsTrigger>
-            <TabsTrigger value="cash">Cash Balances</TabsTrigger>
-            <TabsTrigger value="analytics">Look-through Analytics</TabsTrigger>
+            <TabsTrigger data-testid="investing-tab-holdings" value="holdings">Holdings</TabsTrigger>
+            <TabsTrigger data-testid="investing-tab-cash" value="cash">Cash Balances</TabsTrigger>
+            <TabsTrigger data-testid="investing-tab-analytics" value="analytics">Look-through Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="holdings">
             <div className="grid gap-6 lg:grid-cols-5">
-          <form onSubmit={onCreateHolding} className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 lg:col-span-2">
+          <form
+            data-testid="investing-add-holding-form"
+            onSubmit={onCreateHolding}
+            className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 lg:col-span-2"
+          >
             <h3 className="font-semibold text-white">Add Holding</h3>
             {accountOptions.length === 0 ? (
               <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-200">
                 Create an account below before adding holdings.
               </div>
             ) : null}
-            <input className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white" placeholder="Symbol (e.g. AAPL)" value={holdingForm.symbol} onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))} />
+            <input
+              data-testid="investing-holding-symbol"
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+              placeholder="Symbol (e.g. AAPL)"
+              value={holdingForm.symbol}
+              onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
+            />
             <Combobox
+              testId="investing-holding-account"
               value={selectedHoldingAccount}
               options={accountDropdownOptions}
               onChange={(value) => setHoldingForm((s) => ({ ...s, account_name: value }))}
@@ -398,26 +450,58 @@ export const InvestingPage: React.FC = () => {
               clearLabel="Clear selection"
               emptyText="No accounts found."
             />
-            <input className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white" placeholder="Quantity" type="number" step="0.00000001" value={holdingForm.quantity} onChange={(e) => setHoldingForm((s) => ({ ...s, quantity: e.target.value }))} />
-            <input className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white" placeholder="Avg cost" type="number" step="0.01" value={holdingForm.avg_cost} onChange={(e) => setHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))} />
+            <input
+              data-testid="investing-holding-quantity"
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+              placeholder="Quantity"
+              type="number"
+              step="0.00000001"
+              value={holdingForm.quantity}
+              onChange={(e) => setHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
+            />
+            <input
+              data-testid="investing-holding-avg-cost"
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+              placeholder="Avg cost"
+              type="number"
+              step="0.01"
+              value={holdingForm.avg_cost}
+              onChange={(e) => setHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
+            />
             <DropdownSelect
+              testId="investing-holding-currency"
               value={selectedHoldingCurrency}
               options={currencyDropdownOptions}
               onChange={(value) => setHoldingForm((s) => ({ ...s, currency: value }))}
               placeholder="Currency"
             />
-            <button disabled={createHoldingMutation.isPending || accountOptions.length === 0} type="submit" className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500">Add holding</button>
+            <button
+              data-testid="investing-holding-submit"
+              disabled={createHoldingMutation.isPending || accountOptions.length === 0}
+              type="submit"
+              className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500"
+            >
+              Add holding
+            </button>
 
             <div className="mt-3 border-t border-slate-700/60 pt-3">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Quick Create Account</p>
-              <input className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white" placeholder="Account name" value={newAccountName} onChange={(e) => setNewAccountName(e.target.value)} />
+              <input
+                data-testid="investing-account-name"
+                className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+                placeholder="Account name"
+                value={newAccountName}
+                onChange={(e) => setNewAccountName(e.target.value)}
+              />
               <DropdownSelect
+                testId="investing-account-type"
                 value={newAccountType}
                 options={[...accountTypeOptions]}
                 onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
                 placeholder="Account type"
               />
               <button
+                data-testid="investing-account-create"
                 type="button"
                 disabled={!newAccountName.trim() || createAccountMutation.isPending}
                 onClick={() => createAccountMutation.mutate()}
@@ -428,11 +512,40 @@ export const InvestingPage: React.FC = () => {
             </div>
           </form>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 lg:col-span-3">
+          <div className="space-y-3 lg:col-span-3">
+            <CompactFilterBar
+              title="Holdings filters"
+              onReset={() => {
+                setHoldingsAccountFilter('');
+                setHoldingsCurrencyFilter('');
+              }}
+            >
+              <CompactFilterField label="Account">
+                <DropdownSelect
+                  value={holdingsAccountFilter}
+                  options={accountDropdownOptions}
+                  onChange={setHoldingsAccountFilter}
+                  placeholder="All accounts"
+                  clearLabel="All accounts"
+                />
+              </CompactFilterField>
+              <CompactFilterField label="Currency">
+                <DropdownSelect
+                  value={holdingsCurrencyFilter}
+                  options={currencyDropdownOptions}
+                  onChange={setHoldingsCurrencyFilter}
+                  placeholder="All currencies"
+                  clearLabel="All currencies"
+                />
+              </CompactFilterField>
+            </CompactFilterBar>
+          <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30">
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Symbol</th>
+                  <th className="px-4 py-3">Account</th>
+                  <th className="px-4 py-3">Currency</th>
                   <th className="px-4 py-3">Qty</th>
                   <th className="px-4 py-3">Avg Cost</th>
                   <th className="px-4 py-3">Book Value</th>
@@ -440,15 +553,19 @@ export const InvestingPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {holdings.length === 0 ? (
-                  <tr><td className="px-4 py-6 text-slate-400" colSpan={5}>No holdings yet.</td></tr>
+                {filteredHoldings.length === 0 ? (
+                  <tr><td className="px-4 py-6 text-slate-400" colSpan={7}>No holdings yet.</td></tr>
                 ) : (
-                  holdings.map((h) => (
-                    <tr key={h.public_id}>
-                      <td className="px-4 py-3 font-medium text-white">{h.symbol}</td>
+                  filteredHoldings.map((h) => (
+                    <tr key={h.public_id} data-testid={`investing-holding-row-${h.public_id}`}>
+                      <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">{h.symbol}</td>
+                      <td className="px-4 py-3">{h.account_name}</td>
+                      <td className="px-4 py-3">
+                        <CurrencyBadge code={h.currency} />
+                      </td>
                       <td className="px-4 py-3">{toNumber(h.quantity).toFixed(8)}</td>
-                      <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency)}</td>
-                      <td className="px-4 py-3">{formatCurrency(toNumber(h.quantity) * toNumber(h.avg_cost), h.currency)}</td>
+                      <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</td>
+                      <td className="px-4 py-3">{formatCurrency(toNumber(h.quantity) * toNumber(h.avg_cost), h.currency, currencyDisplayPreference)}</td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => deleteHoldingMutation.mutate(h.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
                           <Trash2 className="h-4 w-4" />
@@ -458,13 +575,13 @@ export const InvestingPage: React.FC = () => {
                   ))
                 )}
               </tbody>
-              {holdings.length > 0 ? (
+              {filteredHoldings.length > 0 ? (
                 <tfoot>
                   <tr className="border-t border-slate-700/50 bg-slate-900/40">
-                    <td className="px-4 py-3 text-slate-400" colSpan={3}>Total book cost</td>
+                    <td className="px-4 py-3 text-slate-400" colSpan={5}>Total book cost</td>
                     <td className="px-4 py-3 font-semibold text-white">
                       {totalBookCost != null
-                        ? formatCurrency(totalBookCost, holdingCurrencies[0] ?? 'USD')
+                        ? formatCurrency(totalBookCost, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
                         : 'N/A (multi-currency)'}
                     </td>
                     <td />
@@ -472,6 +589,7 @@ export const InvestingPage: React.FC = () => {
                 </tfoot>
               ) : null}
             </table>
+          </div>
           </div>
             </div>
           </TabsContent>
@@ -496,11 +614,42 @@ export const InvestingPage: React.FC = () => {
               onChange={(value) => setCashForm((s) => ({ ...s, currency: value }))}
               placeholder="Currency"
             />
-            <input className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white" type="datetime-local" value={cashForm.as_of} onChange={(e) => setCashForm((s) => ({ ...s, as_of: e.target.value }))} />
+            <DateTimePicker
+              value={cashForm.as_of}
+              onChange={(value) => setCashForm((s) => ({ ...s, as_of: value }))}
+              required
+            />
             <button disabled={createCashMutation.isPending || accountOptions.length === 0} type="submit" className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500">Add cash balance</button>
           </form>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 lg:col-span-3">
+          <div className="space-y-3 lg:col-span-3">
+            <CompactFilterBar
+              title="Cash filters"
+              onReset={() => {
+                setCashAccountFilter('');
+                setCashCurrencyFilter('');
+              }}
+            >
+              <CompactFilterField label="Account">
+                <DropdownSelect
+                  value={cashAccountFilter}
+                  options={accountDropdownOptions}
+                  onChange={setCashAccountFilter}
+                  placeholder="All accounts"
+                  clearLabel="All accounts"
+                />
+              </CompactFilterField>
+              <CompactFilterField label="Currency">
+                <DropdownSelect
+                  value={cashCurrencyFilter}
+                  options={currencyDropdownOptions}
+                  onChange={setCashCurrencyFilter}
+                  placeholder="All currencies"
+                  clearLabel="All currencies"
+                />
+              </CompactFilterField>
+            </CompactFilterBar>
+          <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30">
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                 <tr>
@@ -511,13 +660,13 @@ export const InvestingPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {cashBalances.length === 0 ? (
+                {filteredCashBalances.length === 0 ? (
                   <tr><td className="px-4 py-6 text-slate-400" colSpan={4}>No cash balances yet.</td></tr>
                 ) : (
-                  cashBalances.map((c) => (
+                  filteredCashBalances.map((c) => (
                     <tr key={c.public_id}>
                       <td className="px-4 py-3 text-white">{c.account_name}</td>
-                      <td className="px-4 py-3">{formatCurrency(c.balance, c.currency)}</td>
+                      <td className="px-4 py-3">{formatCurrency(c.balance, c.currency, currencyDisplayPreference)}</td>
                       <td className="px-4 py-3">{Number.isNaN(new Date(c.as_of).getTime()) ? "N/A" : new Date(c.as_of).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => deleteCashMutation.mutate(c.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
@@ -529,6 +678,7 @@ export const InvestingPage: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
           </div>
             </div>
           </TabsContent>
@@ -623,8 +773,8 @@ export const InvestingPage: React.FC = () => {
               <p className="text-sm text-slate-400">Loading exposure…</p>
             ) : (
               <div className="space-y-2 text-sm text-slate-300">
-                <p>Total direct: {formatCurrency(exposure?.total_direct_exposure ?? '0', preferredWorkspaceCurrency)}</p>
-                <p>Total look-through: {formatCurrency(exposure?.total_lookthrough_exposure ?? '0', preferredWorkspaceCurrency)}</p>
+                <p data-testid="investing-total-direct">Total direct: {formatCurrency(exposure?.total_direct_exposure ?? '0', preferredWorkspaceCurrency, currencyDisplayPreference)}</p>
+                <p data-testid="investing-total-lookthrough">Total look-through: {formatCurrency(exposure?.total_lookthrough_exposure ?? '0', preferredWorkspaceCurrency, currencyDisplayPreference)}</p>
                 <div className="max-h-56 overflow-auto rounded-lg border border-slate-700/40">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-800/60 text-slate-400">
@@ -638,8 +788,8 @@ export const InvestingPage: React.FC = () => {
                       {(exposure?.exposure ?? []).map((row) => (
                         <tr key={row.company_id} className="border-t border-slate-700/40">
                           <td className="px-3 py-2">{row.company_ticker ?? row.company_name}</td>
-                          <td className="px-3 py-2">{formatCurrency(row.direct_exposure, preferredWorkspaceCurrency)}</td>
-                          <td className="px-3 py-2">{formatCurrency(row.lookthrough_exposure, preferredWorkspaceCurrency)}</td>
+                          <td className="px-3 py-2">{formatCurrency(row.direct_exposure, preferredWorkspaceCurrency, currencyDisplayPreference)}</td>
+                          <td className="px-3 py-2">{formatCurrency(row.lookthrough_exposure, preferredWorkspaceCurrency, currencyDisplayPreference)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -674,14 +824,14 @@ export const InvestingPage: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
-    </div>
+    </PageShell>
   );
 };
 
-const SummaryCard = ({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) => (
+const SummaryCard = ({ label, value, icon, testId }: { label: string; value: string; icon: React.ReactNode; testId?: string }) => (
   <div className="rounded-2xl border border-slate-700/50 bg-slate-800/60 p-5">
     <div className="mb-2 inline-flex rounded-xl bg-slate-700/60 p-2 text-slate-100">{icon}</div>
     <p className="text-sm text-slate-400">{label}</p>
-    <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+    <p data-testid={testId} className="mt-2 text-2xl font-bold text-white">{value}</p>
   </div>
 );

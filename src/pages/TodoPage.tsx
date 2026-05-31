@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Plus, Trash2, X } from 'lucide-react';
 
+import { CompactFilterBar, CompactFilterField } from '../components/filters/CompactFilterBar';
 import { DatePicker } from '../components/DatePicker';
+import { PageHero } from '../components/layout/PageHero';
+import { PageShell } from '../components/layout/PageShell';
 import { Pagination } from '../components/Pagination';
 import { todoService } from '../services/todo';
 import type { RecurringTodoCreate, Todo, TodoCreate } from '../services/todo';
@@ -23,6 +26,7 @@ export const TodoPage: React.FC = () => {
   const [newTodoDueDate, setNewTodoDueDate] = useState('');
   const [offset, setOffset] = useState(0);
   const limit = 50;
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'completed'>('all');
 
   const [ruleTitle, setRuleTitle] = useState('');
   const [ruleDescription, setRuleDescription] = useState('');
@@ -31,10 +35,12 @@ export const TodoPage: React.FC = () => {
   const [ruleFrequency, setRuleFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('weekly');
   const [ruleInterval, setRuleInterval] = useState(1);
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const completedFilterValue =
+    statusFilter === 'all' ? undefined : statusFilter === 'completed';
 
   const { data: todosResponse, isLoading } = useQuery({
-    queryKey: ['todos', offset],
-    queryFn: () => todoService.getTodos(undefined, limit, offset),
+    queryKey: ['todos', offset, statusFilter],
+    queryFn: () => todoService.getTodos(completedFilterValue, limit, offset),
   });
 
   const { data: recurringResponse, isLoading: isRecurringLoading } = useQuery({
@@ -112,17 +118,28 @@ export const TodoPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full px-8 py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-white">Todos</h1>
-        <p className="mt-2 text-slate-400">Manage your tasks and recurring task rules for this workspace.</p>
-      </header>
+    <PageShell>
+      <PageHero
+        title="Todos"
+        subtitle="Manage your tasks and recurring task rules for this workspace."
+        actions={(
+          <button
+            type="button"
+            onClick={() => setIsRecurringModalOpen(true)}
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-500"
+          >
+            <Plus className="h-4 w-4" />
+            New rule
+          </button>
+        )}
+      />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <section>
           <h2 className="mb-3 text-lg font-semibold text-white">New task</h2>
-          <form onSubmit={handleCreate} className="mb-6 rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
+          <form data-testid="todo-new-form" onSubmit={handleCreate} className="mb-6 rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
             <input
+              data-testid="todo-new-title"
               type="text"
               value={newTodoTitle}
               onChange={(e) => setNewTodoTitle(e.target.value)}
@@ -140,6 +157,7 @@ export const TodoPage: React.FC = () => {
               />
             </div>
             <button
+              data-testid="todo-new-submit"
               type="submit"
               disabled={createMutation.isPending || !newTodoTitle.trim()}
               className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
@@ -147,6 +165,30 @@ export const TodoPage: React.FC = () => {
               Add Task
             </button>
           </form>
+
+          <CompactFilterBar
+            className="mb-4"
+            title="Task filters"
+            onReset={() => {
+              setStatusFilter('all');
+              setOffset(0);
+            }}
+          >
+            <CompactFilterField label="Status" className="max-w-[260px]">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value as 'all' | 'open' | 'completed');
+                  setOffset(0);
+                }}
+                className="h-10 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100"
+              >
+                <option value="all">All tasks</option>
+                <option value="open">Open tasks</option>
+                <option value="completed">Completed tasks</option>
+              </select>
+            </CompactFilterField>
+          </CompactFilterBar>
 
           {isLoading ? (
             <div className="text-center text-slate-400">Loading tasks...</div>
@@ -162,10 +204,13 @@ export const TodoPage: React.FC = () => {
                   {todosResponse?.items.map((todo) => (
                     <div
                       key={todo.public_id}
+                      data-testid={`todo-item-${todo.public_id}`}
                       className={`group flex items-center justify-between rounded-2xl border border-slate-700/50 bg-slate-800/50 p-5 transition-all hover:border-slate-600 ${todo.completed ? 'opacity-60' : ''}`}
                     >
                       <div className="flex items-center gap-4">
                         <button
+                          data-testid={`todo-toggle-${todo.public_id}`}
+                          aria-label={todo.completed ? `Mark todo as incomplete: ${todo.title}` : `Mark todo as complete: ${todo.title}`}
                           onClick={() => toggleMutation.mutate(todo)}
                           className="text-slate-400 hover:text-blue-500 transition-colors"
                         >
@@ -206,16 +251,8 @@ export const TodoPage: React.FC = () => {
         </section>
 
         <section>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4">
             <h2 className="text-lg font-semibold text-white">Recurring rules</h2>
-            <button
-              type="button"
-              onClick={() => setIsRecurringModalOpen(true)}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-500"
-            >
-              <Plus className="h-4 w-4" />
-              New rule
-            </button>
           </div>
 
           {isRecurringLoading ? (
@@ -346,6 +383,6 @@ export const TodoPage: React.FC = () => {
           </div>
         </div>
       ) : null}
-    </div>
+    </PageShell>
   );
 };

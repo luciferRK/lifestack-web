@@ -31,11 +31,28 @@ export interface AccountUpdate {
 
 export interface WorkspaceFinanceSetting {
   reporting_currency_code: string | null;
+  currency_display_preference?: 'symbol' | 'code';
   updated_at: string;
 }
 
 export interface WorkspaceFinanceSettingUpdate {
-  reporting_currency_code: string | null;
+  reporting_currency_code?: string | null;
+  currency_display_preference?: 'symbol' | 'code' | null;
+}
+
+export interface UserFinanceSetting {
+  reporting_currency_override_code: string | null;
+  currency_display_preference_override: 'symbol' | 'code' | null;
+  workspace_reporting_currency_code: string | null;
+  workspace_currency_display_preference: 'symbol' | 'code';
+  effective_reporting_currency_code: string | null;
+  effective_currency_display_preference: 'symbol' | 'code';
+  updated_at: string;
+}
+
+export interface UserFinanceSettingUpdate {
+  reporting_currency_override_code?: string | null;
+  currency_display_preference_override?: 'symbol' | 'code' | null;
 }
 
 export interface CapitalTransferCreate {

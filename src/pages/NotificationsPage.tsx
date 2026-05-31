@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PageHero } from '../components/layout/PageHero';
+import { PageShell } from '../components/layout/PageShell';
 import { notificationsService } from '../services/notifications';
 import { Pagination } from '../components/Pagination';
 
@@ -35,20 +37,20 @@ export const NotificationsPage: React.FC = () => {
   });
 
   return (
-    <div className="w-full px-8 py-8">
-      <header className="mb-6 flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Notifications</h1>
-          <p className="mt-1 text-slate-400">In-app alerts and delivery preferences.</p>
-        </div>
-        <button
-          onClick={() => markAllMutation.mutate()}
-          disabled={markAllMutation.isPending}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
-        >
-          Mark all read
-        </button>
-      </header>
+    <PageShell>
+      <PageHero
+        title="Notifications"
+        subtitle="In-app alerts and delivery preferences."
+        actions={(
+          <button
+            onClick={() => markAllMutation.mutate()}
+            disabled={markAllMutation.isPending}
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+          >
+            Mark all read
+          </button>
+        )}
+      />
 
       <section className="mb-6 rounded-xl border border-slate-800 bg-slate-800/30 p-4">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">Preferences</h2>
@@ -108,6 +110,6 @@ export const NotificationsPage: React.FC = () => {
       ) : (
         <div className="rounded-xl border border-slate-800 bg-slate-800/30 p-6 text-slate-400">No notifications yet.</div>
       )}
-    </div>
+    </PageShell>
   );
 };

@@ -55,25 +55,25 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         <h1 className="mb-8 text-2xl font-bold text-white tracking-tight">Lifestack</h1>
         <ul className="space-y-4 text-slate-400">
           <li>
-            <Link to="/" className="hover:text-white transition-colors">Dashboard</Link>
+            <Link to="/" data-testid="nav-dashboard" className="hover:text-white transition-colors">Dashboard</Link>
           </li>
           <li>
-            <Link to="/todo" className="hover:text-white transition-colors">Todos</Link>
+            <Link to="/todo" data-testid="nav-todo" className="hover:text-white transition-colors">Todos</Link>
           </li>
           <li>
-            <Link to="/spending" className="hover:text-white transition-colors">Spending</Link>
+            <Link to="/spending" data-testid="nav-spending" className="hover:text-white transition-colors">Spending</Link>
           </li>
           <li>
-            <Link to="/investing" className="hover:text-white transition-colors">Investing</Link>
+            <Link to="/investing" data-testid="nav-investing" className="hover:text-white transition-colors">Investing</Link>
           </li>
           <li>
-            <Link to="/summaries" className="hover:text-white transition-colors">Weekly Summaries</Link>
+            <Link to="/summaries" data-testid="nav-summaries" className="hover:text-white transition-colors">Weekly Summaries</Link>
           </li>
           <li>
-            <Link to="/imports" className="hover:text-white transition-colors">Bulk Imports</Link>
+            <Link to="/imports" data-testid="nav-imports" className="hover:text-white transition-colors">Bulk Imports</Link>
           </li>
           <li>
-            <Link to="/settings" className="hover:text-white transition-colors">Master Config</Link>
+            <Link to="/settings" data-testid="nav-settings" className="hover:text-white transition-colors">Master Config</Link>
           </li>
         </ul>
       </nav>
@@ -86,6 +86,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             <NavLink
               to="/notifications"
               aria-label="Notifications"
+              data-testid="header-notifications"
               className={({ isActive }) =>
                 `relative inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
                   isActive
@@ -107,6 +108,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
               <span className="max-w-[160px] truncate">{user?.username ?? user?.email ?? 'Profile'}</span>
             </div>
             <button
+              data-testid="header-logout"
               onClick={handleLogout}
               disabled={isLoggingOut}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"

@@ -9,6 +9,7 @@ export type DropdownOption = {
 
 type DropdownSelectProps = {
   id?: string;
+  testId?: string;
   value: string;
   options: DropdownOption[];
   onChange: (value: string) => void;
@@ -19,6 +20,7 @@ type DropdownSelectProps = {
 
 export const DropdownSelect: React.FC<DropdownSelectProps> = ({
   id,
+  testId,
   value,
   options,
   onChange,
@@ -35,7 +37,7 @@ export const DropdownSelect: React.FC<DropdownSelectProps> = ({
       onValueChange={(nextValue) => onChange(nextValue === clearValue ? '' : nextValue)}
       disabled={disabled}
     >
-      <SelectTrigger id={id}>
+      <SelectTrigger id={id} data-testid={testId}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

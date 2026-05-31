@@ -38,6 +38,43 @@ export const VoiceAgentWidget: React.FC = () => {
   const viewportMargin = 24;
   const panelWidth = 384;
   const panelHeight = 600;
+  const launcherStorageKey = 'voice-agent-launcher-pos-v1';
+
+  const clampLauncherPos = (position: { x: number; y: number }) => {
+    if (typeof window === 'undefined') return position;
+    return {
+      x: Math.min(
+        Math.max(viewportMargin, position.x),
+        window.innerWidth - launcherSize - viewportMargin
+      ),
+      y: Math.min(
+        Math.max(viewportMargin, position.y),
+        window.innerHeight - launcherSize - viewportMargin
+      ),
+    };
+  };
+
+  const getDefaultLauncherPos = () =>
+    clampLauncherPos({
+      x: typeof window === 'undefined' ? viewportMargin : window.innerWidth - launcherSize - viewportMargin,
+      y: typeof window === 'undefined' ? viewportMargin : window.innerHeight - launcherSize - viewportMargin,
+    });
+
+  const snapLauncherPos = (position: { x: number; y: number }) => {
+    if (typeof window === 'undefined') return position;
+    const clamped = clampLauncherPos(position);
+
+    const left = clamped.x - viewportMargin;
+    const right = window.innerWidth - launcherSize - viewportMargin - clamped.x;
+    const top = clamped.y - viewportMargin;
+    const bottom = window.innerHeight - launcherSize - viewportMargin - clamped.y;
+
+    const nearest = Math.min(left, right, top, bottom);
+    if (nearest === left) return { x: viewportMargin, y: clamped.y };
+    if (nearest === right) return { x: window.innerWidth - launcherSize - viewportMargin, y: clamped.y };
+    if (nearest === top) return { x: clamped.x, y: viewportMargin };
+    return { x: clamped.x, y: window.innerHeight - launcherSize - viewportMargin };
+  };
   
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -45,10 +82,7 @@ export const VoiceAgentWidget: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [launcherPos, setLauncherPos] = useState<{ x: number; y: number }>(() => ({
-    x: Math.max(viewportMargin, window.innerWidth - launcherSize - viewportMargin),
-    y: Math.max(viewportMargin, window.innerHeight - launcherSize - viewportMargin),
-  }));
+  const [launcherPos, setLauncherPos] = useState<{ x: number; y: number }>(() => getDefaultLauncherPos());
   
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -67,11 +101,27 @@ export const VoiceAgentWidget: React.FC = () => {
   }, [messages, isOpen]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem(launcherStorageKey);
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved) as { x?: number; y?: number };
+      if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+        setLauncherPos(clampLauncherPos({ x: parsed.x, y: parsed.y }));
+      }
+    } catch {
+      // Ignore invalid cached values and keep defaults.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(launcherStorageKey, JSON.stringify(launcherPos));
+  }, [launcherPos, launcherStorageKey]);
+
+  useEffect(() => {
     const handleResize = () => {
-      setLauncherPos((prev) => ({
-        x: Math.min(Math.max(viewportMargin, prev.x), window.innerWidth - launcherSize - viewportMargin),
-        y: Math.min(Math.max(viewportMargin, prev.y), window.innerHeight - launcherSize - viewportMargin),
-      }));
+      setLauncherPos((prev) => clampLauncherPos(prev));
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -91,13 +141,11 @@ export const VoiceAgentWidget: React.FC = () => {
     isDraggingRef.current = true;
     const nextX = event.clientX - dragOffsetRef.current.x;
     const nextY = event.clientY - dragOffsetRef.current.y;
-    setLauncherPos({
-      x: Math.min(Math.max(viewportMargin, nextX), window.innerWidth - launcherSize - viewportMargin),
-      y: Math.min(Math.max(viewportMargin, nextY), window.innerHeight - launcherSize - viewportMargin),
-    });
+    setLauncherPos(clampLauncherPos({ x: nextX, y: nextY }));
   };
 
   const endDrag = () => {
+    setLauncherPos((prev) => snapLauncherPos(prev));
     dragOffsetRef.current = null;
     window.setTimeout(() => {
       isDraggingRef.current = false;

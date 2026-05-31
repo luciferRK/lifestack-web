@@ -7,6 +7,8 @@ import type {
   CapitalTransfer,
   CapitalTransferCreate,
   Currency,
+  UserFinanceSetting,
+  UserFinanceSettingUpdate,
   WorkspaceFinanceSetting,
   WorkspaceFinanceSettingUpdate,
 } from '../types/finance';
@@ -43,6 +45,16 @@ export const financeService = {
 
   updateSettings: async (data: WorkspaceFinanceSettingUpdate): Promise<WorkspaceFinanceSetting> => {
     const response = await api.patch('/finance/settings', data);
+    return response.data;
+  },
+
+  getUserSettings: async (): Promise<UserFinanceSetting> => {
+    const response = await api.get('/finance/settings/user');
+    return response.data;
+  },
+
+  updateUserSettings: async (data: UserFinanceSettingUpdate): Promise<UserFinanceSetting> => {
+    const response = await api.patch('/finance/settings/user', data);
     return response.data;
   },
 

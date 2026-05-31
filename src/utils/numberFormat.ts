@@ -7,9 +7,11 @@ export const toNumber = (value: number | string | null | undefined): number => {
 export const formatCurrency = (
   amount: number | string | null | undefined,
   currency: string = 'USD',
+  currencyDisplay: 'symbol' | 'code' = 'symbol',
 ): string =>
   new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency,
+    currencyDisplay,
     minimumFractionDigits: 2,
   }).format(toNumber(amount));
