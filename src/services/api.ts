@@ -3,7 +3,8 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 // ─── Axios instance ───────────────────────────────────────────────────────────
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  // Fallback to local dev URL so Vitest runs without VITE_API_URL configured
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/v1',
   withCredentials: true, // Send HttpOnly cookies on every request
 });
 

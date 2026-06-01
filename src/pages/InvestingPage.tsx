@@ -291,11 +291,16 @@ export const InvestingPage: React.FC = () => {
     e.preventDefault();
     if (!holdingForm.symbol || !holdingForm.quantity || !holdingForm.avg_cost || !selectedHoldingAccount) return;
 
+    const qty = Number(holdingForm.quantity);
+    const cost = Number(holdingForm.avg_cost);
+    // Guard against NaN/Infinity before sending to server
+    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0) return;
+
     createHoldingMutation.mutate({
       symbol: holdingForm.symbol.trim().toUpperCase(),
       account_name: selectedHoldingAccount.trim(),
-      quantity: Number(holdingForm.quantity),
-      avg_cost: Number(holdingForm.avg_cost),
+      quantity: qty,
+      avg_cost: cost,
       currency: selectedHoldingCurrency.trim().toUpperCase() || 'USD',
     });
   };
@@ -304,9 +309,13 @@ export const InvestingPage: React.FC = () => {
     e.preventDefault();
     if (!cashForm.balance || !cashForm.as_of || !selectedCashAccount) return;
 
+    const balance = Number(cashForm.balance);
+    // Guard against NaN/Infinity before sending to server
+    if (!Number.isFinite(balance)) return;
+
     createCashMutation.mutate({
       account_name: selectedCashAccount.trim(),
-      balance: Number(cashForm.balance),
+      balance,
       currency: selectedCashCurrency.trim().toUpperCase() || 'USD',
       as_of: new Date(cashForm.as_of).toISOString(),
     });

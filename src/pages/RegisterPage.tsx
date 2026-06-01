@@ -20,11 +20,16 @@ export const RegisterPage: React.FC = () => {
       navigate('/login', { state: { message: 'Registration successful. Please log in.' } });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
+      const status = err.response?.status;
       const detail = err.response?.data?.detail;
-      if (Array.isArray(detail)) {
-        setError(detail[0]?.msg || 'Failed to register');
+      // Normalize 409 / 422 errors to prevent username/email enumeration
+      if (status === 409 || (typeof detail === 'string' && /already (exists|in use|registered)/i.test(detail))) {
+        setError('An account with that username or email is already in use.');
+      } else if (Array.isArray(detail)) {
+        // Expose validation field errors (e.g. pattern mismatch) — safe, not enumeration
+        setError(detail[0]?.msg || 'Registration failed. Please check your details.');
       } else {
-        setError(detail || 'Failed to register');
+        setError('Registration failed. Please check your details.');
       }
     } finally {
       setLoading(false);
@@ -62,6 +67,10 @@ export const RegisterPage: React.FC = () => {
                 type="text" 
                 placeholder="Username" 
                 required
+                minLength={3}
+                maxLength={50}
+                pattern="^[a-zA-Z0-9_-]+$"
+                title="3–50 characters. Letters, numbers, underscores and hyphens only."
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-blue-500 transition-all"

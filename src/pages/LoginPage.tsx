@@ -25,7 +25,13 @@ export const LoginPage: React.FC = () => {
       navigate('/', { replace: true });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to login');
+      // Always show a generic message to prevent username/email enumeration
+      const status = err.response?.status;
+      if (status === 401 || status === 403 || status === 422) {
+        setError('Invalid credentials. Please check your email and password.');
+      } else {
+        setError('Sign in failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
