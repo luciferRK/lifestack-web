@@ -9,7 +9,6 @@ on:
       - main
 
 env:
-  COVERAGE_DEADLINE: 2026-07-01
   COVERAGE_THRESHOLD: 70
 
 jobs:
@@ -39,26 +38,7 @@ jobs:
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api.lifestack.app' }}
 
-      - name: Coverage policy (date-gated)
-        run: |
-          TODAY="$(date -u +%F)"
-          HAS_TEST_SCRIPT="$(node -e "const p=require('./package.json'); process.stdout.write(p.scripts && p.scripts.test ? 'yes' : 'no')")"
-
-          echo "Today (UTC): ${TODAY}"
-          echo "Coverage deadline: ${COVERAGE_DEADLINE}"
-
-          if [ "${HAS_TEST_SCRIPT}" = "yes" ]; then
-            echo "Test script detected. Running tests with coverage."
-            npm run test -- --coverage --coverage.reporter=text --coverage.reporter=lcov --coverage.thresholds.lines=${COVERAGE_THRESHOLD}
-            exit 0
-          fi
-
-          if [ "${TODAY}" \< "${COVERAGE_DEADLINE}" ]; then
-            echo "No test script yet. Allowed until ${COVERAGE_DEADLINE}."
-            exit 0
-          fi
-
-          echo "Coverage enforcement active: add a test script and coverage setup (minimum ${COVERAGE_THRESHOLD}% lines)."
-          exit 1
+      - name: Enforce test coverage
+        run: npm run test -- --coverage --coverage.reporter=text --coverage.reporter=lcov --coverage.thresholds.lines=${COVERAGE_THRESHOLD}
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api.lifestack.app' }}
