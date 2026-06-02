@@ -11,7 +11,12 @@ type DateTimePickerProps = {
   minuteStep?: number;
 };
 
-const getTodayDateValue = () => new Date().toLocaleDateString('en-CA');
+const formatLocalDateInput = (date: Date) => {
+  const tzOffsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, 10);
+};
+
+const getTodayDateValue = () => formatLocalDateInput(new Date());
 
 const buildTimeOptions = (minuteStep: number) => {
   const options: Array<{ value: string; label: string }> = [];

@@ -118,11 +118,6 @@ export const VoiceAgentWidget: React.FC = () => {
 
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(launcherStorageKey, JSON.stringify(launcherPos));
-  }, [launcherPos, launcherStorageKey]);
-
-  useEffect(() => {
     const handleResize = () => {
       setLauncherPos((prev) => clampLauncherPos(prev));
     };
@@ -148,7 +143,11 @@ export const VoiceAgentWidget: React.FC = () => {
   };
 
   const endDrag = () => {
-    setLauncherPos((prev) => snapLauncherPos(prev));
+    const snappedPos = snapLauncherPos(launcherPos);
+    setLauncherPos(snappedPos);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(launcherStorageKey, JSON.stringify(snappedPos));
+    }
     dragOffsetRef.current = null;
     window.setTimeout(() => {
       isDraggingRef.current = false;

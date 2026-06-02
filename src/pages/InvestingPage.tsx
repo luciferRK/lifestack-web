@@ -312,12 +312,14 @@ export const InvestingPage: React.FC = () => {
     const balance = Number(cashForm.balance);
     // Guard against NaN/Infinity before sending to server
     if (!Number.isFinite(balance)) return;
+    const asOfDate = new Date(cashForm.as_of);
+    if (Number.isNaN(asOfDate.getTime())) return;
 
     createCashMutation.mutate({
       account_name: selectedCashAccount.trim(),
       balance,
       currency: selectedCashCurrency.trim().toUpperCase() || 'USD',
-      as_of: new Date(cashForm.as_of).toISOString(),
+      as_of: asOfDate.toISOString(),
     });
   };
   const onCreateInstrument = (e: React.FormEvent) => {

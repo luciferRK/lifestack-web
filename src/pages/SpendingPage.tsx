@@ -937,7 +937,11 @@ export const SpendingPage: React.FC = () => {
                     const linkedAccount = tx.account_id ? accountById.get(tx.account_id) : undefined;
                     const sourceName =
                       tx.wallet_name || linkedAccount?.name || (tx.account_id ? accountNameById.get(tx.account_id) : null) || '-';
-                    const sourceType = linkedAccount ? linkedAccount.account_type.replace('_', ' ') : tx.wallet_name ? 'wallet' : null;
+                    const sourceType = linkedAccount?.account_type
+                      ? linkedAccount.account_type.replace('_', ' ')
+                      : tx.wallet_name
+                        ? 'wallet'
+                        : null;
                     const sourceCurrency = linkedAccount?.default_currency_code ?? displayCurrency;
                     
                     return (
