@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PageHero } from '../components/layout/PageHero';
+import { PageShell } from '../components/layout/PageShell';
 import { importsService } from '../services/imports';
 import type { ImportErrorItem, ImportModule, ImportValidateResponse } from '../types/imports';
 
@@ -83,16 +85,17 @@ export const ImportsPage: React.FC = () => {
   const errors: ImportErrorItem[] = activeDetail?.errors ?? [];
 
   return (
-    <div className="w-full px-8 py-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-white">Bulk Imports</h1>
-        <p className="mt-1 text-slate-400">Upload CSV templates for transactions, budgets, and holdings.</p>
-      </header>
+    <PageShell>
+      <PageHero
+        title="Bulk Imports"
+        subtitle="Upload CSV templates for transactions, budgets, and holdings."
+      />
 
-      <section className="mb-8 rounded-xl border border-slate-800 bg-slate-800/30 p-5">
+      <section className="mb-6 rounded-xl border border-slate-800 bg-slate-800/30 p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">New import</h2>
         <div className="grid gap-3 md:grid-cols-[2fr,3fr,auto,auto]">
           <select
+            data-testid="imports-module-select"
             value={module}
             onChange={(e) => setModule(e.target.value as ImportModule)}
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
@@ -108,6 +111,7 @@ export const ImportsPage: React.FC = () => {
           </select>
 
           <input
+            data-testid="imports-file-input"
             key={file ? `selected-${file.name}-${file.lastModified}` : 'no-file-selected'}
             type="file"
             accept=".csv,text/csv"
@@ -116,6 +120,7 @@ export const ImportsPage: React.FC = () => {
           />
 
           <button
+            data-testid="imports-download-template"
             type="button"
             onClick={() => void handleTemplateDownload()}
             disabled={!module || isDownloadingTemplate}
@@ -125,6 +130,7 @@ export const ImportsPage: React.FC = () => {
           </button>
 
           <button
+            data-testid="imports-upload-validate"
             type="button"
             onClick={() => file && uploadMutation.mutate()}
             disabled={!module || !file || uploadMutation.isPending}
@@ -151,6 +157,7 @@ export const ImportsPage: React.FC = () => {
             ) : null}
             {importsResponse?.items.map((item) => (
               <button
+                data-testid={`imports-list-item-${item.public_id}`}
                 key={item.public_id}
                 type="button"
                 onClick={() => setSelectedImportId(item.public_id)}
@@ -181,6 +188,7 @@ export const ImportsPage: React.FC = () => {
               </div>
 
               <button
+                data-testid="imports-commit"
                 type="button"
                 disabled={activeDetail.import_batch.status !== 'validated' || commitMutation.isPending}
                 onClick={() => commitMutation.mutate(activeDetail.import_batch.public_id)}
@@ -224,6 +232,6 @@ export const ImportsPage: React.FC = () => {
           ) : null}
         </section>
       </div>
-    </div>
+    </PageShell>
   );
 };

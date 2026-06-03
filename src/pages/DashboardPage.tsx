@@ -4,6 +4,8 @@ import { dashboardService } from '../services/dashboard';
 import { summariesService } from '../services/summaries';
 import { financeService } from '../services/finance';
 import { RefreshCw, AlertCircle, Clock3, CircleAlert, PiggyBank, Wallet, BriefcaseBusiness } from 'lucide-react';
+import { PageHero } from '../components/layout/PageHero';
+import { PageShell } from '../components/layout/PageShell';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
 
 export const DashboardPage: React.FC = () => {
@@ -15,18 +17,23 @@ export const DashboardPage: React.FC = () => {
     queryKey: ['summaries', 'weekly', 'latest'],
     queryFn: () => summariesService.latestWeekly(),
   });
-  const { data: financeSettings } = useQuery({
-    queryKey: ['finance', 'settings'],
-    queryFn: () => financeService.getSettings(),
+  const { data: userFinanceSettings } = useQuery({
+    queryKey: ['finance', 'settings', 'user'],
+    queryFn: () => financeService.getUserSettings(),
   });
-  const displayCurrency = financeSettings?.reporting_currency_code ?? 'USD';
+  const displayCurrency = userFinanceSettings?.effective_reporting_currency_code ?? 'USD';
+  const currencyDisplayPreference =
+    userFinanceSettings?.effective_currency_display_preference ?? 'symbol';
 
-  const generatedAt = data
-    ? new Date(data.system.generated_at).toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
-    : null;
+  const generatedAt = (() => {
+    if (!data?.system.generated_at) return null;
+    const generatedAtDate = new Date(data.system.generated_at);
+    if (Number.isNaN(generatedAtDate.getTime())) return null;
+    return generatedAtDate.toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  })();
   const latestWeeklyStartLabel = (() => {
     if (!latestSummary?.week_start) return 'N/A';
     const date = new Date(`${latestSummary.week_start}T00:00:00Z`);
@@ -42,26 +49,21 @@ export const DashboardPage: React.FC = () => {
       : null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="w-full px-8 py-8">
-        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.35em] text-slate-500">Workspace snapshot</p>
-            <h1 className="mt-2 text-4xl font-bold tracking-tight">Dashboard</h1>
-            <p className="mt-2 max-w-2xl text-slate-400">
-              Live totals for tasks, spending, and portfolio activity.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => void refetch()}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
-            >
-              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </div>
-        </header>
+    <PageShell>
+      <PageHero
+        title="Dashboard"
+        subtitle="Live totals for tasks, spending, and portfolio activity."
+        actions={(
+          <button
+            onClick={() => void refetch()}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        )}
+      />
+      <p className="mb-6 text-xs uppercase tracking-[0.35em] text-slate-500">Workspace snapshot</p>
 
         {isLoading ? (
           <div className="flex min-h-[320px] items-center justify-center rounded-3xl border border-slate-800 bg-slate-900/60">
@@ -87,24 +89,25 @@ export const DashboardPage: React.FC = () => {
               />
               <MetricCard
                 label="This month spent"
-                value={formatCurrency(data.spending.month_spent, displayCurrency)}
-                note={data.spending.month_budget != null ? `Budget: ${formatCurrency(data.spending.month_budget, displayCurrency)}` : 'No budget set'}
+                value={formatCurrency(data.spending.month_spent, displayCurrency, currencyDisplayPreference)}
+                note={data.spending.month_budget != null ? `Budget: ${formatCurrency(data.spending.month_budget, displayCurrency, currencyDisplayPreference)}` : 'No budget set'}
                 icon={<PiggyBank className="h-5 w-5" />}
                 accent="from-emerald-500/25 to-teal-500/10"
               />
               <MetricCard
                 label="Budget remaining"
-                value={budgetRemaining != null ? formatCurrency(budgetRemaining, displayCurrency) : 'N/A'}
+                value={budgetRemaining != null ? formatCurrency(budgetRemaining, displayCurrency, currencyDisplayPreference) : 'N/A'}
                 note={budgetRemaining != null ? 'Based on current month budget' : 'Set a budget to track remaining spend'}
                 icon={<Wallet className="h-5 w-5" />}
                 accent="from-violet-500/25 to-fuchsia-500/10"
               />
               <MetricCard
                 label="Portfolio value"
-                value={formatCurrency(data.investing.portfolio_value, displayCurrency)}
+                value={formatCurrency(data.investing.portfolio_value, displayCurrency, currencyDisplayPreference)}
                 note={`${data.investing.holdings_count} holdings`}
                 icon={<BriefcaseBusiness className="h-5 w-5" />}
                 accent="from-amber-500/25 to-orange-500/10"
+                testId="dashboard-portfolio-value"
               />
             </div>
 
@@ -132,7 +135,7 @@ export const DashboardPage: React.FC = () => {
                   />
                   <StatRow
                     label="Daily portfolio change"
-                    value={data.investing.daily_change != null ? formatCurrency(data.investing.daily_change, displayCurrency) : 'N/A'}
+                    value={data.investing.daily_change != null ? formatCurrency(data.investing.daily_change, displayCurrency, currencyDisplayPreference) : 'N/A'}
                   />
                   <StatRow
                     label="Latest weekly summary"
@@ -147,8 +150,7 @@ export const DashboardPage: React.FC = () => {
             </div>
           </>
         ) : null}
-      </div>
-    </div>
+      </PageShell>
   );
 };
 
@@ -158,14 +160,15 @@ type MetricCardProps = {
   note: string;
   icon: React.ReactNode;
   accent: string;
+  testId?: string;
 };
 
-const MetricCard = ({ label, value, note, icon, accent }: MetricCardProps) => (
+const MetricCard = ({ label, value, note, icon, accent, testId }: MetricCardProps) => (
   <div className={`relative overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br ${accent} p-6 shadow-xl shadow-black/10`}>
     <div className="flex items-start justify-between gap-4">
       <div>
         <p className="text-sm uppercase tracking-[0.24em] text-slate-400">{label}</p>
-        <p className="mt-3 text-3xl font-bold tracking-tight text-white">{value}</p>
+        <p data-testid={testId} className="mt-3 text-3xl font-bold tracking-tight text-white">{value}</p>
         <p className="mt-2 text-sm text-slate-300">{note}</p>
       </div>
       <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-white">{icon}</div>

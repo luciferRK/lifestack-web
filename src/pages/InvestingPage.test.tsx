@@ -50,6 +50,17 @@ describe('InvestingPage', () => {
           { code: 'GBP', name: 'Pound Sterling', symbol: '£', minor_unit: 2, is_active: true },
         ]),
       ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
+      ),
       http.get('*/v1/investing/summary', () =>
         HttpResponse.json({
           portfolio_value: null,
@@ -104,6 +115,17 @@ describe('InvestingPage', () => {
           { code: 'INR', name: 'Indian Rupee', symbol: 'Rs', minor_unit: 2, is_active: true },
           { code: 'GBP', name: 'Pound Sterling', symbol: '£', minor_unit: 2, is_active: true },
         ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
       ),
       http.get('*/v1/investing/summary', () =>
         HttpResponse.json({
@@ -208,6 +230,17 @@ describe('InvestingPage', () => {
         HttpResponse.json([
           { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
         ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
       ),
       http.get('*/v1/investing/summary', () =>
         HttpResponse.json({

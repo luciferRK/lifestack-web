@@ -12,6 +12,7 @@ export type ComboboxOption = {
 };
 
 type ComboboxProps = {
+  testId?: string;
   value: string;
   options: ComboboxOption[];
   onChange: (value: string) => void;
@@ -24,6 +25,7 @@ type ComboboxProps = {
 };
 
 export const Combobox: React.FC<ComboboxProps> = ({
+  testId,
   value,
   options,
   onChange,
@@ -43,6 +45,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
         <Button
           type="button"
           variant="secondary"
+          data-testid={testId}
           role="combobox"
           aria-expanded={open}
           disabled={disabled}

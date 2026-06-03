@@ -25,7 +25,13 @@ export const LoginPage: React.FC = () => {
       navigate('/', { replace: true });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to login');
+      // Always show a generic message to prevent username/email enumeration
+      const status = err.response?.status;
+      if (status === 401 || status === 403 || status === 422) {
+        setError('Invalid credentials. Please check your email and password.');
+      } else {
+        setError('Sign in failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,7 +60,11 @@ export const LoginPage: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
+              <label htmlFor="login-email" className="sr-only">
+                Email address
+              </label>
               <input 
+                id="login-email"
                 type="email" 
                 placeholder="Email address" 
                 required
@@ -64,7 +74,11 @@ export const LoginPage: React.FC = () => {
               />
             </div>
             <div>
+              <label htmlFor="login-password" className="sr-only">
+                Password
+              </label>
               <input 
+                id="login-password"
                 type="password" 
                 placeholder="Password" 
                 required

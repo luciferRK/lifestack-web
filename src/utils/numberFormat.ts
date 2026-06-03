@@ -6,10 +6,20 @@ export const toNumber = (value: number | string | null | undefined): number => {
 
 export const formatCurrency = (
   amount: number | string | null | undefined,
-  currency: string = 'USD',
-): string =>
-  new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(toNumber(amount));
+  currency: string | null | undefined = 'USD',
+  currencyDisplay: 'symbol' | 'code' = 'symbol',
+): string => {
+  const normalizedCurrency = (currency || 'USD').trim().toUpperCase();
+  const numericAmount = toNumber(amount);
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: normalizedCurrency,
+      currencyDisplay,
+      minimumFractionDigits: 2,
+    }).format(numericAmount);
+  } catch {
+    return `${normalizedCurrency} ${numericAmount.toFixed(2)}`;
+  }
+};

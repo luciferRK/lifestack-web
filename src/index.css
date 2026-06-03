@@ -3,6 +3,14 @@
 :root {
   --primary: #3b82f6;
   --bg-dark: #0f172a;
+  --max-content-width: 1400px;
+  --page-padding-x: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --page-padding-x: 2rem;
+  }
 }
 
 body {

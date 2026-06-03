@@ -31,11 +31,28 @@ export interface AccountUpdate {
 
 export interface WorkspaceFinanceSetting {
   reporting_currency_code: string | null;
+  currency_display_preference?: 'symbol' | 'code';
   updated_at: string;
 }
 
 export interface WorkspaceFinanceSettingUpdate {
-  reporting_currency_code: string | null;
+  reporting_currency_code?: string | null;
+  currency_display_preference?: 'symbol' | 'code' | null;
+}
+
+export interface UserFinanceSetting {
+  reporting_currency_override_code: string | null;
+  currency_display_preference_override: 'symbol' | 'code' | null;
+  workspace_reporting_currency_code: string | null;
+  workspace_currency_display_preference: 'symbol' | 'code';
+  effective_reporting_currency_code: string | null;
+  effective_currency_display_preference: 'symbol' | 'code';
+  updated_at: string;
+}
+
+export interface UserFinanceSettingUpdate {
+  reporting_currency_override_code?: string | null;
+  currency_display_preference_override?: 'symbol' | 'code' | null;
 }
 
 export interface CapitalTransferCreate {
@@ -61,6 +78,12 @@ export interface CapitalTransfer {
   to_module: 'spending' | 'investing';
   from_account_id: number;
   to_account_id: number;
+  from_account_public_id: string | null;
+  to_account_public_id: string | null;
+  from_account_name: string | null;
+  to_account_name: string | null;
+  from_account_type: 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card' | null;
+  to_account_type: 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card' | null;
   from_currency_code: string;
   to_currency_code: string;
   gross_amount: string;

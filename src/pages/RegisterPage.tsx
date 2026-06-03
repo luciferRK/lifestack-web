@@ -2,6 +2,31 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth';
 
+const getPasswordStrength = (value: string) => {
+  let score = 0;
+  if (value.length >= 8) score += 1;
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
+  if (/\d/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+  if (score >= 4) return { label: 'Strong', color: 'bg-emerald-500' };
+  if (score >= 3) return { label: 'Good', color: 'bg-cyan-500' };
+  if (score >= 2) return { label: 'Fair', color: 'bg-amber-500' };
+  return { label: 'Weak', color: 'bg-rose-500' };
+};
+
+const getPasswordStrengthWidth = (value: string) => {
+  if (!value) return 0;
+
+  let score = 0;
+  if (value.length >= 8) score += 1;
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
+  if (/\d/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+  return Math.max(25, score * 25);
+};
+
 export const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -9,6 +34,8 @@ export const RegisterPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const passwordStrength = getPasswordStrength(password);
+  const passwordStrengthWidth = getPasswordStrengthWidth(password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,11 +47,16 @@ export const RegisterPage: React.FC = () => {
       navigate('/login', { state: { message: 'Registration successful. Please log in.' } });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
+      const status = err.response?.status;
       const detail = err.response?.data?.detail;
-      if (Array.isArray(detail)) {
-        setError(detail[0]?.msg || 'Failed to register');
+      // Normalize 409 / 422 errors to prevent username/email enumeration
+      if (status === 409 || (typeof detail === 'string' && /already (exists|in use|registered)/i.test(detail))) {
+        setError('Registration failed. Please check your details and try again.');
+      } else if (Array.isArray(detail)) {
+        // Expose validation field errors (e.g. pattern mismatch) — safe, not enumeration
+        setError(detail[0]?.msg || 'Registration failed. Please check your details.');
       } else {
-        setError(detail || 'Failed to register');
+        setError('Registration failed. Please check your details.');
       }
     } finally {
       setLoading(false);
@@ -48,7 +80,11 @@ export const RegisterPage: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
+              <label htmlFor="register-email" className="sr-only">
+                Email address
+              </label>
               <input 
+                id="register-email"
                 type="email" 
                 placeholder="Email address" 
                 required
@@ -58,17 +94,29 @@ export const RegisterPage: React.FC = () => {
               />
             </div>
             <div>
+              <label htmlFor="register-username" className="sr-only">
+                Username
+              </label>
               <input 
+                id="register-username"
                 type="text" 
                 placeholder="Username" 
                 required
+                minLength={3}
+                maxLength={50}
+                pattern="^[a-zA-Z0-9_-]+$"
+                title="3–50 characters. Letters, numbers, underscores and hyphens only."
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-blue-500 transition-all"
               />
             </div>
             <div>
+              <label htmlFor="register-password" className="sr-only">
+                Password
+              </label>
               <input 
+                id="register-password"
                 type="password" 
                 placeholder="Password" 
                 required
@@ -77,6 +125,20 @@ export const RegisterPage: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-blue-500 transition-all"
               />
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-slate-400">
+                  Use at least 8 characters with upper and lower case letters, a number, and a symbol.
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-700">
+                    <div
+                      className={`h-full transition-all ${passwordStrength.color}`}
+                      style={{ width: `${passwordStrengthWidth}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-slate-300">{password ? passwordStrength.label : 'Required'}</span>
+                </div>
+              </div>
             </div>
           </div>
           

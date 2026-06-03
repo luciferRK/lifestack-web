@@ -36,19 +36,72 @@ export const VoiceAgentWidget: React.FC = () => {
   const queryClient = useQueryClient();
   const launcherSize = 56;
   const viewportMargin = 24;
-  const panelWidth = 384;
-  const panelHeight = 600;
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const isMobileViewport = viewportWidth < 640;
+  const panelWidth = isMobileViewport ? Math.max(320, viewportWidth - viewportMargin * 2) : 384;
+  const panelHeight = isMobileViewport ? Math.min(560, Math.max(420, viewportHeight * 0.72)) : 600;
+  const launcherStorageKey = 'voice-agent-launcher-pos-v1';
+
+  const clampLauncherPos = (position: { x: number; y: number }) => {
+    if (typeof window === 'undefined') return position;
+    return {
+      x: Math.min(
+        Math.max(viewportMargin, position.x),
+        window.innerWidth - launcherSize - viewportMargin
+      ),
+      y: Math.min(
+        Math.max(viewportMargin, position.y),
+        window.innerHeight - launcherSize - viewportMargin
+      ),
+    };
+  };
+
+  const getDefaultLauncherPos = () =>
+    clampLauncherPos({
+      x: typeof window === 'undefined' ? viewportMargin : window.innerWidth - launcherSize - viewportMargin,
+      y: typeof window === 'undefined' ? viewportMargin : window.innerHeight - launcherSize - viewportMargin,
+    });
+
+  const snapLauncherPos = (position: { x: number; y: number }) => {
+    if (typeof window === 'undefined') return position;
+    const clamped = clampLauncherPos(position);
+
+    const left = clamped.x - viewportMargin;
+    const right = window.innerWidth - launcherSize - viewportMargin - clamped.x;
+    const top = clamped.y - viewportMargin;
+    const bottom = window.innerHeight - launcherSize - viewportMargin - clamped.y;
+
+    const nearest = Math.min(left, right, top, bottom);
+    if (nearest === left) return { x: viewportMargin, y: clamped.y };
+    if (nearest === right) return { x: window.innerWidth - launcherSize - viewportMargin, y: clamped.y };
+    if (nearest === top) return { x: clamped.x, y: viewportMargin };
+    return { x: clamped.x, y: window.innerHeight - launcherSize - viewportMargin };
+  };
   
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [launcherPos, setLauncherPos] = useState<{ x: number; y: number }>(() => ({
-    x: Math.max(viewportMargin, window.innerWidth - launcherSize - viewportMargin),
-    y: Math.max(viewportMargin, window.innerHeight - launcherSize - viewportMargin),
-  }));
+  const [launcherPos, setLauncherPos] = useState<{ x: number; y: number }>(() => {
+    const defaultPos = getDefaultLauncherPos();
+    if (typeof window === 'undefined') return defaultPos;
+    try {
+      const saved = window.localStorage.getItem(launcherStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { x?: number; y?: number };
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return clampLauncherPos({ x: parsed.x, y: parsed.y });
+        }
+      }
+    } catch {
+      // Ignore
+    }
+    return defaultPos;
+  });
   
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -66,12 +119,11 @@ export const VoiceAgentWidget: React.FC = () => {
     }
   }, [messages, isOpen]);
 
+
+
   useEffect(() => {
     const handleResize = () => {
-      setLauncherPos((prev) => ({
-        x: Math.min(Math.max(viewportMargin, prev.x), window.innerWidth - launcherSize - viewportMargin),
-        y: Math.min(Math.max(viewportMargin, prev.y), window.innerHeight - launcherSize - viewportMargin),
-      }));
+      setLauncherPos((prev) => clampLauncherPos(prev));
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -91,13 +143,19 @@ export const VoiceAgentWidget: React.FC = () => {
     isDraggingRef.current = true;
     const nextX = event.clientX - dragOffsetRef.current.x;
     const nextY = event.clientY - dragOffsetRef.current.y;
-    setLauncherPos({
-      x: Math.min(Math.max(viewportMargin, nextX), window.innerWidth - launcherSize - viewportMargin),
-      y: Math.min(Math.max(viewportMargin, nextY), window.innerHeight - launcherSize - viewportMargin),
-    });
+    setLauncherPos(clampLauncherPos({ x: nextX, y: nextY }));
   };
 
   const endDrag = () => {
+    const snappedPos = snapLauncherPos(launcherPos);
+    setLauncherPos(snappedPos);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(launcherStorageKey, JSON.stringify(snappedPos));
+      } catch (e) {
+        console.warn('Failed to save voice agent position to localStorage:', e);
+      }
+    }
     dragOffsetRef.current = null;
     window.setTimeout(() => {
       isDraggingRef.current = false;
@@ -249,6 +307,7 @@ export const VoiceAgentWidget: React.FC = () => {
     }
 
     setConnectionStatus('connecting');
+    setConnectionError(null);
     try {
       const wsUrl = getWebSocketUrl();
       const ws = new WebSocket(wsUrl);
@@ -257,6 +316,7 @@ export const VoiceAgentWidget: React.FC = () => {
 
       ws.onopen = () => {
         setConnectionStatus('connected');
+        setConnectionError(null);
         setMessages(prev => [...prev, {
           id: Math.random().toString(),
           role: 'system',
@@ -275,6 +335,7 @@ export const VoiceAgentWidget: React.FC = () => {
             handleServerMessage(msg);
           } catch (err) {
             console.error('Failed parsing server message:', err);
+            setConnectionError('Voice Copilot received an unreadable response. Retry the session.');
           }
         }
       };
@@ -282,10 +343,14 @@ export const VoiceAgentWidget: React.FC = () => {
       ws.onerror = (err) => {
         console.error('WS Error:', err);
         setConnectionStatus('error');
+        setConnectionError('Voice Copilot could not connect to the live session.');
       };
 
       ws.onclose = (event) => {
         setConnectionStatus('disconnected');
+        if (event.code !== 1000) {
+          setConnectionError(`Voice Copilot disconnected unexpectedly (${event.code}).`);
+        }
         setMessages(prev => [...prev, {
           id: Math.random().toString(),
           role: 'system',
@@ -298,6 +363,7 @@ export const VoiceAgentWidget: React.FC = () => {
     } catch (err) {
       console.error('Failed to establish WebSocket connection:', err);
       setConnectionStatus('error');
+      setConnectionError('Voice Copilot could not start a live session.');
       setMessages(prev => [...prev, {
         id: Math.random().toString(),
         role: 'system',
@@ -429,6 +495,16 @@ export const VoiceAgentWidget: React.FC = () => {
     }
   };
 
+  const retryConnection = () => {
+    stopRecording();
+    clearAudioQueue();
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    connectWebSocket();
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -465,6 +541,7 @@ export const VoiceAgentWidget: React.FC = () => {
         style={{ left: launcherPos.x, top: launcherPos.y }}
         id="voice-agent-trigger"
         title="Voice Copilot"
+        aria-label={isOpen ? 'Close voice copilot' : 'Open voice copilot'}
         disabled={isStarting}
       >
         {isRecording ? (
@@ -479,19 +556,32 @@ export const VoiceAgentWidget: React.FC = () => {
 
       {/* Floating Copilot Drawer Panel */}
       <div
-        className={`fixed z-50 flex h-[600px] w-96 flex-col rounded-2xl border border-slate-800 bg-slate-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-in-out origin-bottom-right ${
+        className={`fixed z-50 flex flex-col rounded-2xl border border-slate-800 bg-slate-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-in-out ${
+          isMobileViewport ? 'origin-bottom' : 'origin-bottom-right'
+        } ${
           isOpen ? 'scale-100 opacity-100' : 'scale-75 opacity-0 pointer-events-none'
         }`}
-        style={{
-          left: Math.min(
-            Math.max(viewportMargin, launcherPos.x + launcherSize - panelWidth),
-            window.innerWidth - panelWidth - viewportMargin
-          ),
-          top: Math.min(
-            Math.max(viewportMargin, launcherPos.y - panelHeight - 10),
-            window.innerHeight - panelHeight - viewportMargin
-          ),
-        }}
+        style={
+          isMobileViewport
+            ? {
+                left: viewportMargin,
+                width: panelWidth,
+                height: panelHeight,
+                top: Math.max(viewportMargin, viewportHeight - panelHeight - launcherSize - viewportMargin),
+              }
+            : {
+                left: Math.min(
+                  Math.max(viewportMargin, launcherPos.x + launcherSize - panelWidth),
+                  viewportWidth - panelWidth - viewportMargin
+                ),
+                top: Math.min(
+                  Math.max(viewportMargin, launcherPos.y - panelHeight - 10),
+                  viewportHeight - panelHeight - viewportMargin
+                ),
+                width: panelWidth,
+                height: panelHeight,
+              }
+        }
       >
         {/* Panel Header */}
         <div className="flex items-center justify-between border-b border-slate-800/80 px-4 py-3">
@@ -510,10 +600,40 @@ export const VoiceAgentWidget: React.FC = () => {
           <button
             onClick={toggleOpen}
             className="rounded p-1 text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"
+            aria-label="Close voice copilot"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {connectionError ? (
+          <div
+            role="alert"
+            className="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">Voice session needs attention</p>
+              <p className="mt-1 text-xs text-rose-100/80">{connectionError}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={retryConnection}
+                className="rounded-md border border-rose-300/40 px-2 py-1 text-xs font-medium text-rose-100 transition-colors hover:bg-rose-400/10"
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={() => setConnectionError(null)}
+                className="rounded-md px-2 py-1 text-xs font-medium text-rose-100/80 transition-colors hover:bg-rose-400/10 hover:text-rose-50"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Scrollable Message Transcripts */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 select-text">
