@@ -180,14 +180,14 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
 - E2E spec:
   - `e2e/investing-lookthrough.spec.ts`
 
-The current browser E2E suite focuses on frontend behavior. A true full-stack end-to-end harness across frontend, backend, and database is still a later integration step.
+The current browser E2E suite in this repo focuses on frontend behavior. The full-stack end-to-end harness now lives in the standalone `lifestack-e2e` repo, where the UI, API, and database run together against real contracts.
 
-### E2E Strategy (Scope Item)
+### E2E Strategy
 - Current frontend Playwright tests mock API responses for fast UI regression checks.
-- A true full-stack FE+BE+DB E2E suite is recommended as a dedicated integration repo because FE and BE are separate repositories.
-- Proposed future setup:
-  - integration repo with compose orchestration for frontend + backend + postgres
-  - real API contracts, with no route mocks
+- Full-stack FE+BE+DB coverage is handled in the dedicated `lifestack-e2e` repo because FE and BE are separate repositories.
+- Remaining follow-up:
+  - smoother compose orchestration for frontend + backend + postgres
+  - fewer manual environment and migration steps
   - seeded deterministic test data and cross-repo CI gate
 
 ---

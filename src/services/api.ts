@@ -52,13 +52,18 @@ export const onSessionExtended = (cb: EventCallback) => {
 // requests retry once the single refresh resolves.
 
 let refreshPromise: Promise<void> | null = null;
+let refreshFailed = false;
 
 const attemptRefresh = (): Promise<void> => {
+  if (refreshFailed) {
+    return Promise.reject(new Error('Refresh already failed'));
+  }
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = api
     .post('/auth/refresh')
     .then(() => {
+      refreshFailed = false;
       [...sessionExtendedCallbacks].forEach((cb) => {
         try {
           cb();
@@ -71,6 +76,7 @@ const attemptRefresh = (): Promise<void> => {
       // Only force logout on definitive auth failures (401/403).
       // Network errors let the original request fail naturally.
       if (err.response?.status === 401 || err.response?.status === 403) {
+        refreshFailed = true;
         [...unauthorizedCallbacks].forEach((cb) => {
           try {
             cb();
@@ -100,6 +106,7 @@ api.interceptors.response.use(
       error.response?.status === 401 &&
       original &&
       !original._retried &&
+      !refreshFailed &&
       !original.url?.endsWith('/auth/refresh')
     ) {
       original._retried = true;

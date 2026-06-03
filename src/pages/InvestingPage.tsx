@@ -261,7 +261,7 @@ export const InvestingPage: React.FC = () => {
       holdings.filter((holding) => {
         const accountMatch = !holdingsAccountFilter || holding.account_name === holdingsAccountFilter;
         const currencyMatch =
-          !holdingsCurrencyFilter || holding.currency?.toUpperCase() === holdingsCurrencyFilter.toUpperCase();
+          !holdingsCurrencyFilter || (holding.currency ?? 'USD').toUpperCase() === holdingsCurrencyFilter.toUpperCase();
         return accountMatch && currencyMatch;
       }),
     [holdings, holdingsAccountFilter, holdingsCurrencyFilter]
@@ -271,7 +271,7 @@ export const InvestingPage: React.FC = () => {
       cashBalances.filter((balance) => {
         const accountMatch = !cashAccountFilter || balance.account_name === cashAccountFilter;
         const currencyMatch =
-          !cashCurrencyFilter || balance.currency?.toUpperCase() === cashCurrencyFilter.toUpperCase();
+          !cashCurrencyFilter || (balance.currency ?? 'USD').toUpperCase() === cashCurrencyFilter.toUpperCase();
         return accountMatch && currencyMatch;
       }),
     [cashBalances, cashAccountFilter, cashCurrencyFilter]

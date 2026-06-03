@@ -25,12 +25,15 @@ export const DashboardPage: React.FC = () => {
   const currencyDisplayPreference =
     userFinanceSettings?.effective_currency_display_preference ?? 'symbol';
 
-  const generatedAt = data
-    ? new Date(data.system.generated_at).toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
-    : null;
+  const generatedAt = (() => {
+    if (!data?.system.generated_at) return null;
+    const generatedAtDate = new Date(data.system.generated_at);
+    if (Number.isNaN(generatedAtDate.getTime())) return null;
+    return generatedAtDate.toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  })();
   const latestWeeklyStartLabel = (() => {
     if (!latestSummary?.week_start) return 'N/A';
     const date = new Date(`${latestSummary.week_start}T00:00:00Z`);

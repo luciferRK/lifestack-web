@@ -256,10 +256,6 @@ export const SpendingPage: React.FC = () => {
         })),
     [spendingAccounts]
   );
-  const accountNameById = useMemo(
-    () => new Map(spendingAccounts.map((account) => [account.public_id, account.name])),
-    [spendingAccounts]
-  );
   const accountById = useMemo(
     () => new Map(spendingAccounts.map((account) => [account.public_id, account])),
     [spendingAccounts]
@@ -935,8 +931,7 @@ export const SpendingPage: React.FC = () => {
                     const isIncome = tx.type === 'income';
                     const dateObj = new Date(tx.occurred_at);
                     const linkedAccount = tx.account_id ? accountById.get(tx.account_id) : undefined;
-                    const sourceName =
-                      tx.wallet_name || linkedAccount?.name || (tx.account_id ? accountNameById.get(tx.account_id) : null) || '-';
+                    const sourceName = tx.wallet_name || linkedAccount?.name || '-';
                     const sourceType = linkedAccount?.account_type
                       ? linkedAccount.account_type.replace('_', ' ')
                       : tx.wallet_name

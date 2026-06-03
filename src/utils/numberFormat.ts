@@ -8,10 +8,18 @@ export const formatCurrency = (
   amount: number | string | null | undefined,
   currency: string = 'USD',
   currencyDisplay: 'symbol' | 'code' = 'symbol',
-): string =>
-  new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency,
-    currencyDisplay,
-    minimumFractionDigits: 2,
-  }).format(toNumber(amount));
+): string => {
+  const normalizedCurrency = currency.trim().toUpperCase() || 'USD';
+  const numericAmount = toNumber(amount);
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: normalizedCurrency,
+      currencyDisplay,
+      minimumFractionDigits: 2,
+    }).format(numericAmount);
+  } catch {
+    return `${normalizedCurrency} ${numericAmount.toFixed(2)}`;
+  }
+};
