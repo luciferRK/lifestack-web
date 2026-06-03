@@ -88,7 +88,7 @@ The current implementation is intentionally centered on a single-user personal w
 
 These tracks are planned product direction, not current web functionality:
 
-- **Mobile companion:** quick capture, notifications, camera upload, background sync, and health-provider sync review.
+- **Mobile companion:** quick capture, notifications, camera upload, background sync, and health-app sync review.
 - **Health tracking:** sleep, weight, vitals, labs, symptoms, medications, and workouts, with manual entry before health-app sync.
 - **Medication reminders:** schedules, adherence check-ins, refill notes, and dashboard follow-up tasks.
 - **Document intelligence:** upload, extraction review, source-linked records, and privacy-focused lifecycle controls.
