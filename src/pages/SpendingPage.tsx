@@ -44,6 +44,14 @@ import { AccountTypeBadge, CurrencyBadge } from '../components/finance/Badges';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { Button } from '../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { formatCurrency } from '../utils/numberFormat';
@@ -213,6 +221,10 @@ export const SpendingPage: React.FC = () => {
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState<'bank' | 'wallet' | 'card' | 'gift_card'>('wallet');
   const [newAccountCurrency, setNewAccountCurrency] = useState('USD');
+  const [recurringPendingDeactivate, setRecurringPendingDeactivate] = useState<{
+    publicId: string;
+    description: string;
+  } | null>(null);
   const [transferFromAccountId, setTransferFromAccountId] = useState('');
   const [transferToAccountId, setTransferToAccountId] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -633,6 +645,13 @@ export const SpendingPage: React.FC = () => {
     setIsRecurringModalOpen(false);
     setEditingRecurring(null);
     resetRecurringForm();
+  };
+
+  const confirmDeactivateRecurring = () => {
+    if (!recurringPendingDeactivate) return;
+    deactivateRecurringMutation.mutate(recurringPendingDeactivate.publicId, {
+      onSuccess: () => setRecurringPendingDeactivate(null),
+    });
   };
 
   const handleSaveRecurring = (values: RecurringFormValues) => {
@@ -1203,15 +1222,12 @@ export const SpendingPage: React.FC = () => {
                       </button>
                       <button
                         data-testid="spending-recurring-deactivate"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              'Are you sure you want to deactivate this recurring rule?'
-                            )
-                          ) {
-                            deactivateRecurringMutation.mutate(r.public_id);
-                          }
-                        }}
+                        onClick={() =>
+                          setRecurringPendingDeactivate({
+                            publicId: r.public_id,
+                            description: r.description || 'this recurring rule',
+                          })
+                        }
                         disabled={deactivateRecurringMutation.isPending}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                         title="Deactivate this rule"
@@ -1232,6 +1248,35 @@ export const SpendingPage: React.FC = () => {
               onPageChange={setRecurringOffset}
             />
           )}
+          <Dialog
+            open={!!recurringPendingDeactivate}
+            onOpenChange={(open) => !open && setRecurringPendingDeactivate(null)}
+          >
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Deactivate recurring rule?</DialogTitle>
+                <DialogDescription>
+                  {recurringPendingDeactivate
+                    ? `Deactivate "${recurringPendingDeactivate.description}"? Future recurring transactions will stop generating.`
+                    : 'Future recurring transactions will stop generating.'}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={() => setRecurringPendingDeactivate(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="text-rose-300 hover:text-rose-200"
+                  onClick={confirmDeactivateRecurring}
+                  disabled={deactivateRecurringMutation.isPending}
+                >
+                  {deactivateRecurringMutation.isPending ? 'Deactivating...' : 'Deactivate rule'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       ) : activeTab === 'transfers' ? (
         <div className="space-y-4 animate-in fade-in duration-300">

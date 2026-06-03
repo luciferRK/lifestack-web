@@ -9,6 +9,14 @@ import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 
 export const MasterConfigPage: React.FC = () => {
@@ -29,6 +37,7 @@ export const MasterConfigPage: React.FC = () => {
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [editingCategoryColor, setEditingCategoryColor] = useState('');
   const [editingCategoryIcon, setEditingCategoryIcon] = useState('');
+  const [accountPendingDelete, setAccountPendingDelete] = useState<{ publicId: string; name: string } | null>(null);
 
   const { data: currencies = [] } = useQuery({
     queryKey: ['finance', 'currencies', 'master-config'],
@@ -191,6 +200,13 @@ export const MasterConfigPage: React.FC = () => {
     setEditingCategoryName(category.name);
     setEditingCategoryColor(category.color ?? '#64748b');
     setEditingCategoryIcon(category.icon ?? '');
+  };
+
+  const confirmDeleteAccount = () => {
+    if (!accountPendingDelete) return;
+    deleteAccountMutation.mutate(accountPendingDelete.publicId, {
+      onSuccess: () => setAccountPendingDelete(null),
+    });
   };
 
   return (
@@ -406,11 +422,9 @@ export const MasterConfigPage: React.FC = () => {
                       type="button"
                       variant="secondary"
                       className="h-9 px-3 text-rose-300 hover:text-rose-200"
-                      onClick={() => {
-                        if (window.confirm(`Delete account "${account.name}"? This cannot be undone.`)) {
-                          deleteAccountMutation.mutate(account.public_id);
-                        }
-                      }}
+                      onClick={() =>
+                        setAccountPendingDelete({ publicId: account.public_id, name: account.name })
+                      }
                       disabled={deleteAccountMutation.isPending}
                     >
                       Delete
@@ -557,6 +571,33 @@ export const MasterConfigPage: React.FC = () => {
           </table>
         </div>
       </section>
+
+      <Dialog open={!!accountPendingDelete} onOpenChange={(open) => !open && setAccountPendingDelete(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete account?</DialogTitle>
+            <DialogDescription>
+              {accountPendingDelete
+                ? `Delete account "${accountPendingDelete.name}"? This cannot be undone.`
+                : 'This action cannot be undone.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setAccountPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-rose-300 hover:text-rose-200"
+              onClick={confirmDeleteAccount}
+              disabled={deleteAccountMutation.isPending}
+            >
+              {deleteAccountMutation.isPending ? 'Deleting...' : 'Delete account'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 };
