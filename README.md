@@ -6,6 +6,8 @@ Lifestack Web is the frontend for the Lifestack product vision: one place to man
 
 The web app is where the personal operating system becomes visible and usable day to day. It is responsible for turning the platform's shared data model into a calm, high-clarity interface for capture, review, and decision-making.
 
+The long-term interface goal is a daily briefing, not a generic chat surface: today's tasks, reminders, health context, money signals, document follow-ups, and coach recommendations with visible source context.
+
 ---
 
 ## Product Principles
@@ -96,6 +98,8 @@ These tracks are planned product direction, not current web functionality:
 - **Personal coach:** planning and recommendations over structured life data, with citations and user-confirmed actions.
 
 The frontend should keep these tracks visually integrated with the existing dashboard, capture, notification, and review surfaces instead of presenting them as disconnected apps.
+
+Trust should be visible in the UI: data-source labels, domain permissions, user confirmation for sensitive changes, export/delete affordances, and cited answers for document-backed or health-backed coach responses.
 
 ---
 
