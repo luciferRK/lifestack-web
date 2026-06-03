@@ -1463,14 +1463,14 @@ export const SpendingPage: React.FC = () => {
               <div>
                 <Label htmlFor="rec-amount" className="mb-2 block">Amount</Label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{displayCurrency}</span>
                   <Input
                     id="rec-amount"
                     data-testid="spending-recurring-amount"
                     type="number"
                     step="0.01"
                     min="0.01"
-                    className="pl-8"
+                    className="pl-16"
                     placeholder="0.00"
                     {...registerRecurringField('amount')}
                   />
@@ -1654,7 +1654,7 @@ export const SpendingPage: React.FC = () => {
                       required
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950/50 py-3 pl-8 pr-4 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/50 py-3 pl-16 pr-4 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       placeholder="0.00"
                     />
                   </div>
@@ -1824,7 +1824,7 @@ export const SpendingPage: React.FC = () => {
                 <div>
                   <Label htmlFor="budget-amount" className="mb-2 block">Budget Limit</Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{displayCurrency}</span>
                     <Input
                       id="budget-amount"
                       data-testid="spending-budget-amount"
@@ -1832,7 +1832,7 @@ export const SpendingPage: React.FC = () => {
                       step="0.01"
                       min="0.01"
                       required
-                      className="pl-8"
+                      className="pl-16"
                       placeholder="0.00"
                       {...registerBudgetField('amount')}
                     />

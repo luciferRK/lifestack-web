@@ -6,10 +6,10 @@ export const toNumber = (value: number | string | null | undefined): number => {
 
 export const formatCurrency = (
   amount: number | string | null | undefined,
-  currency: string = 'USD',
+  currency: string | null | undefined = 'USD',
   currencyDisplay: 'symbol' | 'code' = 'symbol',
 ): string => {
-  const normalizedCurrency = currency.trim().toUpperCase() || 'USD';
+  const normalizedCurrency = (currency || 'USD').trim().toUpperCase();
   const numericAmount = toNumber(amount);
 
   try {
