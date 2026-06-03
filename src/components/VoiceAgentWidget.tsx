@@ -81,6 +81,7 @@ export const VoiceAgentWidget: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false);
   const [inputText, setInputText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [launcherPos, setLauncherPos] = useState<{ x: number; y: number }>(() => {
     const defaultPos = getDefaultLauncherPos();
@@ -299,6 +300,7 @@ export const VoiceAgentWidget: React.FC = () => {
     }
 
     setConnectionStatus('connecting');
+    setConnectionError(null);
     try {
       const wsUrl = getWebSocketUrl();
       const ws = new WebSocket(wsUrl);
@@ -307,6 +309,7 @@ export const VoiceAgentWidget: React.FC = () => {
 
       ws.onopen = () => {
         setConnectionStatus('connected');
+        setConnectionError(null);
         setMessages(prev => [...prev, {
           id: Math.random().toString(),
           role: 'system',
@@ -325,6 +328,7 @@ export const VoiceAgentWidget: React.FC = () => {
             handleServerMessage(msg);
           } catch (err) {
             console.error('Failed parsing server message:', err);
+            setConnectionError('Voice Copilot received an unreadable response. Retry the session.');
           }
         }
       };
@@ -332,10 +336,14 @@ export const VoiceAgentWidget: React.FC = () => {
       ws.onerror = (err) => {
         console.error('WS Error:', err);
         setConnectionStatus('error');
+        setConnectionError('Voice Copilot could not connect to the live session.');
       };
 
       ws.onclose = (event) => {
         setConnectionStatus('disconnected');
+        if (event.code !== 1000) {
+          setConnectionError(`Voice Copilot disconnected unexpectedly (${event.code}).`);
+        }
         setMessages(prev => [...prev, {
           id: Math.random().toString(),
           role: 'system',
@@ -348,6 +356,7 @@ export const VoiceAgentWidget: React.FC = () => {
     } catch (err) {
       console.error('Failed to establish WebSocket connection:', err);
       setConnectionStatus('error');
+      setConnectionError('Voice Copilot could not start a live session.');
       setMessages(prev => [...prev, {
         id: Math.random().toString(),
         role: 'system',
@@ -479,6 +488,16 @@ export const VoiceAgentWidget: React.FC = () => {
     }
   };
 
+  const retryConnection = () => {
+    stopRecording();
+    clearAudioQueue();
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    connectWebSocket();
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -564,6 +583,35 @@ export const VoiceAgentWidget: React.FC = () => {
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {connectionError ? (
+          <div
+            role="alert"
+            className="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">Voice session needs attention</p>
+              <p className="mt-1 text-xs text-rose-100/80">{connectionError}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={retryConnection}
+                className="rounded-md border border-rose-300/40 px-2 py-1 text-xs font-medium text-rose-100 transition-colors hover:bg-rose-400/10"
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={() => setConnectionError(null)}
+                className="rounded-md px-2 py-1 text-xs font-medium text-rose-100/80 transition-colors hover:bg-rose-400/10 hover:text-rose-50"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Scrollable Message Transcripts */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 select-text">
