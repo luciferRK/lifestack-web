@@ -36,8 +36,11 @@ export const VoiceAgentWidget: React.FC = () => {
   const queryClient = useQueryClient();
   const launcherSize = 56;
   const viewportMargin = 24;
-  const panelWidth = 384;
-  const panelHeight = 600;
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const isMobileViewport = viewportWidth < 640;
+  const panelWidth = isMobileViewport ? Math.max(320, viewportWidth - viewportMargin * 2) : 384;
+  const panelHeight = isMobileViewport ? Math.min(560, Math.max(420, viewportHeight * 0.72)) : 600;
   const launcherStorageKey = 'voice-agent-launcher-pos-v1';
 
   const clampLauncherPos = (position: { x: number; y: number }) => {
@@ -534,6 +537,7 @@ export const VoiceAgentWidget: React.FC = () => {
         style={{ left: launcherPos.x, top: launcherPos.y }}
         id="voice-agent-trigger"
         title="Voice Copilot"
+        aria-label={isOpen ? 'Close voice copilot' : 'Open voice copilot'}
         disabled={isStarting}
       >
         {isRecording ? (
@@ -548,19 +552,32 @@ export const VoiceAgentWidget: React.FC = () => {
 
       {/* Floating Copilot Drawer Panel */}
       <div
-        className={`fixed z-50 flex h-[600px] w-96 flex-col rounded-2xl border border-slate-800 bg-slate-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-in-out origin-bottom-right ${
+        className={`fixed z-50 flex flex-col rounded-2xl border border-slate-800 bg-slate-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-in-out ${
+          isMobileViewport ? 'origin-bottom' : 'origin-bottom-right'
+        } ${
           isOpen ? 'scale-100 opacity-100' : 'scale-75 opacity-0 pointer-events-none'
         }`}
-        style={{
-          left: Math.min(
-            Math.max(viewportMargin, launcherPos.x + launcherSize - panelWidth),
-            window.innerWidth - panelWidth - viewportMargin
-          ),
-          top: Math.min(
-            Math.max(viewportMargin, launcherPos.y - panelHeight - 10),
-            window.innerHeight - panelHeight - viewportMargin
-          ),
-        }}
+        style={
+          isMobileViewport
+            ? {
+                left: viewportMargin,
+                width: panelWidth,
+                height: panelHeight,
+                top: Math.max(viewportMargin, viewportHeight - panelHeight - launcherSize - viewportMargin),
+              }
+            : {
+                left: Math.min(
+                  Math.max(viewportMargin, launcherPos.x + launcherSize - panelWidth),
+                  viewportWidth - panelWidth - viewportMargin
+                ),
+                top: Math.min(
+                  Math.max(viewportMargin, launcherPos.y - panelHeight - 10),
+                  viewportHeight - panelHeight - viewportMargin
+                ),
+                width: panelWidth,
+                height: panelHeight,
+              }
+        }
       >
         {/* Panel Header */}
         <div className="flex items-center justify-between border-b border-slate-800/80 px-4 py-3">
@@ -579,6 +596,7 @@ export const VoiceAgentWidget: React.FC = () => {
           <button
             onClick={toggleOpen}
             className="rounded p-1 text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors"
+            aria-label="Close voice copilot"
           >
             <X className="h-4 w-4" />
           </button>

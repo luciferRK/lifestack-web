@@ -60,7 +60,11 @@ export const LoginPage: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
+              <label htmlFor="login-email" className="sr-only">
+                Email address
+              </label>
               <input 
+                id="login-email"
                 type="email" 
                 placeholder="Email address" 
                 required
@@ -70,7 +74,11 @@ export const LoginPage: React.FC = () => {
               />
             </div>
             <div>
+              <label htmlFor="login-password" className="sr-only">
+                Password
+              </label>
               <input 
+                id="login-password"
                 type="password" 
                 placeholder="Password" 
                 required
