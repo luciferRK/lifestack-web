@@ -188,7 +188,6 @@ function App() {
   const isAuthResolved = useAuthStore((state) => state.isAuthResolved);
   const setSession = useAuthStore((state) => state.setSession);
   const clearSession = useAuthStore((state) => state.clearSession);
-  const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,10 +201,6 @@ function App() {
       } catch {
         if (!cancelled) {
           clearSession();
-        }
-      } finally {
-        if (!cancelled) {
-          setIsBootstrapping(false);
         }
       }
     };
@@ -226,7 +221,7 @@ function App() {
     });
   }, [clearSession]);
 
-  if (isBootstrapping && !isAuthResolved) {
+  if (!isAuthResolved) {
     return <div className="flex min-h-screen items-center justify-center bg-slate-900 text-slate-300">Loading...</div>;
   }
 
