@@ -60,6 +60,7 @@ Lifestack Web follows the same staged roadmap as the core platform:
 - Journal, notes, timeline, and context views
 - Cross-domain retrieval and review surfaces across documents, notes, health, tasks, and finance
 - Source-backed personal coach views grounded in structured product data
+- Permissioned agent-access surfaces for MCP and other trusted integrations
 
 ### Stage 8: SaaS
 - Multi-user and multi-workspace collaboration surfaces
@@ -95,11 +96,14 @@ These tracks are planned product direction, not current web functionality:
 - **Medication reminders:** schedules, adherence check-ins, refill notes, and dashboard follow-up tasks.
 - **Document intelligence:** upload, extraction review, source-linked records, and privacy-focused lifecycle controls.
 - **Second brain:** notes, journal, documents, health records, tasks, and finance events combined into source-backed retrieval.
+- **MCP and agent access:** permissioned access for trusted external assistants to selected preferences, second-brain memory, todos, documents, and domain summaries.
 - **Personal coach:** planning and recommendations over structured life data, with citations and user-confirmed actions.
 
 The frontend should keep these tracks visually integrated with the existing dashboard, capture, notification, and review surfaces instead of presenting them as disconnected apps.
 
 Trust should be visible in the UI: data-source labels, domain permissions, user confirmation for sensitive changes, export/delete affordances, and cited answers for document-backed or health-backed coach responses.
+
+Settings and master configuration should stay lean and low-traffic: useful for removing clutter from feature pages, but not a major destination in the product.
 
 ---
 
