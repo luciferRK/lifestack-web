@@ -6,6 +6,8 @@ Lifestack Web is the frontend for the Lifestack product vision: one place to man
 
 The web app is where the personal operating system becomes visible and usable day to day. It is responsible for turning the platform's shared data model into a calm, high-clarity interface for capture, review, and decision-making.
 
+The long-term interface goal is a daily briefing, not a generic chat surface: today's tasks, reminders, health context, money signals, document follow-ups, and coach recommendations with visible source context.
+
 ---
 
 ## Product Principles
@@ -41,10 +43,13 @@ Lifestack Web follows the same staged roadmap as the core platform:
 ### Stage 4: Mobile Companion
 - Shared design language across web and mobile
 - Faster capture, notifications, camera flows, and sync
+- Health-app sync foundation for sleep, weight, workouts, and other supported metrics
 - Personal-device-first use cases handled outside the desktop browser
 
 ### Stage 5: Health Module
-- UI for vitals, labs, medications, symptoms, sleep, and workouts
+- UI for vitals, labs, medications, symptoms, sleep, weight, and workouts
+- Medication tracker and reminder flows
+- Manual health entry first, followed by mobile health-app sync review surfaces
 - Shared dashboard views and follow-up workflows
 
 ### Stage 6: Document Intelligence
@@ -53,7 +58,9 @@ Lifestack Web follows the same staged roadmap as the core platform:
 
 ### Stage 7: Memory and Second Brain
 - Journal, notes, timeline, and context views
-- Cross-domain retrieval and review surfaces
+- Cross-domain retrieval and review surfaces across documents, notes, health, tasks, and finance
+- Source-backed personal coach views grounded in structured product data
+- Permissioned agent-access surfaces for MCP and other trusted integrations
 
 ### Stage 8: SaaS
 - Multi-user and multi-workspace collaboration surfaces
@@ -61,7 +68,7 @@ Lifestack Web follows the same staged roadmap as the core platform:
 
 ---
 
-## Current Scope
+## What Works Today
 
 Today the web app focuses on the personal OS foundation:
 
@@ -77,6 +84,26 @@ Today the web app focuses on the personal OS foundation:
 - Authentication and session handling
 
 The current implementation is intentionally centered on a single-user personal workflow before expanding into later-stage domains.
+
+---
+
+## Future Product Tracks
+
+These tracks are planned product direction, not current web functionality:
+
+- **Mobile companion:** quick capture, notifications, camera upload, background sync, and health-app sync review.
+- **Health tracking:** sleep, weight, vitals, labs, symptoms, medications, and workouts, with manual entry before health-app sync.
+- **Medication reminders:** schedules, adherence check-ins, refill notes, and dashboard follow-up tasks.
+- **Document intelligence:** upload, extraction review, source-linked records, and privacy-focused lifecycle controls.
+- **Second brain:** notes, journal, documents, health records, tasks, and finance events combined into source-backed retrieval.
+- **MCP and agent access:** permissioned access for trusted external assistants to selected preferences, second-brain memory, todos, documents, and domain summaries.
+- **Personal coach:** planning and recommendations over structured life data, with citations and user-confirmed actions.
+
+The frontend should keep these tracks visually integrated with the existing dashboard, capture, notification, and review surfaces instead of presenting them as disconnected apps.
+
+Trust should be visible in the UI: data-source labels, domain permissions, user confirmation for sensitive changes, export/delete affordances, and cited answers for document-backed or health-backed coach responses.
+
+Settings and master configuration should stay lean and low-traffic: useful for removing clutter from feature pages, but not a major destination in the product.
 
 ---
 
