@@ -97,7 +97,10 @@ const attemptRefresh = (): Promise<void> => {
 // ─── Response interceptor ─────────────────────────────────────────────────────
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    refreshFailed = false;
+    return response;
+  },
   async (error: AxiosError) => {
     const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
 

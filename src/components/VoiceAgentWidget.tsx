@@ -150,7 +150,11 @@ export const VoiceAgentWidget: React.FC = () => {
     const snappedPos = snapLauncherPos(launcherPos);
     setLauncherPos(snappedPos);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(launcherStorageKey, JSON.stringify(snappedPos));
+      try {
+        window.localStorage.setItem(launcherStorageKey, JSON.stringify(snappedPos));
+      } catch (e) {
+        console.warn('Failed to save voice agent position to localStorage:', e);
+      }
     }
     dragOffsetRef.current = null;
     window.setTimeout(() => {

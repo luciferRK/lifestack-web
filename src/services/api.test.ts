@@ -79,6 +79,7 @@ describe('api — refresh interceptor', () => {
     let meCallCount = 0;
 
     server.use(
+      http.post('*/v1/auth/login', () => HttpResponse.json({ username: 'test' })),
       http.get(`${BASE_URL}/v1/auth/me`, () => {
         meCallCount++;
         if (meCallCount === 1) return new HttpResponse(null, { status: 401 });
@@ -87,6 +88,7 @@ describe('api — refresh interceptor', () => {
       http.post(`${BASE_URL}/auth/refresh`, () => new HttpResponse(null, { status: 200 })),
     );
 
+    await api.post('/auth/login');
     await api.get('/v1/auth/me');
     expect(cb).toHaveBeenCalledTimes(1);
 
