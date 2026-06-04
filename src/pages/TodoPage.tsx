@@ -7,6 +7,7 @@ import { DatePicker } from '../components/DatePicker';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { Pagination } from '../components/Pagination';
+import { SkeletonList } from '../components/ui/FeedbackStates';
 import { todoService } from '../services/todo';
 import type { RecurringTodoCreate, Todo, TodoCreate } from '../services/todo';
 
@@ -191,7 +192,7 @@ export const TodoPage: React.FC = () => {
           </CompactFilterBar>
 
           {isLoading ? (
-            <div className="text-center text-slate-400">Loading tasks...</div>
+            <SkeletonList rows={4} />
           ) : (
             <div className="space-y-3">
               {todosResponse?.items.length === 0 ? (
@@ -257,7 +258,7 @@ export const TodoPage: React.FC = () => {
           </div>
 
           {isRecurringLoading ? (
-            <div className="text-center text-slate-400">Loading recurring rules...</div>
+            <SkeletonList rows={2} />
           ) : (
             <div className="space-y-3">
               {(recurringResponse?.items ?? []).length === 0 ? (

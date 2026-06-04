@@ -104,7 +104,7 @@ export const RegisterPage: React.FC = () => {
                 required
                 minLength={3}
                 maxLength={50}
-                pattern="^[a-zA-Z0-9_-]+$"
+                pattern="^[a-zA-Z0-9_\-]+$"
                 title="3–50 characters. Letters, numbers, underscores and hyphens only."
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}

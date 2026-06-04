@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { SkeletonList } from '../components/ui/FeedbackStates';
 import { spendingService } from '../services/spending';
 import { financeService } from '../services/finance';
 import type {
@@ -912,13 +913,9 @@ export const SpendingPage: React.FC = () => {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-blue-500" />
         </div>
       ) : isTransfersLoading && activeTab === 'transfers' ? (
-        <div className="flex h-32 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-blue-500" />
-        </div>
+        <SkeletonList rows={4} />
       ) : isLoading && activeTab !== 'recurring' ? (
-        <div className="flex h-32 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-blue-500" />
-        </div>
+        <SkeletonList rows={5} />
       ) : activeTab === 'transactions' ? (
         <div className="space-y-4 animate-in fade-in duration-300">
           <h3 className="text-xl font-semibold text-white">Transactions in {monthRange.label}</h3>
