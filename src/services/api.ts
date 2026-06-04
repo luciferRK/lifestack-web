@@ -8,7 +8,32 @@ const api = axios.create({
   withCredentials: true, // Send HttpOnly cookies on every request
 });
 
+const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
+
+const readCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  const prefix = `${name}=`;
+  const cookie = document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
+};
+
 api.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
+  const method = config.method?.toLowerCase();
+  if (method && MUTATING_METHODS.has(method)) {
+    const headers = config.headers as Record<string, unknown>;
+    const hasCsrfHeader = Object.keys(headers).some(
+      (key) => key.toLowerCase() === 'x-csrf-token',
+    );
+    const csrfToken = readCookie('csrf_token');
+    if (!hasCsrfHeader && csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
   if (config.data instanceof FormData) {
     if (config.headers && 'Content-Type' in config.headers) {
       delete (config.headers as Record<string, unknown>)['Content-Type'];
@@ -16,7 +41,6 @@ api.interceptors.request.use((config) => {
     return config;
   }
 
-  config.headers = config.headers ?? {};
   if (!('Content-Type' in config.headers)) {
     (config.headers as Record<string, unknown>)['Content-Type'] = 'application/json';
   }

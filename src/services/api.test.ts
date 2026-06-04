@@ -8,6 +8,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 describe('api — refresh interceptor', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    document.cookie = 'csrf_token=; Max-Age=0; path=/';
   });
 
   it('passes withCredentials on every request', async () => {
@@ -17,6 +18,38 @@ describe('api — refresh interceptor', () => {
     // axios withCredentials is set at the instance level; we verify no Authorization header is used
     expect(res.config.withCredentials).toBe(true);
     expect(res.config.headers?.Authorization).toBeUndefined();
+  });
+
+  it('adds X-CSRF-Token from readable cookie on mutating requests', async () => {
+    let csrfHeader: string | null = null;
+    document.cookie = 'csrf_token=test-csrf-token; path=/';
+
+    server.use(
+      http.post('*/auth/logout', ({ request }) => {
+        csrfHeader = request.headers.get('x-csrf-token');
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await api.post('/auth/logout');
+
+    expect(csrfHeader).toBe('test-csrf-token');
+  });
+
+  it('does not add X-CSRF-Token to safe GET requests', async () => {
+    let csrfHeader: string | null = 'not-called';
+    document.cookie = 'csrf_token=test-csrf-token; path=/';
+
+    server.use(
+      http.get('*/auth/me', ({ request }) => {
+        csrfHeader = request.headers.get('x-csrf-token');
+        return HttpResponse.json({ username: 'test' });
+      }),
+    );
+
+    await api.get('/auth/me');
+
+    expect(csrfHeader).toBeNull();
   });
 
   it('retries original request once after successful token refresh on 401', async () => {
