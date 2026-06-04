@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Bell } from 'lucide-react';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { notificationsService } from '../services/notifications';
 import { Pagination } from '../components/Pagination';
+import { SkeletonList, EmptyState, ErrorBanner } from '../components/ui/FeedbackStates';
 
 export const NotificationsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [offset, setOffset] = useState(0);
   const limit = 20;
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications', offset],
     queryFn: () => notificationsService.list(limit, offset),
   });
@@ -66,11 +68,12 @@ export const NotificationsPage: React.FC = () => {
       </section>
 
       {isLoading ? (
-        <div className="text-slate-400">Loading notifications...</div>
+        <SkeletonList rows={5} />
       ) : isError ? (
-        <div className="rounded-xl border border-rose-800 bg-rose-950/30 p-6 text-rose-300">
-          Failed to load notifications. Please try again.
-        </div>
+        <ErrorBanner
+          message="Failed to load notifications. Please try again."
+          onRetry={() => void refetch()}
+        />
       ) : data?.items?.length ? (
         <>
           <div className="space-y-3">
@@ -108,7 +111,11 @@ export const NotificationsPage: React.FC = () => {
           </div>
         </>
       ) : (
-        <div className="rounded-xl border border-slate-800 bg-slate-800/30 p-6 text-slate-400">No notifications yet.</div>
+        <EmptyState
+          icon={<Bell className="h-6 w-6" />}
+          title="No notifications yet"
+          description="Notifications appear here when budget guardrails fire, recurring tasks trigger, or important events occur in your workspace."
+        />
       )}
     </PageShell>
   );
