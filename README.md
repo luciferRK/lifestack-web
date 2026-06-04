@@ -82,6 +82,9 @@ Today the web app focuses on the personal OS foundation:
 - Bulk CSV imports flow (transactions, budgets, holdings)
 - Recurring rules UX for todo and spending
 - Authentication and session handling
+- Responsive app shell with mobile navigation
+- Real workspace name/role display from the platform API
+- Shared loading, empty, and error states on key daily-use pages
 
 The current implementation is intentionally centered on a single-user personal workflow before expanding into later-stage domains.
 
@@ -213,9 +216,9 @@ The current browser E2E suite in this repo focuses on frontend behavior. The ful
 - Current frontend Playwright tests mock API responses for fast UI regression checks.
 - Full-stack FE+BE+DB coverage is handled in the dedicated `lifestack-e2e` repo because FE and BE are separate repositories.
 - Remaining follow-up:
-  - smoother compose orchestration for frontend + backend + postgres
-  - fewer manual environment and migration steps
   - seeded deterministic test data and cross-repo CI gate
+  - screenshot/accessibility pass for responsive layouts
+  - continued decomposition of large feature pages into smaller feature components/hooks
 
 ---
 
