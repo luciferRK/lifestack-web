@@ -36,6 +36,40 @@ describe('api — refresh interceptor', () => {
     expect(csrfHeader).toBe('test-csrf-token');
   });
 
+  it('does not overwrite an explicit X-CSRF-Token header', async () => {
+    let csrfHeader: string | null = null;
+    document.cookie = 'csrf_token=cookie-csrf-token; path=/';
+
+    server.use(
+      http.post('*/auth/logout', ({ request }) => {
+        csrfHeader = request.headers.get('x-csrf-token');
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await api.post('/auth/logout', undefined, {
+      headers: { 'X-CSRF-Token': 'explicit-csrf-token' },
+    });
+
+    expect(csrfHeader).toBe('explicit-csrf-token');
+  });
+
+  it('ignores malformed CSRF cookie encoding without throwing', async () => {
+    let csrfHeader: string | null = 'not-called';
+    document.cookie = 'csrf_token=%E0%A4%A; path=/';
+
+    server.use(
+      http.post('*/auth/logout', ({ request }) => {
+        csrfHeader = request.headers.get('x-csrf-token');
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await api.post('/auth/logout');
+
+    expect(csrfHeader).toBeNull();
+  });
+
   it('does not add X-CSRF-Token to safe GET requests', async () => {
     let csrfHeader: string | null = 'not-called';
     document.cookie = 'csrf_token=test-csrf-token; path=/';

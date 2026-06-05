@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 // ─── Axios instance ───────────────────────────────────────────────────────────
 
@@ -12,37 +12,39 @@ const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
 
 const readCookie = (name: string): string | null => {
   if (typeof document === 'undefined') return null;
+  if (typeof document.cookie !== 'string') return null;
   const prefix = `${name}=`;
   const cookie = document.cookie
     .split(';')
     .map((part) => part.trim())
     .find((part) => part.startsWith(prefix));
-  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
+  if (!cookie) return null;
+
+  try {
+    return decodeURIComponent(cookie.slice(prefix.length));
+  } catch {
+    return null;
+  }
 };
 
 api.interceptors.request.use((config) => {
-  config.headers = config.headers ?? {};
+  const headers = AxiosHeaders.from(config.headers);
+  config.headers = headers;
   const method = config.method?.toLowerCase();
   if (method && MUTATING_METHODS.has(method)) {
-    const headers = config.headers as Record<string, unknown>;
-    const hasCsrfHeader = Object.keys(headers).some(
-      (key) => key.toLowerCase() === 'x-csrf-token',
-    );
     const csrfToken = readCookie('csrf_token');
-    if (!hasCsrfHeader && csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
+    if (!headers.has('X-CSRF-Token') && csrfToken) {
+      headers.set('X-CSRF-Token', csrfToken);
     }
   }
 
   if (config.data instanceof FormData) {
-    if (config.headers && 'Content-Type' in config.headers) {
-      delete (config.headers as Record<string, unknown>)['Content-Type'];
-    }
+    headers.delete('Content-Type');
     return config;
   }
 
-  if (!('Content-Type' in config.headers)) {
-    (config.headers as Record<string, unknown>)['Content-Type'] = 'application/json';
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
   return config;
 });
