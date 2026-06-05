@@ -414,6 +414,19 @@ export const InvestingPage: React.FC = () => {
           <span className="font-semibold text-slate-100">Valuation status:</span>{' '}
           {statusLabel(summary?.valuation_status)}
         </p>
+        {summary?.valuation_status === 'converted_available' && summary?.fx_rates_used && Object.keys(summary.fx_rates_used).length > 0 ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="investing-fx-rates-used">
+            <span className="text-xs text-slate-400">FX conversion rates used:</span>
+            {Object.entries(summary.fx_rates_used).map(([base, rate]) => (
+              <span key={base} className="inline-flex items-center gap-1 text-xs text-slate-300">
+                <span className="font-medium text-slate-100">1 {base}</span>
+                <span>=</span>
+                <span className="font-medium text-slate-100">{toNumber(rate).toFixed(4)}</span>
+                <span>{summary.reporting_currency}</span>
+              </span>
+            ))}
+          </div>
+        ) : null}
         <p className="mt-1">
           <span className="font-semibold text-slate-100">Performance (gain/loss):</span>{' '}
           {performanceLoading

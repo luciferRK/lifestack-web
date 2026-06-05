@@ -13,4 +13,8 @@ export const platformService = {
     const response = await api.get('/platform/workspaces/');
     return response.data as { items: WorkspaceInfo[] };
   },
+  resetDemoData: async (workspaceId: string): Promise<{ status: string }> => {
+    const response = await api.post(`/platform/workspaces/${workspaceId}/reset-demo`);
+    return response.data as { status: string };
+  },
 };

@@ -208,7 +208,7 @@ describe('InvestingPage', () => {
     });
     expect(holdingPayload).toMatchObject({
       symbol: 'AAPL',
-      account_name: 'Primary Brokerage',
+      account_id: '22222222-2222-2222-2222-222222222222',
       quantity: 10,
       avg_cost: 150.25,
       currency: 'USD',

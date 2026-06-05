@@ -98,6 +98,7 @@ export interface InvestingSummary {
   daily_change: number | string | null;
   reporting_currency: string | null;
   valuation_status: string;
+  fx_rates_used?: Record<string, number | string>;
 }
 
 export interface ExposureCompanyRow {
