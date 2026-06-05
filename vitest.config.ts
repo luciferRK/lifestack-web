@@ -9,5 +9,8 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     css: true,
     exclude: ['e2e/**', 'node_modules/**', 'dist/**', '.git/**'],
+    env: {
+      VITE_API_URL: 'http://localhost:8000/v1',
+    },
   },
 });
