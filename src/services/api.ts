@@ -10,24 +10,27 @@ const api = axios.create({
 
 const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
 
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retried?: boolean;
+  _csrfTokenMirrored?: boolean;
+};
+
 const readCookie = (name: string): string | null => {
   if (typeof document === 'undefined') return null;
   if (typeof document.cookie !== 'string') return null;
-  const prefix = `${name}=`;
-  const cookie = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(prefix));
-  if (!cookie) return null;
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escapedName}=([^;]*)`));
+  if (!match) return null;
 
   try {
-    return decodeURIComponent(cookie.slice(prefix.length));
+    return decodeURIComponent(match[1]);
   } catch {
     return null;
   }
 };
 
 api.interceptors.request.use((config) => {
+  const requestConfig = config as RetryableRequestConfig;
   const headers = AxiosHeaders.from(config.headers);
   config.headers = headers;
   const method = config.method?.toLowerCase();
@@ -35,6 +38,7 @@ api.interceptors.request.use((config) => {
     const csrfToken = readCookie('csrf_token');
     if (!headers.has('X-CSRF-Token') && csrfToken) {
       headers.set('X-CSRF-Token', csrfToken);
+      requestConfig._csrfTokenMirrored = true;
     }
   }
 
@@ -128,7 +132,7 @@ api.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
+    const original = error.config as RetryableRequestConfig | undefined;
 
     // Only intercept 401s — and never retry the refresh call itself to avoid loops.
     if (
@@ -141,6 +145,12 @@ api.interceptors.response.use(
       original._retried = true;
       try {
         await attemptRefresh();
+        if (original._csrfTokenMirrored) {
+          const headers = AxiosHeaders.from(original.headers);
+          headers.delete('X-CSRF-Token');
+          original.headers = headers;
+          original._csrfTokenMirrored = false;
+        }
         return api(original); // Retry the original request
       } catch {
         // Refresh failed — propagate the original 401

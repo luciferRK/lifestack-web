@@ -103,6 +103,28 @@ describe('api — refresh interceptor', () => {
     expect(meCallCount).toBe(2); // failed + retried
   });
 
+  it('uses the rotated CSRF token when retrying a mutating request after refresh', async () => {
+    const csrfHeaders: Array<string | null> = [];
+    document.cookie = 'csrf_token=old-csrf-token; path=/';
+
+    server.use(
+      http.post('*/todos', ({ request }) => {
+        csrfHeaders.push(request.headers.get('x-csrf-token'));
+        if (csrfHeaders.length === 1) return new HttpResponse(null, { status: 401 });
+        return HttpResponse.json({ public_id: 'todo-1', title: 'retry me' });
+      }),
+      http.post('*/auth/refresh', () => {
+        document.cookie = 'csrf_token=rotated-csrf-token; path=/';
+        return new HttpResponse(null, { status: 200 });
+      }),
+    );
+
+    const res = await api.post('/todos', { title: 'retry me' });
+
+    expect(res.status).toBe(200);
+    expect(csrfHeaders).toEqual(['old-csrf-token', 'rotated-csrf-token']);
+  });
+
   it('coalesces concurrent 401s into a single refresh call', async () => {
     let refreshCallCount = 0;
 
