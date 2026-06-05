@@ -8,6 +8,7 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 describe('api — refresh interceptor', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    document.cookie = 'csrf_token=; Max-Age=0; path=/';
   });
 
   it('passes withCredentials on every request', async () => {
@@ -17,6 +18,72 @@ describe('api — refresh interceptor', () => {
     // axios withCredentials is set at the instance level; we verify no Authorization header is used
     expect(res.config.withCredentials).toBe(true);
     expect(res.config.headers?.Authorization).toBeUndefined();
+  });
+
+  it('adds X-CSRF-Token from readable cookie on mutating requests', async () => {
+    let csrfHeader: string | null = null;
+    document.cookie = 'csrf_token=test-csrf-token; path=/';
+
+    server.use(
+      http.post('*/auth/logout', ({ request }) => {
+        csrfHeader = request.headers.get('x-csrf-token');
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await api.post('/auth/logout');
+
+    expect(csrfHeader).toBe('test-csrf-token');
+  });
+
+  it('does not overwrite an explicit X-CSRF-Token header', async () => {
+    let csrfHeader: string | null = null;
+    document.cookie = 'csrf_token=cookie-csrf-token; path=/';
+
+    server.use(
+      http.post('*/auth/logout', ({ request }) => {
+        csrfHeader = request.headers.get('x-csrf-token');
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await api.post('/auth/logout', undefined, {
+      headers: { 'X-CSRF-Token': 'explicit-csrf-token' },
+    });
+
+    expect(csrfHeader).toBe('explicit-csrf-token');
+  });
+
+  it('ignores malformed CSRF cookie encoding without throwing', async () => {
+    let csrfHeader: string | null = 'not-called';
+    document.cookie = 'csrf_token=%E0%A4%A; path=/';
+
+    server.use(
+      http.post('*/auth/logout', ({ request }) => {
+        csrfHeader = request.headers.get('x-csrf-token');
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await api.post('/auth/logout');
+
+    expect(csrfHeader).toBeNull();
+  });
+
+  it('does not add X-CSRF-Token to safe GET requests', async () => {
+    let csrfHeader: string | null = 'not-called';
+    document.cookie = 'csrf_token=test-csrf-token; path=/';
+
+    server.use(
+      http.get('*/auth/me', ({ request }) => {
+        csrfHeader = request.headers.get('x-csrf-token');
+        return HttpResponse.json({ username: 'test' });
+      }),
+    );
+
+    await api.get('/auth/me');
+
+    expect(csrfHeader).toBeNull();
   });
 
   it('retries original request once after successful token refresh on 401', async () => {
@@ -34,6 +101,28 @@ describe('api — refresh interceptor', () => {
     const res = await api.get('/v1/auth/me');
     expect(res.status).toBe(200);
     expect(meCallCount).toBe(2); // failed + retried
+  });
+
+  it('uses the rotated CSRF token when retrying a mutating request after refresh', async () => {
+    const csrfHeaders: Array<string | null> = [];
+    document.cookie = 'csrf_token=old-csrf-token; path=/';
+
+    server.use(
+      http.post('*/todos', ({ request }) => {
+        csrfHeaders.push(request.headers.get('x-csrf-token'));
+        if (csrfHeaders.length === 1) return new HttpResponse(null, { status: 401 });
+        return HttpResponse.json({ public_id: 'todo-1', title: 'retry me' });
+      }),
+      http.post('*/auth/refresh', () => {
+        document.cookie = 'csrf_token=rotated-csrf-token; path=/';
+        return new HttpResponse(null, { status: 200 });
+      }),
+    );
+
+    const res = await api.post('/todos', { title: 'retry me' });
+
+    expect(res.status).toBe(200);
+    expect(csrfHeaders).toEqual(['old-csrf-token', 'rotated-csrf-token']);
   });
 
   it('coalesces concurrent 401s into a single refresh call', async () => {

@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 // ─── Axios instance ───────────────────────────────────────────────────────────
 
@@ -8,17 +8,47 @@ const api = axios.create({
   withCredentials: true, // Send HttpOnly cookies on every request
 });
 
+const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
+
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retried?: boolean;
+  _csrfTokenMirrored?: boolean;
+};
+
+const readCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  if (typeof document.cookie !== 'string') return null;
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escapedName}=([^;]*)`));
+  if (!match) return null;
+
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+};
+
 api.interceptors.request.use((config) => {
-  if (config.data instanceof FormData) {
-    if (config.headers && 'Content-Type' in config.headers) {
-      delete (config.headers as Record<string, unknown>)['Content-Type'];
+  const requestConfig = config as RetryableRequestConfig;
+  const headers = AxiosHeaders.from(config.headers);
+  config.headers = headers;
+  const method = config.method?.toLowerCase();
+  if (method && MUTATING_METHODS.has(method)) {
+    const csrfToken = readCookie('csrf_token');
+    if (!headers.has('X-CSRF-Token') && csrfToken) {
+      headers.set('X-CSRF-Token', csrfToken);
+      requestConfig._csrfTokenMirrored = true;
     }
+  }
+
+  if (config.data instanceof FormData) {
+    headers.delete('Content-Type');
     return config;
   }
 
-  config.headers = config.headers ?? {};
-  if (!('Content-Type' in config.headers)) {
-    (config.headers as Record<string, unknown>)['Content-Type'] = 'application/json';
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
   return config;
 });
@@ -102,7 +132,7 @@ api.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
+    const original = error.config as RetryableRequestConfig | undefined;
 
     // Only intercept 401s — and never retry the refresh call itself to avoid loops.
     if (
@@ -115,6 +145,12 @@ api.interceptors.response.use(
       original._retried = true;
       try {
         await attemptRefresh();
+        if (original._csrfTokenMirrored) {
+          const headers = AxiosHeaders.from(original.headers);
+          headers.delete('X-CSRF-Token');
+          original.headers = headers;
+          original._csrfTokenMirrored = false;
+        }
         return api(original); // Retry the original request
       } catch {
         // Refresh failed — propagate the original 401

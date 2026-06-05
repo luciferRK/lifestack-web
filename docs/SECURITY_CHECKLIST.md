@@ -11,6 +11,13 @@ Checklist for `lifestack-web` release hardening.
 - [ ] Client handles `401/403/404/409/422` consistently with user-safe messaging.
 - [ ] No sensitive backend error internals shown directly in UI.
 - [ ] Mutation flows invalidate dependent queries after success.
+- [x] Cookie-authenticated mutations mirror the readable `csrf_token` cookie into `X-CSRF-Token`.
+
+## Verification Log (2026-06-04)
+- Gate 0 CSRF client checks passed:
+  - `npm run test -- src/services/api.test.ts --run`
+  - `npm run lint` (0 errors; existing coverage-report warnings only)
+  - `npm run build`
 
 ## Input and Form Safety
 - [ ] Date, amount, and enum inputs are validated client-side before submit.
