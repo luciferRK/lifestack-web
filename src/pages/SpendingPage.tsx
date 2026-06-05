@@ -63,7 +63,10 @@ const budgetFormSchema = z.object({
   amount: z
     .string()
     .min(1, 'Enter a budget amount')
-    .refine((value) => !Number.isNaN(Number(value)) && Number(value) > 0, 'Budget must be greater than 0'),
+    .refine((value) => {
+      const num = Number(value);
+      return !Number.isNaN(num) && Number.isFinite(num) && num > 0;
+    }, 'Budget must be a valid positive number'),
 });
 
 type BudgetFormValues = z.infer<typeof budgetFormSchema>;
@@ -74,13 +77,19 @@ const recurringFormSchema = z
     amount: z
       .string()
       .min(1, 'Enter an amount')
-      .refine((v) => !Number.isNaN(Number(v)) && Number(v) > 0, 'Amount must be greater than 0'),
+      .refine((v) => {
+        const num = Number(v);
+        return !Number.isNaN(num) && Number.isFinite(num) && num > 0;
+      }, 'Amount must be a valid positive number'),
     type: z.enum(['income', 'expense']),
     description: z.string().max(500).optional(),
     frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
     interval: z
       .string()
-      .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, 'Interval must be a positive integer'),
+      .refine((v) => {
+        const num = Number(v);
+        return Number.isInteger(num) && Number.isFinite(num) && num >= 1;
+      }, 'Interval must be a positive integer'),
     anchor_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Select a start date'),
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
   })
@@ -468,11 +477,34 @@ export const SpendingPage: React.FC = () => {
       if (!from || !to) {
         throw new Error('Transfer accounts are required');
       }
-      const gross = Number(transferAmount) || 0;
+      const gross = Number(transferAmount);
+      if (Number.isNaN(gross) || !Number.isFinite(gross) || gross <= 0) {
+        throw new Error('Gross amount must be a valid positive number');
+      }
       const fxFee = Number(transferFxFee) || 0;
       const platformFee = Number(transferPlatformFee) || 0;
       const tax = Number(transferTax) || 0;
-      const net = Math.max(0, gross - fxFee - platformFee - tax);
+
+      if (Number.isNaN(fxFee) || !Number.isFinite(fxFee) || fxFee < 0) {
+        throw new Error('FX fee must be a valid non-negative number');
+      }
+      if (Number.isNaN(platformFee) || !Number.isFinite(platformFee) || platformFee < 0) {
+        throw new Error('Platform fee must be a valid non-negative number');
+      }
+      if (Number.isNaN(tax) || !Number.isFinite(tax) || tax < 0) {
+        throw new Error('Tax must be a valid non-negative number');
+      }
+
+      let parsedFxRate = null;
+      if (transferFxRate) {
+        const rate = Number(transferFxRate);
+        if (Number.isNaN(rate) || !Number.isFinite(rate) || rate <= 0) {
+          throw new Error('FX rate must be a valid positive number');
+        }
+        parsedFxRate = rate.toFixed(10);
+      }
+
+      const net = Math.max(0, gross * (parsedFxRate ? Number(parsedFxRate) : 1) - fxFee - platformFee - tax);
       const parsedTransferDate = new Date(transferDate);
       if (Number.isNaN(parsedTransferDate.getTime())) {
         throw new Error('Invalid transfer date');
@@ -486,7 +518,7 @@ export const SpendingPage: React.FC = () => {
         from_currency_code: from.default_currency_code,
         to_currency_code: to.default_currency_code,
         gross_amount: gross.toFixed(2),
-        fx_rate_used: transferFxRate ? Number(transferFxRate).toFixed(10) : null,
+        fx_rate_used: parsedFxRate,
         fx_fee_amount: fxFee.toFixed(2),
         platform_fee_amount: platformFee.toFixed(2),
         tax_amount: tax.toFixed(2),
@@ -533,13 +565,18 @@ export const SpendingPage: React.FC = () => {
   const handleSaveTransaction = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !categoryId || !type || !date) return;
+    const parsedAmount = parseFloat(amount);
+    if (Number.isNaN(parsedAmount) || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      alert('Please enter a valid positive amount.');
+      return;
+    }
     const parsedTransactionDate = new Date(date);
     if (Number.isNaN(parsedTransactionDate.getTime())) {
       alert('Please enter a valid transaction date.');
       return;
     }
     const payload: TransactionCreate = {
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       category_id: categoryId,
       account_id: accountId || null,
       type,
