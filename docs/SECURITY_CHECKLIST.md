@@ -18,8 +18,7 @@ Checklist for `lifestack-web` release hardening.
 - [ ] UI defaults avoid ambiguous module routing where explicit intent is available.
 
 ## Dependency and Build Hygiene
-- [x] `npm audit --audit-level=high` is available as `npm run security:audit` and runs in CI.
-- [x] React Router dependency is patched past the high-severity advisory range found during Gate 0 hardening.
+- [ ] `npm audit --audit-level=high` is available as `npm run security:audit` and runs in CI.
 - [ ] Build warnings tracked (notably large chunks) and code-splitting backlog maintained.
 - [ ] Environment-specific variables are read from env files, not hardcoded.
 
@@ -28,6 +27,7 @@ Checklist for `lifestack-web` release hardening.
   - `npm run security:audit` (0 vulnerabilities)
   - `npm run lint` (0 errors; existing coverage-report warnings only)
   - `npm run build`
+  - React Router dependency patched past the high-severity advisory range found during Gate 0 hardening.
 
 ## Verification Log (2026-05-28)
 - Smoke checks passed:
