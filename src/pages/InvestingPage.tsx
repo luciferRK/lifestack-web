@@ -54,14 +54,14 @@ export const InvestingPage: React.FC = () => {
 
   const [holdingForm, setHoldingForm] = useState({
     symbol: '',
-    account_name: '',
+    account_id: '',
     quantity: '',
     avg_cost: '',
     currency: 'USD',
   });
 
   const [cashForm, setCashForm] = useState({
-    account_name: '',
+    account_id: '',
     balance: '',
     currency: 'USD',
     as_of: formatDateTimeLocalInput(new Date()),
@@ -171,7 +171,7 @@ export const InvestingPage: React.FC = () => {
     mutationFn: (payload: CashBalanceCreate) => investingService.createCashBalance(payload),
     onSuccess: () => {
       setCashForm({
-        account_name: cashForm.account_name,
+        account_id: cashForm.account_id,
         balance: '',
         currency: cashForm.currency,
         as_of: formatDateTimeLocalInput(new Date()),
@@ -198,8 +198,8 @@ export const InvestingPage: React.FC = () => {
   const accountOptions = accounts.map((account) => account.name);
   const currencyOptions = currencies.map((currency) => currency.code);
   const accountDropdownOptions = useMemo(
-    () => accountOptions.map((name) => ({ value: name, label: name })),
-    [accountOptions]
+    () => accounts.map((acc) => ({ value: acc.public_id, label: acc.name })),
+    [accounts]
   );
   const currencyDropdownOptions = useMemo(
     () => currencyOptions.map((code) => ({ value: code, label: code })),
@@ -227,8 +227,8 @@ export const InvestingPage: React.FC = () => {
         })),
     [instruments]
   );
-  const selectedHoldingAccount = holdingForm.account_name;
-  const selectedCashAccount = cashForm.account_name;
+  const selectedHoldingAccount = holdingForm.account_id;
+  const selectedCashAccount = cashForm.account_id;
   const currencyDisplayPreference =
     userFinanceSettings?.effective_currency_display_preference ?? 'symbol';
   const preferredWorkspaceCurrency =
@@ -250,8 +250,8 @@ export const InvestingPage: React.FC = () => {
       }),
     onSuccess: (created) => {
       setNewAccountName('');
-      setHoldingForm((prev) => ({ ...prev, account_name: created.name }));
-      setCashForm((prev) => ({ ...prev, account_name: created.name }));
+      setHoldingForm((prev) => ({ ...prev, account_id: created.public_id }));
+      setCashForm((prev) => ({ ...prev, account_id: created.public_id }));
       refresh();
     },
   });
@@ -259,7 +259,7 @@ export const InvestingPage: React.FC = () => {
   const filteredHoldings = useMemo(
     () =>
       holdings.filter((holding) => {
-        const accountMatch = !holdingsAccountFilter || holding.account_name === holdingsAccountFilter;
+        const accountMatch = !holdingsAccountFilter || holding.account_id === holdingsAccountFilter;
         const currencyMatch =
           !holdingsCurrencyFilter || (holding.currency ?? 'USD').toUpperCase() === holdingsCurrencyFilter.toUpperCase();
         return accountMatch && currencyMatch;
@@ -269,7 +269,7 @@ export const InvestingPage: React.FC = () => {
   const filteredCashBalances = useMemo(
     () =>
       cashBalances.filter((balance) => {
-        const accountMatch = !cashAccountFilter || balance.account_name === cashAccountFilter;
+        const accountMatch = !cashAccountFilter || balance.account_id === cashAccountFilter;
         const currencyMatch =
           !cashCurrencyFilter || (balance.currency ?? 'USD').toUpperCase() === cashCurrencyFilter.toUpperCase();
         return accountMatch && currencyMatch;
@@ -298,7 +298,7 @@ export const InvestingPage: React.FC = () => {
 
     createHoldingMutation.mutate({
       symbol: holdingForm.symbol.trim().toUpperCase(),
-      account_name: selectedHoldingAccount.trim(),
+      account_id: selectedHoldingAccount,
       quantity: qty,
       avg_cost: cost,
       currency: selectedHoldingCurrency.trim().toUpperCase() || 'USD',
@@ -316,7 +316,7 @@ export const InvestingPage: React.FC = () => {
     if (Number.isNaN(asOfDate.getTime())) return;
 
     createCashMutation.mutate({
-      account_name: selectedCashAccount.trim(),
+      account_id: selectedCashAccount,
       balance,
       currency: selectedCashCurrency.trim().toUpperCase() || 'USD',
       as_of: asOfDate.toISOString(),
@@ -414,6 +414,19 @@ export const InvestingPage: React.FC = () => {
           <span className="font-semibold text-slate-100">Valuation status:</span>{' '}
           {statusLabel(summary?.valuation_status)}
         </p>
+        {summary?.valuation_status === 'converted_available' && summary?.fx_rates_used && Object.keys(summary.fx_rates_used).length > 0 ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="investing-fx-rates-used">
+            <span className="text-xs text-slate-400">FX conversion rates used:</span>
+            {Object.entries(summary.fx_rates_used).map(([base, rate]) => (
+              <span key={base} className="inline-flex items-center gap-1 text-xs text-slate-300">
+                <span className="font-medium text-slate-100">1 {base}</span>
+                <span>=</span>
+                <span className="font-medium text-slate-100">{toNumber(rate).toFixed(4)}</span>
+                <span>{summary.reporting_currency}</span>
+              </span>
+            ))}
+          </div>
+        ) : null}
         <p className="mt-1">
           <span className="font-semibold text-slate-100">Performance (gain/loss):</span>{' '}
           {performanceLoading
@@ -455,7 +468,7 @@ export const InvestingPage: React.FC = () => {
               testId="investing-holding-account"
               value={selectedHoldingAccount}
               options={accountDropdownOptions}
-              onChange={(value) => setHoldingForm((s) => ({ ...s, account_name: value }))}
+              onChange={(value) => setHoldingForm((s) => ({ ...s, account_id: value }))}
               placeholder="Select account"
               searchPlaceholder="Search accounts..."
               clearLabel="Clear selection"
@@ -612,7 +625,7 @@ export const InvestingPage: React.FC = () => {
             <Combobox
               value={selectedCashAccount}
               options={accountDropdownOptions}
-              onChange={(value) => setCashForm((s) => ({ ...s, account_name: value }))}
+              onChange={(value) => setCashForm((s) => ({ ...s, account_id: value }))}
               placeholder="Select account"
               searchPlaceholder="Search accounts..."
               clearLabel="Clear selection"

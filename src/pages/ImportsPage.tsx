@@ -18,6 +18,7 @@ export const ImportsPage: React.FC = () => {
   const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
   const [latestValidation, setLatestValidation] = useState<ImportValidateResponse | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const { data: importsResponse, isLoading: isLoadingImports } = useQuery({
     queryKey: ['imports', 'list'],
@@ -47,9 +48,25 @@ export const ImportsPage: React.FC = () => {
       setLatestValidation(data);
       setSelectedImportId(data.import_batch.public_id);
       setFile(null);
+      setUploadError(null);
       void queryClient.invalidateQueries({ queryKey: ['imports', 'list'] });
     },
   });
+
+  const handleUpload = () => {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('File size exceeds the maximum limit of 10MB.');
+      return;
+    }
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setUploadError('Invalid file format. Please upload a CSV file.');
+      return;
+    }
+    setUploadError(null);
+    uploadMutation.mutate();
+  };
+
 
   const commitMutation = useMutation({
     mutationFn: (importPublicId: string) => importsService.commitImport(importPublicId),
@@ -115,7 +132,10 @@ export const ImportsPage: React.FC = () => {
             key={file ? `selected-${file.name}-${file.lastModified}` : 'no-file-selected'}
             type="file"
             accept=".csv,text/csv"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              setFile(e.target.files?.[0] ?? null);
+              setUploadError(null);
+            }}
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200"
           />
 
@@ -132,14 +152,16 @@ export const ImportsPage: React.FC = () => {
           <button
             data-testid="imports-upload-validate"
             type="button"
-            onClick={() => file && uploadMutation.mutate()}
+            onClick={handleUpload}
             disabled={!module || !file || uploadMutation.isPending}
             className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {uploadMutation.isPending ? 'Validating...' : 'Upload + validate'}
           </button>
         </div>
-        {uploadMutation.isError ? (
+        {uploadError ? (
+          <p className="mt-3 text-sm text-rose-300" data-testid="imports-upload-error">{uploadError}</p>
+        ) : uploadMutation.isError ? (
           <p className="mt-3 text-sm text-rose-300">Import validation failed to submit. Check file and try again.</p>
         ) : null}
       </section>

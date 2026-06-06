@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit2 } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { spendingService } from '../services/spending';
+import { platformService } from '../services/platform';
 import { AccountTypeBadge, CurrencyBadge, StatusBadge } from '../components/finance/Badges';
 import { DropdownSelect } from '../components/DropdownSelect';
 import { PageHero } from '../components/layout/PageHero';
@@ -38,6 +39,15 @@ export const MasterConfigPage: React.FC = () => {
   const [editingCategoryColor, setEditingCategoryColor] = useState('');
   const [editingCategoryIcon, setEditingCategoryIcon] = useState('');
   const [accountPendingDelete, setAccountPendingDelete] = useState<{ publicId: string; name: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetStatus, setResetStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
+
+  const { data: workspacesRes } = useQuery({
+    queryKey: ['platform', 'workspaces'],
+    queryFn: () => platformService.listWorkspaces(),
+  });
+  const currentWorkspace = workspacesRes?.items[0];
 
   const { data: currencies = [] } = useQuery({
     queryKey: ['finance', 'currencies', 'master-config'],
@@ -207,6 +217,22 @@ export const MasterConfigPage: React.FC = () => {
     deleteAccountMutation.mutate(accountPendingDelete.publicId, {
       onSuccess: () => setAccountPendingDelete(null),
     });
+  };
+
+  const performResetDemoData = async () => {
+    if (!currentWorkspace) return;
+    setIsResetting(true);
+    setResetStatus('idle');
+    try {
+      await platformService.resetDemoData(currentWorkspace.public_id);
+      setResetStatus('success');
+      void queryClient.invalidateQueries();
+    } catch (err) {
+      console.error(err);
+      setResetStatus('error');
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -572,6 +598,34 @@ export const MasterConfigPage: React.FC = () => {
         </div>
       </section>
 
+      <section data-testid="master-demo-reset-section" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
+        <h2 className="text-lg font-semibold text-white">Demo Data & Reset</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Reset this workspace to seed a clean, deterministic mock dataset (including demo transactions, budgets, instruments, holdings, and notifications). <strong>Warning:</strong> This will delete all current accounts, transactions, and holdings in this workspace.
+        </p>
+        <div className="mt-4">
+          <Button
+            data-testid="master-demo-reset-button"
+            type="button"
+            className="bg-rose-600 hover:bg-rose-500 hover:shadow-rose-500/40 shadow-rose-500/20 text-white"
+            onClick={() => setIsConfirmResetOpen(true)}
+            disabled={isResetting || !currentWorkspace}
+          >
+            {isResetting ? 'Resetting Workspace...' : 'Reset & Seed Demo Data'}
+          </Button>
+          {resetStatus === 'success' && (
+            <div className="mt-3 rounded-lg border border-emerald-600/40 bg-emerald-500/10 p-3 text-xs text-emerald-200">
+              Workspace successfully reset and seeded with demo data!
+            </div>
+          )}
+          {resetStatus === 'error' && (
+            <div className="mt-3 rounded-lg border border-rose-600/40 bg-rose-500/10 p-3 text-xs text-rose-200">
+              Failed to reset workspace. Please try again.
+            </div>
+          )}
+        </div>
+      </section>
+
       <Dialog open={!!accountPendingDelete} onOpenChange={(open) => !open && setAccountPendingDelete(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -594,6 +648,33 @@ export const MasterConfigPage: React.FC = () => {
               disabled={deleteAccountMutation.isPending}
             >
               {deleteAccountMutation.isPending ? 'Deleting...' : 'Delete account'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isConfirmResetOpen} onOpenChange={setIsConfirmResetOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Workspace?</DialogTitle>
+            <DialogDescription>
+              This action will permanently delete all accounts, transactions, budgets, holdings, cash balances, and tasks in this workspace. It will seed deterministic demo data in their place. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setIsConfirmResetOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-rose-600 hover:bg-rose-500 hover:shadow-rose-500/40 shadow-rose-500/20 text-white"
+              onClick={() => {
+                setIsConfirmResetOpen(false);
+                void performResetDemoData();
+              }}
+              disabled={isResetting}
+            >
+              {isResetting ? 'Resetting...' : 'Reset & Seed'}
             </Button>
           </DialogFooter>
         </DialogContent>

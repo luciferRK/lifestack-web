@@ -1,6 +1,7 @@
 export interface Holding {
   public_id: string;
   symbol: string;
+  account_id: string;
   account_name: string;
   quantity: number | string;
   avg_cost: number | string;
@@ -53,7 +54,7 @@ export interface InstrumentConstituent {
 
 export interface HoldingCreate {
   symbol: string;
-  account_name?: string;
+  account_id: string;
   quantity: number;
   avg_cost: number;
   currency: string;
@@ -67,6 +68,7 @@ export interface HoldingUpdate {
 
 export interface CashBalance {
   public_id: string;
+  account_id: string;
   account_name: string;
   balance: number | string;
   currency: string;
@@ -76,7 +78,7 @@ export interface CashBalance {
 }
 
 export interface CashBalanceCreate {
-  account_name: string;
+  account_id: string;
   balance: number;
   currency: string;
   as_of: string;
@@ -96,6 +98,7 @@ export interface InvestingSummary {
   daily_change: number | string | null;
   reporting_currency: string | null;
   valuation_status: string;
+  fx_rates_used?: Record<string, number | string>;
 }
 
 export interface ExposureCompanyRow {
