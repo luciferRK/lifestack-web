@@ -481,9 +481,9 @@ export const SpendingPage: React.FC = () => {
       if (Number.isNaN(gross) || !Number.isFinite(gross) || gross <= 0) {
         throw new Error('Gross amount must be a valid positive number');
       }
-      const fxFee = Number(transferFxFee) || 0;
-      const platformFee = Number(transferPlatformFee) || 0;
-      const tax = Number(transferTax) || 0;
+      const fxFee = transferFxFee ? Number(transferFxFee) : 0;
+      const platformFee = transferPlatformFee ? Number(transferPlatformFee) : 0;
+      const tax = transferTax ? Number(transferTax) : 0;
 
       if (Number.isNaN(fxFee) || !Number.isFinite(fxFee) || fxFee < 0) {
         throw new Error('FX fee must be a valid non-negative number');
@@ -496,15 +496,17 @@ export const SpendingPage: React.FC = () => {
       }
 
       let parsedFxRate = null;
+      let rateNum = 1;
       if (transferFxRate) {
         const rate = Number(transferFxRate);
         if (Number.isNaN(rate) || !Number.isFinite(rate) || rate <= 0) {
           throw new Error('FX rate must be a valid positive number');
         }
         parsedFxRate = rate.toFixed(10);
+        rateNum = rate;
       }
 
-      const net = Math.max(0, gross * (parsedFxRate ? Number(parsedFxRate) : 1) - fxFee - platformFee - tax);
+      const net = Math.max(0, gross * rateNum - fxFee - platformFee - tax);
       const parsedTransferDate = new Date(transferDate);
       if (Number.isNaN(parsedTransferDate.getTime())) {
         throw new Error('Invalid transfer date');
