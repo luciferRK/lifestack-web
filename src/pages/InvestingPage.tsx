@@ -194,8 +194,8 @@ export const InvestingPage: React.FC = () => {
     : `${performancePctRaw.toFixed(2)}%`;
   const holdings = useMemo(() => holdingsRes?.items ?? [], [holdingsRes]);
   const cashBalances = useMemo(() => cashRes?.items ?? [], [cashRes]);
-  const accounts = accountsRes?.items ?? [];
-  const accountOptions = accounts.map((account) => account.name);
+  const accounts = useMemo(() => accountsRes?.items ?? [], [accountsRes]);
+  const accountOptions = useMemo(() => accounts.map((account) => account.name), [accounts]);
   const currencyOptions = currencies.map((currency) => currency.code);
   const accountDropdownOptions = useMemo(
     () => accounts.map((acc) => ({ value: acc.public_id, label: acc.name })),

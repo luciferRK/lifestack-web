@@ -146,4 +146,5 @@ export interface PerformanceSummary {
   total_gain_loss_pct: number | string | null;
   snapshot_date: string;
   currency: string;
+  fx_rates_used?: Record<string, number | string>;
 }
