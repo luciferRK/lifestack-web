@@ -22,6 +22,22 @@ export interface CategoryUpdate {
 
 export type TransactionType = 'income' | 'expense';
 
+export interface SourceMetadata {
+  source_type: 'manual' | 'imported' | 'synced' | 'assistant' | 'extracted';
+  source_ref: string | null;
+  origin:
+    | 'manual_entry'
+    | 'bulk_import'
+    | 'external_sync'
+    | 'assistant_action'
+    | 'document_extraction';
+  label: string;
+  import_public_id: string | null;
+  import_module: string | null;
+  import_row_number: number | null;
+  rollback_supported: boolean;
+}
+
 export interface Transaction {
   public_id: string;
   category_id: string;
@@ -32,6 +48,9 @@ export interface Transaction {
   description: string | null;
   wallet_name: string | null;
   labels: string | null;
+  source_type?: SourceMetadata['source_type'];
+  source_ref?: string | null;
+  source_metadata?: SourceMetadata;
   created_at: string;
   updated_at: string;
 }

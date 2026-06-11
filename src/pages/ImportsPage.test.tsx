@@ -121,4 +121,79 @@ describe('ImportsPage', () => {
     });
     expect(uploadedModule).toBe('spending-transactions');
   });
+
+  it('deletes or rolls back a selected import batch', async () => {
+    let deletedImportId: string | null = null;
+    const importId = '11111111-1111-1111-1111-111111111111';
+
+    server.use(
+      http.get('*/v1/imports', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: importId,
+              status: 'completed',
+              module: 'spending-budgets',
+              filename: 'budgets.csv',
+              content_type: 'text/csv',
+              file_size_bytes: 128,
+              file_sha256: 'abc',
+              storage_backend: 'db',
+              storage_key: null,
+              total_rows: 2,
+              valid_rows: 2,
+              error_rows: 0,
+              started_at: '2026-06-01T00:00:00Z',
+              validated_at: '2026-06-01T00:00:01Z',
+              committed_at: '2026-06-01T00:00:02Z',
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        }),
+      ),
+      http.get(`*/v1/imports/${importId}`, () =>
+        HttpResponse.json({
+          import_batch: {
+            public_id: importId,
+            status: 'completed',
+            module: 'spending-budgets',
+            filename: 'budgets.csv',
+            content_type: 'text/csv',
+            file_size_bytes: 128,
+            file_sha256: 'abc',
+            storage_backend: 'db',
+            storage_key: null,
+            total_rows: 2,
+            valid_rows: 2,
+            error_rows: 0,
+            started_at: '2026-06-01T00:00:00Z',
+            validated_at: '2026-06-01T00:00:01Z',
+            committed_at: '2026-06-01T00:00:02Z',
+          },
+          errors: [],
+          error_summary: {
+            total_errors: 0,
+            returned_errors: 0,
+            by_code: {},
+            by_field: {},
+          },
+        }),
+      ),
+      http.delete(`*/v1/imports/${importId}`, () => {
+        deletedImportId = importId;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderWithQuery(<ImportsPage />);
+
+    fireEvent.click(await screen.findByTestId(`imports-list-item-${importId}`));
+    expect(await screen.findByTestId('imports-delete')).toHaveTextContent('Roll back import');
+    fireEvent.click(screen.getByTestId('imports-delete'));
+
+    await waitFor(() => expect(deletedImportId).toBe(importId));
+    expect(screen.queryByTestId('imports-delete')).not.toBeInTheDocument();
+  });
 });

@@ -35,4 +35,8 @@ export const importsService = {
     const response = await api.get(`/imports/${importPublicId}`);
     return response.data;
   },
+
+  deleteImport: async (importPublicId: string): Promise<void> => {
+    await api.delete(`/imports/${importPublicId}`);
+  },
 };

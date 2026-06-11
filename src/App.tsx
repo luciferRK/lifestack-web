@@ -11,6 +11,7 @@ import { InvestingPage } from './pages/InvestingPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { WeeklySummariesPage } from './pages/WeeklySummariesPage';
 import { ImportsPage } from './pages/ImportsPage';
+import { ExportsPage } from './pages/ExportsPage';
 import { MasterConfigPage } from './pages/MasterConfigPage';
 import { useAuthStore } from './store/authStore';
 import { useWorkspaceStore } from './store/workspaceStore';
@@ -39,6 +40,7 @@ const NAV_LINKS = [
   { to: '/investing', label: 'Investing', testId: 'nav-investing' },
   { to: '/summaries', label: 'Weekly Summaries', testId: 'nav-summaries' },
   { to: '/imports', label: 'Bulk Imports', testId: 'nav-imports' },
+  { to: '/exports', label: 'Data Exports', testId: 'nav-exports' },
   { to: '/settings', label: 'Master Config', testId: 'nav-settings' },
 ];
 
@@ -550,6 +552,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ImportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exports"
+          element={
+            <ProtectedRoute>
+              <ExportsPage />
             </ProtectedRoute>
           }
         />

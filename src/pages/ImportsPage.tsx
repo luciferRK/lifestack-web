@@ -11,6 +11,25 @@ const MODULE_OPTIONS: Array<{ value: ImportModule; label: string }> = [
   { value: 'investing-holdings', label: 'Investing Holdings' },
 ];
 
+const lifecycleCopy = (status: string) => {
+  if (status === 'completed') {
+    return {
+      action: 'Roll back import',
+      description: 'Rollback deletes records created by this committed import when source metadata is available.',
+    };
+  }
+  if (status === 'validated' || status === 'failed_validation') {
+    return {
+      action: 'Delete import batch',
+      description: 'Delete the validation batch, uploaded artifact, preview rows, and validation errors.',
+    };
+  }
+  return {
+    action: 'Delete import batch',
+    description: 'Deletion is available after validation or commit has finished.',
+  };
+};
+
 export const ImportsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [module, setModule] = useState<ImportModule | ''>('');
@@ -71,6 +90,20 @@ export const ImportsPage: React.FC = () => {
   const commitMutation = useMutation({
     mutationFn: (importPublicId: string) => importsService.commitImport(importPublicId),
     onSuccess: async (_, importPublicId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['imports', 'list'] }),
+        queryClient.invalidateQueries({ queryKey: ['imports', 'detail', importPublicId] }),
+      ]);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (importPublicId: string) => importsService.deleteImport(importPublicId),
+    onSuccess: async (_, importPublicId) => {
+      if (selectedImportId === importPublicId) {
+        setSelectedImportId(null);
+        setLatestValidation(null);
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['imports', 'list'] }),
         queryClient.invalidateQueries({ queryKey: ['imports', 'detail', importPublicId] }),
@@ -203,10 +236,46 @@ export const ImportsPage: React.FC = () => {
 
           {selectedImportId && activeDetail ? (
             <>
+              {(() => {
+                const lifecycle = lifecycleCopy(activeDetail.import_batch.status);
+                const canDelete = ['validated', 'failed_validation', 'completed', 'failed_commit'].includes(
+                  activeDetail.import_batch.status,
+                );
+                return (
+                  <div className="mb-4 rounded-lg border border-slate-700 bg-slate-950/40 p-3 text-sm text-slate-300">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-100">Recovery</p>
+                        <p className="mt-1 text-slate-400">{lifecycle.description}</p>
+                      </div>
+                      <button
+                        data-testid="imports-delete"
+                        type="button"
+                        disabled={!canDelete || deleteMutation.isPending}
+                        onClick={() => deleteMutation.mutate(activeDetail.import_batch.public_id)}
+                        className="h-10 rounded-lg border border-rose-500/50 px-4 text-sm font-semibold text-rose-200 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {deleteMutation.isPending ? 'Deleting...' : lifecycle.action}
+                      </button>
+                    </div>
+                    {deleteMutation.isError ? (
+                      <p className="mt-3 text-sm text-rose-300">
+                        Delete or rollback failed. Refresh import details and retry.
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })()}
+
               <div className="mb-4 rounded-lg border border-slate-700 bg-slate-800/40 p-3 text-sm text-slate-200">
                 <p>Module: <span className="font-semibold">{activeDetail.import_batch.module}</span></p>
                 <p>Status: <span className="font-semibold uppercase">{activeDetail.import_batch.status.replace('_', ' ')}</span></p>
                 <p>Rows: {activeDetail.import_batch.valid_rows}/{activeDetail.import_batch.total_rows} valid</p>
+                {activeDetail.error_summary ? (
+                  <p>
+                    Error summary: {activeDetail.error_summary.returned_errors}/{activeDetail.error_summary.total_errors} returned
+                  </p>
+                ) : null}
               </div>
 
               <button
