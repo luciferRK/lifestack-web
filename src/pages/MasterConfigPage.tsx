@@ -48,6 +48,23 @@ export const MasterConfigPage: React.FC = () => {
   const { activeWorkspace: currentWorkspace } = useActiveWorkspace(true);
   const activeWorkspaceId = currentWorkspace?.public_id;
 
+  React.useEffect(() => {
+    setEditingAccountId(null);
+    setEditingAccountName('');
+    setEditingAccountType('wallet');
+    setEditingAccountCurrency('');
+    setEditingAccountIsActive(true);
+    setEditingCategoryId(null);
+    setEditingCategoryName('');
+    setEditingCategoryColor('');
+    setEditingCategoryIcon('');
+    setAccountPendingDelete(null);
+    setNewAccountName('');
+    setResetStatus('idle');
+    setIsConfirmResetOpen(false);
+    setResetConfirmationText('');
+  }, [activeWorkspaceId]);
+
   const { data: demoResetStatus } = useQuery({
     queryKey: ['platform', 'demo-reset-status', activeWorkspaceId],
     queryFn: () => {

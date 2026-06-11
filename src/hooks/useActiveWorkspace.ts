@@ -25,13 +25,14 @@ export function useActiveWorkspace(enabled: boolean) {
       workspaces.find((workspace) => workspace.public_id === activeWorkspaceId) ?? workspaces[0]
     );
   }, [activeWorkspaceId, workspaces]);
+  const resolvedActiveWorkspaceId = activeWorkspace?.public_id;
 
   useEffect(() => {
-    if (!enabled || !activeWorkspace) return;
-    if (activeWorkspace.public_id !== activeWorkspaceId) {
-      setActiveWorkspaceId(activeWorkspace.public_id);
+    if (!enabled || !resolvedActiveWorkspaceId) return;
+    if (resolvedActiveWorkspaceId !== activeWorkspaceId) {
+      setActiveWorkspaceId(resolvedActiveWorkspaceId);
     }
-  }, [activeWorkspace, activeWorkspaceId, enabled, setActiveWorkspaceId]);
+  }, [activeWorkspaceId, enabled, resolvedActiveWorkspaceId, setActiveWorkspaceId]);
 
   const selectWorkspaceMutation = useMutation({
     mutationFn: async (workspaceId: string) => {
@@ -46,7 +47,7 @@ export function useActiveWorkspace(enabled: boolean) {
 
   return {
     activeWorkspace,
-    activeWorkspaceId: activeWorkspace?.public_id ?? null,
+    activeWorkspaceId: resolvedActiveWorkspaceId ?? null,
     workspaces,
     isLoading: workspacesQuery.isLoading,
     selectWorkspace: selectWorkspaceMutation.mutate,
