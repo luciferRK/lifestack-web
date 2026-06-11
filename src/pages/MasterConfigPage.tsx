@@ -65,7 +65,7 @@ export const MasterConfigPage: React.FC = () => {
     setResetConfirmationText('');
   }, [activeWorkspaceId]);
 
-  const { data: demoResetStatus } = useQuery({
+  const { data: demoResetStatus, isLoading: isDemoResetStatusLoading } = useQuery({
     queryKey: ['platform', 'demo-reset-status', activeWorkspaceId],
     queryFn: () => {
       if (!activeWorkspaceId) {
@@ -626,7 +626,7 @@ export const MasterConfigPage: React.FC = () => {
         </div>
       </section>
 
-      {currentWorkspace && demoResetStatus?.allowed ? (
+      {currentWorkspace ? (
         <section data-testid="master-demo-reset-section" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
           <h2 className="text-lg font-semibold text-white">Demo Data & Reset</h2>
           <p className="mt-1 text-sm text-slate-400">
@@ -641,10 +641,18 @@ export const MasterConfigPage: React.FC = () => {
                 setResetConfirmationText('');
                 setIsConfirmResetOpen(true);
               }}
-              disabled={isResetting}
+              disabled={isResetting || !demoResetStatus?.allowed}
             >
               {isResetting ? 'Resetting Workspace...' : 'Reset & Seed Demo Data'}
             </Button>
+            {isDemoResetStatusLoading ? (
+              <p className="mt-2 text-xs text-slate-500">Loading reset status...</p>
+            ) : null}
+            {demoResetStatus && !demoResetStatus.allowed ? (
+              <p className="mt-2 text-xs text-rose-400">
+                {demoResetStatus.reason ?? 'You do not have permission to reset this workspace.'}
+              </p>
+            ) : null}
             {resetStatus === 'success' && (
               <div className="mt-3 rounded-lg border border-emerald-600/40 bg-emerald-500/10 p-3 text-xs text-emerald-200">
                 Workspace successfully reset and seeded with demo data!
