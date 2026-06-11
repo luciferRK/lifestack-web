@@ -13,25 +13,13 @@ import { WeeklySummariesPage } from './pages/WeeklySummariesPage';
 import { ImportsPage } from './pages/ImportsPage';
 import { MasterConfigPage } from './pages/MasterConfigPage';
 import { useAuthStore } from './store/authStore';
+import { useWorkspaceStore } from './store/workspaceStore';
 import { authService } from './services/auth';
 import { onUnauthorized } from './services/api';
 import { notificationsService } from './services/notifications';
-import { platformService, type WorkspaceInfo } from './services/platform';
+import type { WorkspaceInfo } from './services/platform';
 import { VoiceAgentWidget } from './components/VoiceAgentWidget';
-
-// --------------------------------------------------------------------------
-// Workspace context hook
-// --------------------------------------------------------------------------
-
-function useWorkspace(enabled: boolean) {
-  return useQuery({
-    queryKey: ['platform', 'workspaces'],
-    queryFn: () => platformService.listWorkspaces(),
-    enabled,
-    staleTime: 5 * 60 * 1000, // 5 min
-    select: (data) => data.items[0] as WorkspaceInfo | undefined,
-  });
-}
+import { useActiveWorkspace } from './hooks/useActiveWorkspace';
 
 const ROLE_BADGE: Record<string, string> = {
   owner: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
@@ -223,13 +211,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthResolved = useAuthStore((state) => state.isAuthResolved);
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
+  const clearActiveWorkspace = useWorkspaceStore((state) => state.clearActiveWorkspace);
   const { data: unread } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notificationsService.unreadCount(),
     enabled: isAuthenticated && isAuthResolved,
     refetchInterval: 60_000,
   });
-  const { data: workspace } = useWorkspace(isAuthenticated && isAuthResolved);
+  const {
+    activeWorkspace: workspace,
+    workspaces,
+    selectWorkspace,
+    isSelectingWorkspace,
+  } = useActiveWorkspace(isAuthenticated && isAuthResolved);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -252,6 +246,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       await authService.logout();
     } finally {
       clearSession();
+      clearActiveWorkspace();
       setIsLoggingOut(false);
     }
   };
@@ -287,11 +282,30 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
                 <Menu className="h-4 w-4" />
               </button>
 
-              {/* Workspace badge — real name + role */}
+              {/* Workspace badge */}
               {workspace ? (
                 <div className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
                   <Building2 className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                  <span className="font-semibold text-slate-100 truncate max-w-[140px]">{workspace.name}</span>
+                  {workspaces.length > 1 ? (
+                    <select
+                      aria-label="Active workspace"
+                      data-testid="header-workspace-select"
+                      value={workspace.public_id}
+                      onChange={(event) => selectWorkspace(event.target.value)}
+                      disabled={isSelectingWorkspace}
+                      className="max-w-[180px] bg-transparent text-sm font-semibold text-slate-100 outline-none"
+                    >
+                      {workspaces.map((item) => (
+                        <option key={item.public_id} value={item.public_id} className="bg-slate-900">
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="font-semibold text-slate-100 truncate max-w-[140px]">
+                      {workspace.name}
+                    </span>
+                  )}
                   {roleBadge && (
                     <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleBadge}`}>
                       {workspace.role}
@@ -427,6 +441,7 @@ function App() {
   const isAuthResolved = useAuthStore((state) => state.isAuthResolved);
   const setSession = useAuthStore((state) => state.setSession);
   const clearSession = useAuthStore((state) => state.clearSession);
+  const clearActiveWorkspace = useWorkspaceStore((state) => state.clearActiveWorkspace);
 
   useEffect(() => {
     let cancelled = false;
@@ -440,6 +455,7 @@ function App() {
       } catch {
         if (!cancelled) {
           clearSession();
+          clearActiveWorkspace();
         }
       }
     };
@@ -449,13 +465,14 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [clearSession, setSession]);
+  }, [clearActiveWorkspace, clearSession, setSession]);
 
   useEffect(() => {
     return onUnauthorized(() => {
       clearSession();
+      clearActiveWorkspace();
     });
-  }, [clearSession]);
+  }, [clearActiveWorkspace, clearSession]);
 
   if (!isAuthResolved) {
     return (
