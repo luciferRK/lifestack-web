@@ -724,7 +724,12 @@ export const MasterConfigPage: React.FC = () => {
                 setIsConfirmResetOpen(false);
                 void performResetDemoData();
               }}
-              disabled={isResetting || !currentWorkspace || resetConfirmationText !== currentWorkspace.name}
+              disabled={
+                isResetting ||
+                !currentWorkspace ||
+                !demoResetStatus?.allowed ||
+                resetConfirmationText !== currentWorkspace.name
+              }
             >
               {isResetting ? 'Resetting...' : 'Reset & Seed'}
             </Button>
