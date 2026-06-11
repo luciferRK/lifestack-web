@@ -196,7 +196,7 @@ export const InvestingPage: React.FC = () => {
   const cashBalances = useMemo(() => cashRes?.items ?? [], [cashRes]);
   const accounts = useMemo(() => accountsRes?.items ?? [], [accountsRes]);
   const accountOptions = useMemo(() => accounts.map((account) => account.name), [accounts]);
-  const currencyOptions = currencies.map((currency) => currency.code);
+  const currencyOptions = useMemo(() => currencies.map((currency) => currency.code), [currencies]);
   const accountDropdownOptions = useMemo(
     () => accounts.map((acc) => ({ value: acc.public_id, label: acc.name })),
     [accounts]
