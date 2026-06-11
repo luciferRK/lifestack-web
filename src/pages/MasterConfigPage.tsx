@@ -46,11 +46,17 @@ export const MasterConfigPage: React.FC = () => {
   const [resetConfirmationText, setResetConfirmationText] = useState('');
 
   const { activeWorkspace: currentWorkspace } = useActiveWorkspace(true);
+  const activeWorkspaceId = currentWorkspace?.public_id;
 
   const { data: demoResetStatus } = useQuery({
-    queryKey: ['platform', 'demo-reset-status', currentWorkspace?.public_id],
-    queryFn: () => platformService.getDemoResetStatus(currentWorkspace!.public_id),
-    enabled: Boolean(currentWorkspace),
+    queryKey: ['platform', 'demo-reset-status', activeWorkspaceId],
+    queryFn: () => {
+      if (!activeWorkspaceId) {
+        throw new Error('Active workspace is required before loading demo reset status');
+      }
+      return platformService.getDemoResetStatus(activeWorkspaceId);
+    },
+    enabled: Boolean(activeWorkspaceId),
   });
 
   const { data: currencies = [] } = useQuery({
@@ -693,7 +699,7 @@ export const MasterConfigPage: React.FC = () => {
                 setIsConfirmResetOpen(false);
                 void performResetDemoData();
               }}
-              disabled={isResetting || resetConfirmationText !== currentWorkspace?.name}
+              disabled={isResetting || !currentWorkspace || resetConfirmationText !== currentWorkspace.name}
             >
               {isResetting ? 'Resetting...' : 'Reset & Seed'}
             </Button>
