@@ -80,4 +80,27 @@ describe('ExportsPage', () => {
     await waitFor(() => expect(deletedExportId).toBe(readyExport.public_id));
     expect(screen.queryByTestId('exports-status')).not.toBeInTheDocument();
   });
+
+  it('falls back for invalid export dates', async () => {
+    const exportWithInvalidDates = {
+      ...readyExport,
+      created_at: 'not-a-date',
+      completed_at: 'also-not-a-date',
+    };
+
+    server.use(
+      http.post('*/v1/exports', () => HttpResponse.json(exportWithInvalidDates, { status: 201 })),
+      http.get(`*/v1/exports/${readyExport.public_id}`, () =>
+        HttpResponse.json(exportWithInvalidDates),
+      ),
+    );
+
+    renderWithQuery(<ExportsPage />);
+
+    fireEvent.click(screen.getByTestId('exports-create'));
+
+    expect(await screen.findByText('Created: -')).toBeInTheDocument();
+    expect(screen.getByText('Completed: -')).toBeInTheDocument();
+    expect(screen.queryByText(/Invalid Date/i)).not.toBeInTheDocument();
+  });
 });

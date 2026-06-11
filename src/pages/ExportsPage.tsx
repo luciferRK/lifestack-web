@@ -30,6 +30,17 @@ const saveBlob = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+  return date.toLocaleString();
+};
+
 export const ExportsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [format, setFormat] = useState<ExportFormat>('json');
@@ -163,9 +174,9 @@ export const ExportsPage: React.FC = () => {
                 </div>
                 <p>Format: <span className="font-semibold text-slate-100">{activeExport.format}</span></p>
                 <p>Schema version: {activeExport.schema_version}</p>
-                <p>Created: {new Date(activeExport.created_at).toLocaleString()}</p>
+                <p>Created: {formatDateTime(activeExport.created_at)}</p>
                 {activeExport.completed_at ? (
-                  <p>Completed: {new Date(activeExport.completed_at).toLocaleString()}</p>
+                  <p>Completed: {formatDateTime(activeExport.completed_at)}</p>
                 ) : null}
                 {activeExport.artifact_filename ? <p>Artifact: {activeExport.artifact_filename}</p> : null}
                 {activeExport.error_message ? (
