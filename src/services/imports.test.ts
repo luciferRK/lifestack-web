@@ -7,6 +7,7 @@ vi.mock('./api', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -29,12 +30,14 @@ describe('importsService', () => {
     expect(api.get).toHaveBeenNthCalledWith(3, '/imports/imp_1');
   });
 
-  it('calls upload and commit endpoints', async () => {
+  it('calls upload, commit, and delete endpoints', async () => {
     (api.post as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    (api.delete as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const file = new File(['a,b\n1,2'], 'sample.csv', { type: 'text/csv' });
     await importsService.uploadAndValidate('spending-budgets', file);
     await importsService.commitImport('imp_2');
+    await importsService.deleteImport('imp_2');
 
     expect(api.post).toHaveBeenNthCalledWith(
       1,
@@ -42,5 +45,6 @@ describe('importsService', () => {
       expect.any(FormData)
     );
     expect(api.post).toHaveBeenNthCalledWith(2, '/imports/imp_2/commit');
+    expect(api.delete).toHaveBeenCalledWith('/imports/imp_2');
   });
 });

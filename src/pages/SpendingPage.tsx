@@ -993,6 +993,7 @@ export const SpendingPage: React.FC = () => {
                         ? 'wallet'
                         : null;
                     const sourceCurrency = linkedAccount?.default_currency_code ?? displayCurrency;
+                    const sourceMetadata = tx.source_metadata;
                     
                     return (
                       <tr key={tx.public_id} className="group transition-colors hover:bg-slate-700/30">
@@ -1022,6 +1023,21 @@ export const SpendingPage: React.FC = () => {
                             </span>
                             {sourceType ? <AccountTypeBadge type={sourceType} /> : null}
                             <CurrencyBadge code={sourceCurrency} />
+                            {sourceMetadata ? (
+                              <span
+                                data-testid={`transaction-source-metadata-${tx.public_id}`}
+                                title={
+                                  sourceMetadata.rollback_supported && sourceMetadata.import_row_number
+                                    ? `${sourceMetadata.label}, row ${sourceMetadata.import_row_number}`
+                                    : sourceMetadata.label
+                                }
+                                className="rounded-full border border-slate-600 bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-slate-300"
+                              >
+                                {sourceMetadata.origin === 'bulk_import'
+                                  ? `Imported${sourceMetadata.import_row_number ? ` #${sourceMetadata.import_row_number}` : ''}`
+                                  : sourceMetadata.label}
+                              </span>
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-6 py-4">

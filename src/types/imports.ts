@@ -34,9 +34,17 @@ export interface ImportErrorItem {
   raw_value: string | null;
 }
 
+export interface ImportErrorSummary {
+  total_errors: number;
+  returned_errors: number;
+  by_code: Record<string, number>;
+  by_field: Record<string, number>;
+}
+
 export interface ImportValidateResponse {
   import_batch: ImportBatch;
   errors: ImportErrorItem[];
+  error_summary?: ImportErrorSummary;
 }
 
 export interface ImportCommitResponse {
