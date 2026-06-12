@@ -1,4 +1,3 @@
-import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -122,14 +121,14 @@ describe('App shell', () => {
     await waitFor(() => {
       expect(document.body.style.overflow).toBe('hidden');
     });
-    expect(screen.getByTestId('nav-dashboard-mobile')).toHaveClass('text-cyan-300');
+    expect(screen.getByTestId('nav-dashboard-mobile')).toHaveAttribute('aria-current', 'page');
 
     fireEvent.click(screen.getByLabelText('Close navigation'));
 
     await waitFor(() => {
       expect(document.body.style.overflow).toBe('');
     });
-    expect(screen.getByTestId('nav-dashboard')).toHaveClass('text-cyan-300');
+    expect(screen.getByTestId('nav-dashboard')).toHaveAttribute('aria-current', 'page');
   });
 
   it('switches active workspace from the header selector', async () => {
