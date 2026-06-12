@@ -135,6 +135,7 @@ describe('App shell', () => {
     let selectedWorkspace: string | null = null;
 
     server.use(
+      http.get('*/v1/notifications/unread-count', () => HttpResponse.json({ count: 3 })),
       ...defaultHandlers,
       http.get('*/v1/platform/workspaces/', () =>
         HttpResponse.json({ items: [workspaceA, workspaceB] }),
@@ -143,7 +144,6 @@ describe('App shell', () => {
         selectedWorkspace = String(params.workspaceId);
         return HttpResponse.json({}, { status: 204 });
       }),
-      http.get('*/v1/notifications/unread-count', () => HttpResponse.json({ count: 3 })),
     );
 
     renderApp();
