@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Landmark, Layers, Plus, Trash2, WalletCards } from 'lucide-react';
+import { BarChart3, Check, Edit2, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { investingService } from '../services/investing';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
@@ -15,6 +15,7 @@ import { PageShell } from '../components/layout/PageShell';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import type {
   CashBalanceCreate,
+  Holding,
   HoldingCreate,
   InstrumentConstituentUpsert,
   InstrumentCreate,
@@ -185,6 +186,47 @@ export const InvestingPage: React.FC = () => {
     onSuccess: refresh,
   });
 
+  const [editingHoldingId, setEditingHoldingId] = useState<string | null>(null);
+  const [editPriceValue, setEditPriceValue] = useState<string>('');
+
+  const refreshPricesMutation = useMutation({
+    mutationFn: () => investingService.refreshPrices(),
+    onSuccess: () => {
+      refresh();
+    },
+  });
+
+  const submitPricesMutation = useMutation({
+    mutationFn: (payload: {
+      price_date: string;
+      prices: Array<{ holding_public_id: string; unit_price: number }>;
+    }) => investingService.submitPrices(payload),
+    onSuccess: () => {
+      setEditingHoldingId(null);
+      refresh();
+    },
+  });
+
+  const handleStartEditPrice = (h: Holding) => {
+    setEditingHoldingId(h.public_id);
+    setEditPriceValue(toNumber(h.current_price ?? h.avg_cost).toString());
+  };
+
+  const handleSavePrice = (h: Holding) => {
+    const priceNum = Number(editPriceValue);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) return;
+    const todayStr = formatDateInput(new Date());
+    submitPricesMutation.mutate({
+      price_date: todayStr,
+      prices: [
+        {
+          holding_public_id: h.public_id,
+          unit_price: priceNum,
+        },
+      ],
+    });
+  };
+
   const performancePctRaw =
     performanceSummary?.total_gain_loss_pct != null
       ? Number(performanceSummary.total_gain_loss_pct)
@@ -286,6 +328,13 @@ export const InvestingPage: React.FC = () => {
   }, [filteredHoldings]);
   const holdingCurrencies = Object.keys(holdingsByCurrency);
   const totalBookCost = holdingCurrencies.length === 1 ? holdingsByCurrency[holdingCurrencies[0]] : null;
+  const totalCurrentValue = useMemo(() => {
+    if (holdingCurrencies.length !== 1) return null;
+    return filteredHoldings.reduce((acc, item) => {
+      const price = toNumber(item.current_price ?? item.avg_cost);
+      return acc + toNumber(item.quantity) * price;
+    }, 0);
+  }, [filteredHoldings, holdingCurrencies]);
 
   const onCreateHolding = (e: React.FormEvent) => {
     e.preventDefault();
@@ -537,6 +586,19 @@ export const InvestingPage: React.FC = () => {
           </form>
 
           <div className="space-y-3 lg:col-span-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-white text-base">Active Holdings</h3>
+              <button
+                data-testid="investing-refresh-prices-btn"
+                type="button"
+                disabled={refreshPricesMutation.isPending}
+                onClick={() => refreshPricesMutation.mutate()}
+                className="flex items-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
+                {refreshPricesMutation.isPending ? 'Refreshing...' : 'Refresh Prices'}
+              </button>
+            </div>
             <CompactFilterBar
               title="Holdings filters"
               onReset={() => {
@@ -563,57 +625,120 @@ export const InvestingPage: React.FC = () => {
                 />
               </CompactFilterField>
             </CompactFilterBar>
-          <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30">
-            <table className="w-full text-left text-sm text-slate-300">
-              <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">Symbol</th>
-                  <th className="px-4 py-3">Account</th>
-                  <th className="px-4 py-3">Currency</th>
-                  <th className="px-4 py-3">Qty</th>
-                  <th className="px-4 py-3">Avg Cost</th>
-                  <th className="px-4 py-3">Book Value</th>
-                  <th className="px-4 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/50">
-                {filteredHoldings.length === 0 ? (
-                  <tr><td className="px-4 py-6 text-slate-400" colSpan={7}>No holdings yet.</td></tr>
-                ) : (
-                  filteredHoldings.map((h) => (
-                    <tr key={h.public_id} data-testid={`investing-holding-row-${h.public_id}`}>
-                      <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">{h.symbol}</td>
-                      <td className="px-4 py-3">{h.account_name}</td>
-                      <td className="px-4 py-3">
-                        <CurrencyBadge code={h.currency} />
-                      </td>
-                      <td className="px-4 py-3">{toNumber(h.quantity).toFixed(8)}</td>
-                      <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</td>
-                      <td className="px-4 py-3">{formatCurrency(toNumber(h.quantity) * toNumber(h.avg_cost), h.currency, currencyDisplayPreference)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button disabled={deleteHoldingMutation.isPending} onClick={() => deleteHoldingMutation.mutate(h.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-              {filteredHoldings.length > 0 ? (
-                <tfoot>
-                  <tr className="border-t border-slate-700/50 bg-slate-900/40">
-                    <td className="px-4 py-3 text-slate-400" colSpan={5}>Total book cost</td>
-                    <td className="px-4 py-3 font-semibold text-white">
-                      {totalBookCost != null
-                        ? formatCurrency(totalBookCost, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
-                        : 'N/A (multi-currency)'}
-                    </td>
-                    <td />
+            <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30">
+              <table className="w-full text-left text-sm text-slate-300">
+                <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3">Symbol</th>
+                    <th className="px-4 py-3">Account</th>
+                    <th className="px-4 py-3">Currency</th>
+                    <th className="px-4 py-3">Qty</th>
+                    <th className="px-4 py-3">Avg Cost</th>
+                    <th className="px-4 py-3">Book Value</th>
+                    <th className="px-4 py-3">Unit Price</th>
+                    <th className="px-4 py-3">Current Value</th>
+                    <th className="px-4 py-3">Gain / Loss</th>
+                    <th className="px-4 py-3 text-right">Action</th>
                   </tr>
-                </tfoot>
-              ) : null}
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {filteredHoldings.length === 0 ? (
+                    <tr><td className="px-4 py-6 text-slate-400" colSpan={10}>No holdings yet.</td></tr>
+                  ) : (
+                    filteredHoldings.map((h) => {
+                      const gainLoss = toNumber(h.gain_loss ?? 0);
+                      const gainLossPct = toNumber(h.gain_loss_pct ?? 0);
+                      const isPositive = gainLoss > 0;
+                      const isNegative = gainLoss < 0;
+                      const colorClass = isPositive ? 'text-green-400' : isNegative ? 'text-red-400' : 'text-slate-400';
+                      const sign = isPositive ? '+' : '';
+                      return (
+                        <tr key={h.public_id} data-testid={`investing-holding-row-${h.public_id}`}>
+                          <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">{h.symbol}</td>
+                          <td className="px-4 py-3">{h.account_name}</td>
+                          <td className="px-4 py-3">
+                            <CurrencyBadge code={h.currency} />
+                          </td>
+                          <td className="px-4 py-3">{toNumber(h.quantity).toFixed(8)}</td>
+                          <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</td>
+                          <td className="px-4 py-3">{formatCurrency(toNumber(h.quantity) * toNumber(h.avg_cost), h.currency, currencyDisplayPreference)}</td>
+                          <td className="px-4 py-3">
+                            {editingHoldingId === h.public_id ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  data-testid={`investing-price-input-${h.public_id}`}
+                                  type="number"
+                                  step="0.01"
+                                  className="w-20 rounded border border-slate-600 bg-slate-900 px-1.5 py-0.5 text-xs text-white"
+                                  value={editPriceValue}
+                                  onChange={(e) => setEditPriceValue(e.target.value)}
+                                  autoFocus
+                                />
+                                <button
+                                  data-testid={`investing-save-price-${h.public_id}`}
+                                  onClick={() => handleSavePrice(h)}
+                                  className="text-green-400 hover:text-green-300"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => setEditingHoldingId(null)}
+                                  className="text-red-400 hover:text-red-300"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 group">
+                                <span>{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference)}</span>
+                                <button
+                                  data-testid={`investing-edit-price-${h.public_id}`}
+                                  onClick={() => handleStartEditPrice(h)}
+                                  className="text-slate-500 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Override current price"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">{formatCurrency(h.current_value ?? (toNumber(h.quantity) * toNumber(h.avg_cost)), h.currency, currencyDisplayPreference)}</td>
+                          <td className="px-4 py-3 font-medium">
+                            <span className={colorClass}>
+                              {sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference)} ({sign}{gainLossPct.toFixed(2)}%)
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button disabled={deleteHoldingMutation.isPending} onClick={() => deleteHoldingMutation.mutate(h.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+                {filteredHoldings.length > 0 ? (
+                  <tfoot>
+                    <tr className="border-t border-slate-700/50 bg-slate-900/40">
+                      <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={5}>Total Cost & Value</td>
+                      <td className="px-4 py-3 font-semibold text-white">
+                        {totalBookCost != null
+                          ? formatCurrency(totalBookCost, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
+                          : 'N/A (multi-currency)'}
+                      </td>
+                      <td />
+                      <td className="px-4 py-3 font-semibold text-white">
+                        {totalCurrentValue != null
+                          ? formatCurrency(totalCurrentValue, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
+                          : 'N/A (multi-currency)'}
+                      </td>
+                      <td colSpan={2} />
+                    </tr>
+                  </tfoot>
+                ) : null}
+              </table>
+            </div>
           </div>
             </div>
           </TabsContent>

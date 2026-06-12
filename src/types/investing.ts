@@ -6,6 +6,10 @@ export interface Holding {
   quantity: number | string;
   avg_cost: number | string;
   currency: string;
+  current_price?: number | string;
+  current_value?: number | string;
+  gain_loss?: number | string;
+  gain_loss_pct?: number | string;
   created_at: string;
   updated_at: string;
 }

@@ -72,6 +72,16 @@ describe('InvestingPage', () => {
           valuation_status: 'multi_currency_unconverted',
         }),
       ),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '0',
+          total_cost: '0',
+          total_gain_loss: '0',
+          total_gain_loss_pct: '0',
+          snapshot_date: '2026-05-24',
+          currency: 'USD',
+        }),
+      ),
       http.get('*/v1/investing/instruments', () => HttpResponse.json([])),
     );
 
@@ -136,6 +146,16 @@ describe('InvestingPage', () => {
           daily_change: null,
           reporting_currency: 'USD',
           valuation_status: 'single_currency_native',
+        }),
+      ),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '0',
+          total_cost: '0',
+          total_gain_loss: '0',
+          total_gain_loss_pct: '0',
+          snapshot_date: '2026-05-24',
+          currency: 'USD',
         }),
       ),
       http.get('*/v1/investing/instruments', () => HttpResponse.json([])),
@@ -328,5 +348,151 @@ describe('InvestingPage', () => {
     const aaplRows = await screen.findAllByText('AAPL');
     expect(aaplRows.length).toBeGreaterThanOrEqual(1);
     expect(await screen.findByText(/Top 5 concentration/)).toBeInTheDocument();
+  });
+
+  it('renders unit price, current value, gain/loss, and handles refresh and manual edit price actions', async () => {
+    let refreshCalled = false;
+    let submitPayload: {
+      price_date: string;
+      prices: Array<{ holding_public_id: string; unit_price: number }>;
+    } | null = null;
+
+    server.use(
+      http.get('*/v1/investing/holdings', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: 'holding-aapl-id',
+              symbol: 'AAPL',
+              account_id: '11111111-1111-1111-1111-111111111111',
+              account_name: 'Brokerage A',
+              quantity: '10.00000000',
+              avg_cost: '150.00',
+              currency: 'USD',
+              current_price: '180.00',
+              current_value: '1800.00',
+              gain_loss: '300.00',
+              gain_loss_pct: '20.00',
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/investing/cash-balances', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
+      http.get('*/v1/finance/accounts', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: '11111111-1111-1111-1111-111111111111',
+              name: 'Brokerage A',
+              account_type: 'brokerage',
+              default_currency_code: 'USD',
+              is_active: true,
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/finance/currencies', () =>
+        HttpResponse.json([
+          { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
+        ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
+      ),
+      http.get('*/v1/investing/summary', () =>
+        HttpResponse.json({
+          portfolio_value: '1800.00',
+          holdings_count: 1,
+          cash_total: '0',
+          currency_breakdown: { USD: '1500.00' },
+          daily_change: null,
+          reporting_currency: 'USD',
+          valuation_status: 'single_currency_native',
+        }),
+      ),
+      http.get('*/v1/investing/instruments', () => HttpResponse.json([])),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '1800.00',
+          total_cost: '1500.00',
+          total_gain_loss: '300.00',
+          total_gain_loss_pct: '20.00',
+          snapshot_date: '2026-05-24',
+          currency: 'USD',
+        }),
+      ),
+      http.post('*/v1/investing/prices/refresh', () => {
+        refreshCalled = true;
+        return HttpResponse.json({ updated: ['AAPL'] });
+      }),
+      http.post('*/v1/investing/prices', async ({ request }) => {
+        submitPayload = (await request.json()) as {
+          price_date: string;
+          prices: Array<{ holding_public_id: string; unit_price: number }>;
+        };
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+
+    renderWithQuery(<InvestingPage />);
+
+    // Wait for holding row to render
+    const holdingRow = await screen.findByTestId('investing-holding-row-holding-aapl-id');
+    expect(holdingRow).toBeInTheDocument();
+
+    // Verify headers and row values
+    expect(screen.getByText('Unit Price')).toBeInTheDocument();
+    expect(screen.getByText('Current Value')).toBeInTheDocument();
+    expect(screen.getByText('Gain / Loss')).toBeInTheDocument();
+
+    expect(screen.getByText('$180.00')).toBeInTheDocument();
+    expect(screen.getAllByText('$1,800.00').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('+$300.00 (+20.00%)')).toBeInTheDocument();
+
+    // Test Refresh button
+    const refreshBtn = screen.getByTestId('investing-refresh-prices-btn');
+    fireEvent.click(refreshBtn);
+    await waitFor(() => {
+      expect(refreshCalled).toBe(true);
+    });
+
+    // Test Inline Price Edit
+    const editBtn = screen.getByTestId('investing-edit-price-holding-aapl-id');
+    fireEvent.click(editBtn);
+
+    const priceInput = screen.getByTestId('investing-price-input-holding-aapl-id');
+    expect(priceInput).toHaveValue(180);
+
+    fireEvent.change(priceInput, { target: { value: '190.50' } });
+    const saveBtn = screen.getByTestId('investing-save-price-holding-aapl-id');
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(submitPayload).not.toBeNull();
+    });
+    expect(submitPayload!.prices[0]).toEqual({
+      holding_public_id: 'holding-aapl-id',
+      unit_price: 190.5,
+    });
   });
 });

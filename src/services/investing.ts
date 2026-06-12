@@ -106,4 +106,16 @@ export const investingService = {
     const response = await api.get('/investing/performance/summary');
     return response.data;
   },
+
+  refreshPrices: async (): Promise<{ updated: string[] }> => {
+    const response = await api.post('/investing/prices/refresh');
+    return response.data;
+  },
+
+  submitPrices: async (data: {
+    price_date: string;
+    prices: Array<{ holding_public_id: string; unit_price: number | string }>;
+  }): Promise<void> => {
+    await api.post('/investing/prices', data);
+  },
 };
