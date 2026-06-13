@@ -25,6 +25,7 @@ export const TodoPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoDueDate, setNewTodoDueDate] = useState('');
+  const [isNewTaskFormOpen, setIsNewTaskFormOpen] = useState(true);
   const [offset, setOffset] = useState(0);
   const limit = 50;
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'completed'>('all');
@@ -124,48 +125,73 @@ export const TodoPage: React.FC = () => {
         title="Todos"
         subtitle="Manage your tasks and recurring task rules for this workspace."
         actions={(
-          <button
-            type="button"
-            onClick={() => setIsRecurringModalOpen(true)}
-            className="inline-flex h-12 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            <Plus className="h-4 w-4" />
-            New rule
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsNewTaskFormOpen((prev) => !prev)}
+              className={`inline-flex h-12 items-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors ${
+                isNewTaskFormOpen
+                  ? 'bg-slate-700/80 text-slate-100 hover:bg-slate-600'
+                  : 'bg-blue-600 text-white hover:bg-blue-500'
+              }`}
+            >
+              {isNewTaskFormOpen ? 'Hide Task Form' : 'Add Task'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsRecurringModalOpen(true)}
+              className="inline-flex h-12 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-500"
+            >
+              <Plus className="h-4 w-4" />
+              New rule
+            </button>
+          </div>
         )}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-white">New task</h2>
-          <form data-testid="todo-new-form" onSubmit={handleCreate} className="mb-6 rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
-            <input
-              data-testid="todo-new-title"
-              type="text"
-              value={newTodoTitle}
-              onChange={(e) => setNewTodoTitle(e.target.value)}
-              placeholder="What needs to be done?"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white placeholder-slate-400"
-              disabled={createMutation.isPending}
-            />
-            <div>
-              <label className="mb-1 block text-sm text-slate-300">Due date (optional)</label>
-              <DatePicker
-                value={newTodoDueDate}
-                onChange={setNewTodoDueDate}
-                placeholder="Select due date"
+          {isNewTaskFormOpen && (
+            <form data-testid="todo-new-form" onSubmit={handleCreate} className="mb-6 rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold text-white">New task</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsNewTaskFormOpen(false)}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+                  title="Close form"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <input
+                data-testid="todo-new-title"
+                type="text"
+                value={newTodoTitle}
+                onChange={(e) => setNewTodoTitle(e.target.value)}
+                placeholder="What needs to be done?"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white placeholder-slate-400"
                 disabled={createMutation.isPending}
               />
-            </div>
-            <button
-              data-testid="todo-new-submit"
-              type="submit"
-              disabled={createMutation.isPending || !newTodoTitle.trim()}
-              className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
-            >
-              Add Task
-            </button>
-          </form>
+              <div>
+                <label className="mb-1 block text-sm text-slate-300">Due date (optional)</label>
+                <DatePicker
+                  value={newTodoDueDate}
+                  onChange={setNewTodoDueDate}
+                  placeholder="Select due date"
+                  disabled={createMutation.isPending}
+                />
+              </div>
+              <button
+                data-testid="todo-new-submit"
+                type="submit"
+                disabled={createMutation.isPending || !newTodoTitle.trim()}
+                className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+              >
+                Add Task
+              </button>
+            </form>
+          )}
 
           <CompactFilterBar
             className="mb-6"

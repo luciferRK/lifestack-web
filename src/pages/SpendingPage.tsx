@@ -967,8 +967,8 @@ export const SpendingPage: React.FC = () => {
               <p className="text-slate-400">Start tracking your spending by adding a new transaction.</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
-              <table className="w-full text-left text-sm text-slate-300">
+            <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+              <table className="w-full text-left text-sm text-slate-300 min-w-[1000px]">
                 <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                   <tr>
                     <th className="px-6 py-4 font-medium">Date</th>
@@ -1342,8 +1342,8 @@ export const SpendingPage: React.FC = () => {
               <p className="text-slate-400">Create an account-to-account transfer from the Transfer button above.</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
-              <table className="w-full text-left text-sm text-slate-300">
+            <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+              <table className="w-full text-left text-sm text-slate-300 min-w-[700px]">
                 <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                   <tr>
                     <th className="px-6 py-4 font-medium">Date</th>

@@ -52,6 +52,7 @@ export const InvestingPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'holdings' | 'cash' | 'analytics'>('holdings');
   const [analyticsAsOf, setAnalyticsAsOf] = useState(formatDateInput(new Date()));
+  const [isAddFormOpen, setIsAddFormOpen] = useState(true);
 
   const [holdingForm, setHoldingForm] = useState({
     symbol: '',
@@ -495,110 +496,134 @@ export const InvestingPage: React.FC = () => {
 
           <TabsContent value="holdings">
             <div className="grid gap-6 lg:grid-cols-5">
-          <form
-            data-testid="investing-add-holding-form"
-            onSubmit={onCreateHolding}
-            className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 lg:col-span-2"
-          >
-            <h3 className="font-semibold text-white">Add Holding</h3>
-            {accountOptions.length === 0 ? (
-              <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-                Create an account below before adding holdings.
-              </div>
-            ) : null}
-            <input
-              data-testid="investing-holding-symbol"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-              placeholder="Symbol (e.g. AAPL)"
-              value={holdingForm.symbol}
-              onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
-            />
-            <Combobox
-              testId="investing-holding-account"
-              value={selectedHoldingAccount}
-              options={accountDropdownOptions}
-              onChange={(value) => setHoldingForm((s) => ({ ...s, account_id: value }))}
-              placeholder="Select account"
-              searchPlaceholder="Search accounts..."
-              clearLabel="Clear selection"
-              emptyText="No accounts found."
-            />
-            <input
-              data-testid="investing-holding-quantity"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-              placeholder="Quantity"
-              type="number"
-              step="0.00000001"
-              value={holdingForm.quantity}
-              onChange={(e) => setHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
-            />
-            <input
-              data-testid="investing-holding-avg-cost"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-              placeholder="Avg cost"
-              type="number"
-              step="0.01"
-              value={holdingForm.avg_cost}
-              onChange={(e) => setHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
-            />
-            <DropdownSelect
-              testId="investing-holding-currency"
-              value={selectedHoldingCurrency}
-              options={currencyDropdownOptions}
-              onChange={(value) => setHoldingForm((s) => ({ ...s, currency: value }))}
-              placeholder="Currency"
-            />
-            <button
-              data-testid="investing-holding-submit"
-              disabled={createHoldingMutation.isPending || accountOptions.length === 0}
-              type="submit"
-              className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500"
-            >
-              Add holding
-            </button>
+              {isAddFormOpen && (
+                <form
+                  data-testid="investing-add-holding-form"
+                  onSubmit={onCreateHolding}
+                  className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 lg:col-span-2 h-fit"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-semibold text-white">Add Holding</h3>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddFormOpen(false)}
+                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+                      title="Hide form"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {accountOptions.length === 0 ? (
+                    <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                      Create an account below before adding holdings.
+                    </div>
+                  ) : null}
+                  <input
+                    data-testid="investing-holding-symbol"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+                    placeholder="Symbol (e.g. AAPL)"
+                    value={holdingForm.symbol}
+                    onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
+                  />
+                  <Combobox
+                    testId="investing-holding-account"
+                    value={selectedHoldingAccount}
+                    options={accountDropdownOptions}
+                    onChange={(value) => setHoldingForm((s) => ({ ...s, account_id: value }))}
+                    placeholder="Select account"
+                    searchPlaceholder="Search accounts..."
+                    clearLabel="Clear selection"
+                    emptyText="No accounts found."
+                  />
+                  <input
+                    data-testid="investing-holding-quantity"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+                    placeholder="Quantity"
+                    type="number"
+                    step="0.00000001"
+                    value={holdingForm.quantity}
+                    onChange={(e) => setHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
+                  />
+                  <input
+                    data-testid="investing-holding-avg-cost"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+                    placeholder="Avg cost"
+                    type="number"
+                    step="0.01"
+                    value={holdingForm.avg_cost}
+                    onChange={(e) => setHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
+                  />
+                  <DropdownSelect
+                    testId="investing-holding-currency"
+                    value={selectedHoldingCurrency}
+                    options={currencyDropdownOptions}
+                    onChange={(value) => setHoldingForm((s) => ({ ...s, currency: value }))}
+                    placeholder="Currency"
+                  />
+                  <button
+                    data-testid="investing-holding-submit"
+                    disabled={createHoldingMutation.isPending || accountOptions.length === 0}
+                    type="submit"
+                    className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500"
+                  >
+                    Add holding
+                  </button>
 
-            <div className="mt-3 border-t border-slate-700/60 pt-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Quick Create Account</p>
-              <input
-                data-testid="investing-account-name"
-                className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-                placeholder="Account name"
-                value={newAccountName}
-                onChange={(e) => setNewAccountName(e.target.value)}
-              />
-              <DropdownSelect
-                testId="investing-account-type"
-                value={newAccountType}
-                options={[...accountTypeOptions]}
-                onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
-                placeholder="Account type"
-              />
-              <button
-                data-testid="investing-account-create"
-                type="button"
-                disabled={!newAccountName.trim() || createAccountMutation.isPending}
-                onClick={() => createAccountMutation.mutate()}
-                className="w-full rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Create account
-              </button>
-            </div>
-          </form>
+                  <div className="mt-3 border-t border-slate-700/60 pt-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Quick Create Account</p>
+                    <input
+                      data-testid="investing-account-name"
+                      className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+                      placeholder="Account name"
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
+                    />
+                    <DropdownSelect
+                      testId="investing-account-type"
+                      value={newAccountType}
+                      options={[...accountTypeOptions]}
+                      onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
+                      placeholder="Account type"
+                    />
+                    <button
+                      data-testid="investing-account-create"
+                      type="button"
+                      disabled={!newAccountName.trim() || createAccountMutation.isPending}
+                      onClick={() => createAccountMutation.mutate()}
+                      className="w-full rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Create account
+                    </button>
+                  </div>
+                </form>
+              )}
 
-          <div className="space-y-3 lg:col-span-3">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-white text-base">Active Holdings</h3>
-              <button
-                data-testid="investing-refresh-prices-btn"
-                type="button"
-                disabled={refreshPricesMutation.isPending}
-                onClick={() => refreshPricesMutation.mutate()}
-                className="flex items-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
-                {refreshPricesMutation.isPending ? 'Refreshing...' : 'Refresh Prices'}
-              </button>
-            </div>
+              <div className={`space-y-3 ${isAddFormOpen ? 'lg:col-span-3' : 'lg:col-span-5'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-white text-base">Active Holdings</h3>
+                  <div className="flex items-center gap-2">
+                    {!isAddFormOpen && (
+                      <button
+                        type="button"
+                        onClick={() => setIsAddFormOpen(true)}
+                        className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Holding
+                      </button>
+                    )}
+                    <button
+                      data-testid="investing-refresh-prices-btn"
+                      type="button"
+                      disabled={refreshPricesMutation.isPending}
+                      onClick={() => refreshPricesMutation.mutate()}
+                      className="flex items-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
+                      {refreshPricesMutation.isPending ? 'Refreshing...' : 'Refresh Prices'}
+                    </button>
+                  </div>
+                </div>
             <CompactFilterBar
               title="Holdings filters"
               onReset={() => {
@@ -625,8 +650,8 @@ export const InvestingPage: React.FC = () => {
                 />
               </CompactFilterField>
             </CompactFilterBar>
-            <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30">
-              <table className="w-full text-left text-sm text-slate-300">
+            <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30">
+              <table className="w-full text-left text-sm text-slate-300 min-w-[1000px]">
                 <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                   <tr>
                     <th className="px-4 py-3">Symbol</th>
@@ -798,8 +823,8 @@ export const InvestingPage: React.FC = () => {
                 />
               </CompactFilterField>
             </CompactFilterBar>
-          <div className="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/30">
-            <table className="w-full text-left text-sm text-slate-300">
+          <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30">
+            <table className="w-full text-left text-sm text-slate-300 min-w-[600px]">
               <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Account</th>

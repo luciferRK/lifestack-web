@@ -1,7 +1,26 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, NavLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Building2, ChevronDown, LogOut, Menu, Plus, UserCircle2, X } from 'lucide-react';
+import {
+  Bell,
+  Building2,
+  ChevronDown,
+  LogOut,
+  Menu,
+  Plus,
+  UserCircle2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  CheckSquare,
+  CreditCard,
+  TrendingUp,
+  FileText,
+  Upload,
+  Download,
+  Settings,
+} from 'lucide-react';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -34,40 +53,67 @@ const ROLE_BADGE: Record<string, string> = {
 // --------------------------------------------------------------------------
 
 const NAV_LINKS = [
-  { to: '/', label: 'Dashboard', testId: 'nav-dashboard' },
-  { to: '/todo', label: 'Todos', testId: 'nav-todo' },
-  { to: '/spending', label: 'Spending', testId: 'nav-spending' },
-  { to: '/investing', label: 'Investing', testId: 'nav-investing' },
-  { to: '/summaries', label: 'Weekly Summaries', testId: 'nav-summaries' },
-  { to: '/imports', label: 'Bulk Imports', testId: 'nav-imports' },
-  { to: '/exports', label: 'Data Exports', testId: 'nav-exports' },
-  { to: '/settings', label: 'Master Config', testId: 'nav-settings' },
+  { to: '/', label: 'Dashboard', testId: 'nav-dashboard', icon: LayoutDashboard },
+  { to: '/todo', label: 'Todos', testId: 'nav-todo', icon: CheckSquare },
+  { to: '/spending', label: 'Spending', testId: 'nav-spending', icon: CreditCard },
+  { to: '/investing', label: 'Investing', testId: 'nav-investing', icon: TrendingUp },
+  { to: '/summaries', label: 'Weekly Summaries', testId: 'nav-summaries', icon: FileText },
+  { to: '/imports', label: 'Bulk Imports', testId: 'nav-imports', icon: Upload },
+  { to: '/exports', label: 'Data Exports', testId: 'nav-exports', icon: Download },
+  { to: '/settings', label: 'Master Config', testId: 'nav-settings', icon: Settings },
 ];
 
 // --------------------------------------------------------------------------
 // Sidebar navigation (desktop, always visible ≥1024px)
 // --------------------------------------------------------------------------
 
-function Sidebar() {
+function Sidebar({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <nav className="hidden w-64 shrink-0 border-r border-slate-800 bg-slate-900/50 p-6 lg:flex lg:flex-col">
-      <h1 className="mb-8 text-2xl font-bold tracking-tight text-white">Lifestack</h1>
+    <nav
+      className={`hidden shrink-0 border-r border-slate-800 bg-slate-900/50 py-6 lg:flex lg:flex-col transition-all duration-300 ${
+        collapsed ? 'w-16 px-2' : 'w-64 px-4'
+      }`}
+    >
+      <div className={`mb-8 flex items-center justify-between ${collapsed ? 'flex-col gap-4' : 'px-2'}`}>
+        {!collapsed ? (
+          <h1 className="text-2xl font-bold tracking-tight text-white">Lifestack</h1>
+        ) : (
+          <span className="text-xl font-bold tracking-wider text-cyan-400">L</span>
+        )}
+        <button
+          onClick={onToggle}
+          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </button>
+      </div>
       <ul className="space-y-1">
-        {NAV_LINKS.map(({ to, label, testId }) => (
+        {NAV_LINKS.map(({ to, label, testId, icon: Icon }) => (
           <li key={to}>
             <NavLink
               to={to}
               end={to === '/'}
               data-testid={testId}
+              title={collapsed ? label : undefined}
               className={({ isActive }) =>
-                `block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                `flex items-center rounded-lg py-2 text-sm font-medium transition-colors ${
+                  collapsed ? 'justify-center px-0' : 'px-3'
+                } ${
                   isActive
                     ? 'bg-cyan-500/10 text-cyan-300'
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`
               }
             >
-              {label}
+              <Icon className={`shrink-0 ${collapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'}`} />
+              {!collapsed && <span>{label}</span>}
             </NavLink>
           </li>
         ))}
@@ -228,6 +274,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   } = useActiveWorkspace(isAuthenticated && isAuthResolved);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('lifestack:sidebar-collapsed');
+    return saved === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('lifestack:sidebar-collapsed', String(next));
+      return next;
+    });
+  };
 
   if (!isAuthResolved) {
     return (
@@ -258,7 +316,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex min-h-screen bg-slate-900">
       {/* Desktop sidebar */}
-      <Sidebar />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       {/* Mobile nav drawer */}
       <MobileNavDrawer
