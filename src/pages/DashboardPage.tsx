@@ -128,7 +128,7 @@ export const DashboardPage: React.FC = () => {
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   <StatRow label="Next due items" value={data.todos.next_due_items.length.toString()} />
-                  <StatRow label="Active guardrail todos" value={data.todos.active_guardrail_todo_count.toString()} />
+                  <StatRow label="Active budget alerts" value={data.todos.active_guardrail_todo_count.toString()} />
                   <StatRow
                     label="Top overspent categories"
                     value={data.spending.top_overspent_categories.length.toString()}

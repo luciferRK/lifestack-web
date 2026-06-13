@@ -519,6 +519,7 @@ export const InvestingPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    data-testid="investing-add-holding-btn"
                     onClick={() => setIsAddHoldingModalOpen(true)}
                     className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
                   >

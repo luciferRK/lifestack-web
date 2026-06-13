@@ -10,6 +10,7 @@ import { Pagination } from '../components/Pagination';
 import { SkeletonList } from '../components/ui/FeedbackStates';
 import { todoService } from '../services/todo';
 import type { RecurringTodoCreate, Todo, TodoCreate } from '../services/todo';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 
 const toIsoStartOfDay = (yyyyMmDd: string): string | null => {
   if (!yyyyMmDd) return null;
@@ -124,7 +125,7 @@ export const TodoPage: React.FC = () => {
     <PageShell>
       <PageHero
         title="Todos"
-        subtitle="Manage your tasks and recurring task rules for this workspace."
+        subtitle="Manage your tasks and recurring todos for this workspace."
         actions={(
           <div className="flex items-center gap-2">
             <button
@@ -141,7 +142,7 @@ export const TodoPage: React.FC = () => {
               className="inline-flex h-12 items-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-500"
             >
               <Plus className="h-4 w-4" />
-              New rule
+              New recurring todo
             </button>
           </div>
         )}
@@ -210,8 +211,13 @@ export const TodoPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section>
+      <Tabs defaultValue="tasks" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="tasks" data-testid="todo-tab-tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="recurring" data-testid="todo-tab-recurring">Recurring todos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tasks" className="space-y-6 focus-visible:outline-none">
           <CompactFilterBar
             className="mb-6"
             title="Task filters"
@@ -295,11 +301,11 @@ export const TodoPage: React.FC = () => {
               )}
             </div>
           )}
-        </section>
+        </TabsContent>
 
-        <section>
+        <TabsContent value="recurring" className="space-y-6 focus-visible:outline-none">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-white">Recurring rules</h2>
+            <h2 className="text-lg font-semibold text-white">Recurring todos</h2>
           </div>
 
           {isRecurringLoading ? (
@@ -308,7 +314,7 @@ export const TodoPage: React.FC = () => {
             <div className="space-y-3">
               {(recurringResponse?.items ?? []).length === 0 ? (
                 <div className="rounded-2xl border border-slate-800 bg-slate-800/30 p-8 text-center">
-                  <p className="text-slate-300">No recurring rules yet.</p>
+                  <p className="text-slate-300">No recurring todos yet.</p>
                   <p className="mt-1 text-sm text-slate-500">Create one to auto-generate routine tasks.</p>
                   <button
                     type="button"
@@ -316,7 +322,7 @@ export const TodoPage: React.FC = () => {
                     className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
                   >
                     <Plus className="h-4 w-4" />
-                    Create first rule
+                    Create first recurring todo
                   </button>
                 </div>
               ) : (
@@ -342,8 +348,8 @@ export const TodoPage: React.FC = () => {
               )}
             </div>
           )}
-        </section>
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {isRecurringModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -353,7 +359,7 @@ export const TodoPage: React.FC = () => {
           />
           <div className="relative w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-              <h3 className="text-lg font-semibold text-white">Create recurring rule</h3>
+              <h3 className="text-lg font-semibold text-white">Create recurring todo</h3>
               <button
                 type="button"
                 onClick={() => setIsRecurringModalOpen(false)}
@@ -367,7 +373,7 @@ export const TodoPage: React.FC = () => {
                 type="text"
                 value={ruleTitle}
                 onChange={(e) => setRuleTitle(e.target.value)}
-                placeholder="Rule title (e.g. Weekly grocery planning)"
+                placeholder="Title (e.g. Weekly grocery planning)"
                 className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white placeholder-slate-400"
                 required
               />
@@ -423,7 +429,7 @@ export const TodoPage: React.FC = () => {
                   disabled={createRuleMutation.isPending || !ruleTitle.trim() || !ruleAnchorDate}
                   className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
-                  {createRuleMutation.isPending ? 'Creating...' : 'Create rule'}
+                  {createRuleMutation.isPending ? 'Creating...' : 'Create recurring todo'}
                 </button>
               </div>
             </form>
