@@ -12,6 +12,7 @@ import type {
   InstrumentConstituent,
   InstrumentConstituentUpsert,
   InstrumentCreate,
+  InstrumentUpdate,
   InvestingSummary,
   OverlapAnalytics,
   PerformanceSummary,
@@ -71,6 +72,11 @@ export const investingService = {
 
   createInstrument: async (data: InstrumentCreate): Promise<Instrument> => {
     const response = await api.post('/investing/instruments', data);
+    return response.data;
+  },
+
+  updateInstrument: async (publicId: string, data: InstrumentUpdate): Promise<Instrument> => {
+    const response = await api.patch(`/investing/instruments/${publicId}`, data);
     return response.data;
   },
 

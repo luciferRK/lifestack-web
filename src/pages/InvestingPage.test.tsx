@@ -16,6 +16,10 @@ const renderWithQuery = (ui: React.ReactNode) => {
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 };
 
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
 describe('InvestingPage', () => {
   it('shows valuation status and N/A totals for multi-currency unconverted summary', async () => {
     server.use(
@@ -236,6 +240,7 @@ describe('InvestingPage', () => {
       quantity: 10,
       avg_cost: 150.25,
       currency: 'USD',
+      instrument_type: 'stock',
     });
   });
 
@@ -497,6 +502,171 @@ describe('InvestingPage', () => {
     expect(submitPayload!.prices[0]).toEqual({
       holding_public_id: 'holding-aapl-id',
       unit_price: 190.5,
+    });
+  });
+
+  it('edits holding economics and linked asset type from the holdings table', async () => {
+    let holdingPatchPayload: Record<string, unknown> | null = null;
+    let instrumentPatchPayload: Record<string, unknown> | null = null;
+
+    server.use(
+      http.get('*/v1/investing/holdings', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: 'holding-vti-id',
+              symbol: 'VTI',
+              instrument_type: 'stock',
+              account_id: '11111111-1111-1111-1111-111111111111',
+              account_name: 'Brokerage A',
+              quantity: '10.00000000',
+              avg_cost: '150.00',
+              currency: 'USD',
+              current_price: '180.00',
+              current_value: '1800.00',
+              gain_loss: '300.00',
+              gain_loss_pct: '20.00',
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/investing/cash-balances', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
+      http.get('*/v1/finance/accounts', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: '11111111-1111-1111-1111-111111111111',
+              name: 'Brokerage A',
+              account_type: 'brokerage',
+              default_currency_code: 'USD',
+              is_active: true,
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/finance/currencies', () =>
+        HttpResponse.json([
+          { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
+          { code: 'INR', name: 'Indian Rupee', symbol: 'Rs', minor_unit: 2, is_active: true },
+        ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
+      ),
+      http.get('*/v1/investing/summary', () =>
+        HttpResponse.json({
+          portfolio_value: '1800.00',
+          holdings_count: 1,
+          cash_total: '0',
+          currency_breakdown: { USD: '1500.00' },
+          daily_change: null,
+          reporting_currency: 'USD',
+          valuation_status: 'single_currency_native',
+        }),
+      ),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '1800.00',
+          total_cost: '1500.00',
+          total_gain_loss: '300.00',
+          total_gain_loss_pct: '20.00',
+          snapshot_date: '2026-05-24',
+          currency: 'USD',
+        }),
+      ),
+      http.get('*/v1/investing/instruments', () =>
+        HttpResponse.json([
+          {
+            public_id: 'instrument-vti-id',
+            symbol: 'VTI',
+            name: 'Vanguard Total Market ETF',
+            instrument_type: 'stock',
+            company_id: 'company-vti-id',
+            is_active: true,
+            created_at: '2026-05-24T00:00:00Z',
+            updated_at: '2026-05-24T00:00:00Z',
+          },
+        ]),
+      ),
+      http.patch('*/v1/investing/holdings/holding-vti-id', async ({ request }) => {
+        holdingPatchPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          public_id: 'holding-vti-id',
+          symbol: 'VTI',
+          instrument_type: 'stock',
+          account_id: '11111111-1111-1111-1111-111111111111',
+          account_name: 'Brokerage A',
+          quantity: holdingPatchPayload.quantity,
+          avg_cost: holdingPatchPayload.avg_cost,
+          currency: holdingPatchPayload.currency,
+          created_at: '2026-05-24T00:00:00Z',
+          updated_at: '2026-05-24T00:00:00Z',
+        });
+      }),
+      http.patch('*/v1/investing/instruments/instrument-vti-id', async ({ request }) => {
+        instrumentPatchPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          public_id: 'instrument-vti-id',
+          symbol: 'VTI',
+          name: instrumentPatchPayload.name,
+          instrument_type: instrumentPatchPayload.instrument_type,
+          company_id: null,
+          is_active: true,
+          created_at: '2026-05-24T00:00:00Z',
+          updated_at: '2026-05-24T00:00:00Z',
+        });
+      }),
+    );
+
+    renderWithQuery(<InvestingPage />);
+
+    await screen.findByTestId('investing-holding-row-holding-vti-id');
+    fireEvent.click(screen.getByTestId('investing-edit-holding-holding-vti-id'));
+
+    fireEvent.change(await screen.findByTestId('investing-edit-holding-quantity'), {
+      target: { value: '12.5' },
+    });
+    fireEvent.change(screen.getByTestId('investing-edit-holding-avg-cost'), {
+      target: { value: '155.75' },
+    });
+
+    fireEvent.click(screen.getByTestId('investing-edit-holding-instrument-type'));
+    fireEvent.click(await screen.findByRole('option', { name: 'ETF' }));
+
+    fireEvent.click(screen.getByTestId('investing-edit-holding-submit'));
+
+    await waitFor(() => {
+      expect(holdingPatchPayload).not.toBeNull();
+      expect(instrumentPatchPayload).not.toBeNull();
+    });
+    expect(holdingPatchPayload).toEqual({
+      quantity: 12.5,
+      avg_cost: 155.75,
+      currency: 'USD',
+    });
+    expect(instrumentPatchPayload).toEqual({
+      name: 'Vanguard Total Market ETF',
+      instrument_type: 'etf',
     });
   });
 });

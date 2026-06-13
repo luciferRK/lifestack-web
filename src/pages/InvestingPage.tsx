@@ -17,8 +17,10 @@ import type {
   CashBalanceCreate,
   Holding,
   HoldingCreate,
+  Instrument,
   InstrumentConstituentUpsert,
   InstrumentCreate,
+  InstrumentType,
 } from '../types/investing';
 
 const formatDateInput = (d: Date): string => {
@@ -48,11 +50,23 @@ const statusLabel = (status: string | undefined): string => {
   }
 };
 
+const instrumentTypeLabel = (type: InstrumentType | undefined): string => {
+  switch (type) {
+    case 'etf':
+      return 'ETF';
+    case 'mutual_fund':
+      return 'Mutual Fund';
+    default:
+      return 'Stock';
+  }
+};
+
 export const InvestingPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'holdings' | 'cash' | 'analytics'>('holdings');
   const [analyticsAsOf, setAnalyticsAsOf] = useState(formatDateInput(new Date()));
   const [isAddHoldingModalOpen, setIsAddHoldingModalOpen] = useState(false);
+  const [isEditHoldingModalOpen, setIsEditHoldingModalOpen] = useState(false);
   const [isAddCashModalOpen, setIsAddCashModalOpen] = useState(false);
   const [isCreateInstrumentModalOpen, setIsCreateInstrumentModalOpen] = useState(false);
   const [isSeedConstituentsModalOpen, setIsSeedConstituentsModalOpen] = useState(false);
@@ -63,6 +77,14 @@ export const InvestingPage: React.FC = () => {
     quantity: '',
     avg_cost: '',
     currency: 'USD',
+    instrument_type: 'stock' as InstrumentType,
+  });
+  const [selectedHolding, setSelectedHolding] = useState<Holding | null>(null);
+  const [editHoldingForm, setEditHoldingForm] = useState({
+    quantity: '',
+    avg_cost: '',
+    currency: 'USD',
+    instrument_type: 'stock' as InstrumentType,
   });
 
   const [cashForm, setCashForm] = useState({
@@ -86,6 +108,11 @@ export const InvestingPage: React.FC = () => {
   const [selectedInstrumentId, setSelectedInstrumentId] = useState('');
   const [constituentRowsText, setConstituentRowsText] = useState('AAPL,0.60\nMSFT,0.40');
   const [constituentError, setConstituentError] = useState('');
+  const [editingInstrumentId, setEditingInstrumentId] = useState<string | null>(null);
+  const [instrumentEditForm, setInstrumentEditForm] = useState({
+    name: '',
+    instrument_type: 'stock' as InstrumentType,
+  });
 
   const holdingsRes = useQuery({
     queryKey: ['investing', 'holdings'],
@@ -171,6 +198,49 @@ export const InvestingPage: React.FC = () => {
       refresh();
     },
   });
+  const updateInstrumentMutation = useMutation({
+    mutationFn: (payload: { publicId: string; name: string; instrument_type: InstrumentType }) =>
+      investingService.updateInstrument(payload.publicId, {
+        name: payload.name,
+        instrument_type: payload.instrument_type,
+      }),
+    onSuccess: () => {
+      setEditingInstrumentId(null);
+      refresh();
+    },
+  });
+  const updateHoldingMutation = useMutation({
+    mutationFn: async (payload: {
+      holding: Holding;
+      quantity: number;
+      avg_cost: number;
+      currency: string;
+      instrument_type: InstrumentType;
+    }) => {
+      const updatedHolding = await investingService.updateHolding(payload.holding.public_id, {
+        quantity: payload.quantity,
+        avg_cost: payload.avg_cost,
+        currency: payload.currency,
+      });
+      if (payload.instrument_type !== (payload.holding.instrument_type ?? 'stock')) {
+        const instrument = instruments.find(
+          (item) => item.symbol.toUpperCase() === payload.holding.symbol.toUpperCase(),
+        );
+        if (instrument) {
+          await investingService.updateInstrument(instrument.public_id, {
+            name: instrument.name,
+            instrument_type: payload.instrument_type,
+          });
+        }
+      }
+      return updatedHolding;
+    },
+    onSuccess: () => {
+      setSelectedHolding(null);
+      setIsEditHoldingModalOpen(false);
+      refresh();
+    },
+  });
   const upsertConstituentsMutation = useMutation({
     mutationFn: async (payload: InstrumentConstituentUpsert) => {
       if (!selectedInstrumentId) return [];
@@ -206,7 +276,7 @@ export const InvestingPage: React.FC = () => {
     onSuccess: refresh,
   });
 
-  const [editingHoldingId, setEditingHoldingId] = useState<string | null>(null);
+  const [editingPriceHoldingId, setEditingPriceHoldingId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState<string>('');
 
   const refreshPricesMutation = useMutation({
@@ -222,14 +292,25 @@ export const InvestingPage: React.FC = () => {
       prices: Array<{ holding_public_id: string; unit_price: number }>;
     }) => investingService.submitPrices(payload),
     onSuccess: () => {
-      setEditingHoldingId(null);
+      setEditingPriceHoldingId(null);
       refresh();
     },
   });
 
   const handleStartEditPrice = (h: Holding) => {
-    setEditingHoldingId(h.public_id);
+    setEditingPriceHoldingId(h.public_id);
     setEditPriceValue(toNumber(h.current_price ?? h.avg_cost).toString());
+  };
+
+  const handleStartEditHolding = (holding: Holding) => {
+    setSelectedHolding(holding);
+    setEditHoldingForm({
+      quantity: toNumber(holding.quantity).toString(),
+      avg_cost: toNumber(holding.avg_cost).toString(),
+      currency: holding.currency || 'USD',
+      instrument_type: holding.instrument_type ?? 'stock',
+    });
+    setIsEditHoldingModalOpen(true);
   };
 
   const handleSavePrice = (h: Holding) => {
@@ -244,6 +325,41 @@ export const InvestingPage: React.FC = () => {
           unit_price: priceNum,
         },
       ],
+    });
+  };
+
+  const handleStartEditInstrument = (instrument: Instrument) => {
+    setEditingInstrumentId(instrument.public_id);
+    setInstrumentEditForm({
+      name: instrument.name,
+      instrument_type: instrument.instrument_type,
+    });
+  };
+
+  const handleSaveInstrument = (instrument: Instrument) => {
+    if (!instrumentEditForm.name.trim()) return;
+    updateInstrumentMutation.mutate({
+      publicId: instrument.public_id,
+      name: instrumentEditForm.name.trim(),
+      instrument_type: instrumentEditForm.instrument_type,
+    });
+  };
+
+  const onUpdateHolding = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedHolding) return;
+
+    const qty = Number(editHoldingForm.quantity);
+    const cost = Number(editHoldingForm.avg_cost);
+    const currency = editHoldingForm.currency.trim().toUpperCase();
+    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !currency) return;
+
+    updateHoldingMutation.mutate({
+      holding: selectedHolding,
+      quantity: qty,
+      avg_cost: cost,
+      currency,
+      instrument_type: editHoldingForm.instrument_type,
     });
   };
 
@@ -370,6 +486,7 @@ export const InvestingPage: React.FC = () => {
       quantity: qty,
       avg_cost: cost,
       currency: selectedHoldingCurrency.trim().toUpperCase() || 'USD',
+      instrument_type: holdingForm.instrument_type,
     });
   };
 
@@ -571,6 +688,7 @@ export const InvestingPage: React.FC = () => {
                   <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                     <tr>
                       <th className="px-4 py-3">Symbol</th>
+                      <th className="px-4 py-3">Asset Type</th>
                       <th className="px-4 py-3">Account</th>
                       <th className="px-4 py-3">Currency</th>
                       <th className="px-4 py-3">Qty</th>
@@ -584,7 +702,7 @@ export const InvestingPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
                     {filteredHoldings.length === 0 ? (
-                      <tr><td className="px-4 py-6 text-slate-400" colSpan={10}>No holdings yet.</td></tr>
+                      <tr><td className="px-4 py-6 text-slate-400" colSpan={11}>No holdings yet.</td></tr>
                     ) : (
                       filteredHoldings.map((h) => {
                         const gainLoss = toNumber(h.gain_loss ?? 0);
@@ -596,6 +714,11 @@ export const InvestingPage: React.FC = () => {
                         return (
                           <tr key={h.public_id} data-testid={`investing-holding-row-${h.public_id}`}>
                             <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">{h.symbol}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex rounded border border-slate-600/70 px-2 py-0.5 text-xs text-slate-200">
+                                {instrumentTypeLabel(h.instrument_type)}
+                              </span>
+                            </td>
                             <td className="px-4 py-3">{h.account_name}</td>
                             <td className="px-4 py-3">
                               <CurrencyBadge code={h.currency} />
@@ -604,7 +727,7 @@ export const InvestingPage: React.FC = () => {
                             <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</td>
                             <td className="px-4 py-3">{formatCurrency(toNumber(h.quantity) * toNumber(h.avg_cost), h.currency, currencyDisplayPreference)}</td>
                             <td className="px-4 py-3">
-                              {editingHoldingId === h.public_id ? (
+                              {editingPriceHoldingId === h.public_id ? (
                                 <div className="flex items-center gap-1.5">
                                   <input
                                     data-testid={`investing-price-input-${h.public_id}`}
@@ -623,7 +746,7 @@ export const InvestingPage: React.FC = () => {
                                     <Check className="h-4 w-4" />
                                   </button>
                                   <button
-                                    onClick={() => setEditingHoldingId(null)}
+                                    onClick={() => setEditingPriceHoldingId(null)}
                                     className="text-red-400 hover:text-red-300"
                                   >
                                     <X className="h-4 w-4" />
@@ -650,9 +773,26 @@ export const InvestingPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button disabled={deleteHoldingMutation.isPending} onClick={() => deleteHoldingMutation.mutate(h.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  data-testid={`investing-edit-holding-${h.public_id}`}
+                                  onClick={() => handleStartEditHolding(h)}
+                                  className="rounded-lg border border-slate-600/70 p-2 text-slate-200 hover:bg-slate-700/60"
+                                  title="Edit holding"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={deleteHoldingMutation.isPending}
+                                  onClick={() => deleteHoldingMutation.mutate(h.public_id)}
+                                  className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                  title="Delete holding"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -662,7 +802,7 @@ export const InvestingPage: React.FC = () => {
                   {filteredHoldings.length > 0 ? (
                     <tfoot>
                       <tr className="border-t border-slate-700/50 bg-slate-900/40">
-                        <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={5}>Total Cost & Value</td>
+                        <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={6}>Total Cost & Value</td>
                         <td className="px-4 py-3 font-semibold text-white">
                           {totalBookCost != null
                             ? formatCurrency(totalBookCost, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
@@ -809,6 +949,97 @@ export const InvestingPage: React.FC = () => {
                       </ul>
                     )}
                   </div>
+                  <div className="space-y-2 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-xs font-semibold uppercase text-slate-400">Instruments</h4>
+                      <span className="text-xs text-slate-500">{instruments.length}</span>
+                    </div>
+                    <div className="max-h-64 overflow-auto rounded border border-slate-700/40">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead className="bg-slate-800/60 text-slate-400">
+                          <tr>
+                            <th className="px-2 py-1.5">Symbol</th>
+                            <th className="px-2 py-1.5">Type</th>
+                            <th className="px-2 py-1.5 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {instruments.length === 0 ? (
+                            <tr>
+                              <td className="px-2 py-2 text-slate-500" colSpan={3}>No instruments yet.</td>
+                            </tr>
+                          ) : (
+                            instruments.map((instrument) => (
+                              <tr key={instrument.public_id} className="border-t border-slate-700/40">
+                                <td className="px-2 py-1.5 font-medium text-slate-100">
+                                  {editingInstrumentId === instrument.public_id ? (
+                                    <input
+                                      className="w-28 rounded border border-slate-600 bg-slate-950 px-1.5 py-1 text-xs text-white"
+                                      value={instrumentEditForm.name}
+                                      onChange={(e) =>
+                                        setInstrumentEditForm((s) => ({ ...s, name: e.target.value }))
+                                      }
+                                    />
+                                  ) : (
+                                    instrument.symbol
+                                  )}
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  {editingInstrumentId === instrument.public_id ? (
+                                    <DropdownSelect
+                                      value={instrumentEditForm.instrument_type}
+                                      options={[...instrumentTypeOptions]}
+                                      onChange={(value) =>
+                                        setInstrumentEditForm((s) => ({
+                                          ...s,
+                                          instrument_type: value as InstrumentType,
+                                        }))
+                                      }
+                                      placeholder="Type"
+                                    />
+                                  ) : (
+                                    instrumentTypeLabel(instrument.instrument_type)
+                                  )}
+                                </td>
+                                <td className="px-2 py-1.5 text-right">
+                                  {editingInstrumentId === instrument.public_id ? (
+                                    <div className="inline-flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSaveInstrument(instrument)}
+                                        disabled={updateInstrumentMutation.isPending}
+                                        className="rounded p-1 text-green-300 hover:bg-green-500/10 disabled:opacity-60"
+                                        title="Save instrument"
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingInstrumentId(null)}
+                                        className="rounded p-1 text-rose-300 hover:bg-rose-500/10"
+                                        title="Cancel"
+                                      >
+                                        <X className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEditInstrument(instrument)}
+                                      className="rounded p-1 text-slate-400 hover:bg-slate-700/60 hover:text-white"
+                                      title="Edit instrument"
+                                    >
+                                      <Edit2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -918,6 +1149,24 @@ export const InvestingPage: React.FC = () => {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Asset Type</label>
+                  <DropdownSelect
+                    testId="investing-holding-instrument-type"
+                    value={holdingForm.instrument_type}
+                    options={[...instrumentTypeOptions]}
+                    onChange={(value) =>
+                      setHoldingForm((s) => ({
+                        ...s,
+                        instrument_type: value as InstrumentType,
+                      }))
+                    }
+                    placeholder="Asset type"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
                   <label className="text-xs font-semibold text-slate-300">Account</label>
                   <Combobox
                     testId="investing-holding-account"
@@ -1022,6 +1271,138 @@ export const InvestingPage: React.FC = () => {
                   className="mt-3 w-full h-10 rounded-lg border border-slate-700 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
                 >
                   Create account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Holding Modal */}
+      {isEditHoldingModalOpen && selectedHolding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => {
+              setIsEditHoldingModalOpen(false);
+              setSelectedHolding(null);
+            }}
+          />
+          <div className="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="mb-4 flex items-center justify-between border-b border-slate-800 pb-4">
+              <h2 className="text-lg font-semibold text-white">Edit Holding</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditHoldingModalOpen(false);
+                  setSelectedHolding(null);
+                }}
+                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                title="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form
+              data-testid="investing-edit-holding-form"
+              onSubmit={onUpdateHolding}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Symbol</label>
+                  <input
+                    data-testid="investing-edit-holding-symbol"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300"
+                    value={selectedHolding.symbol}
+                    readOnly
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Asset Type</label>
+                  <DropdownSelect
+                    testId="investing-edit-holding-instrument-type"
+                    value={editHoldingForm.instrument_type}
+                    options={[...instrumentTypeOptions]}
+                    onChange={(value) =>
+                      setEditHoldingForm((s) => ({
+                        ...s,
+                        instrument_type: value as InstrumentType,
+                      }))
+                    }
+                    placeholder="Asset type"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Account</label>
+                  <input
+                    data-testid="investing-edit-holding-account"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300"
+                    value={selectedHolding.account_name}
+                    readOnly
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Currency</label>
+                  <DropdownSelect
+                    testId="investing-edit-holding-currency"
+                    value={editHoldingForm.currency}
+                    options={currencyDropdownOptions}
+                    onChange={(value) => setEditHoldingForm((s) => ({ ...s, currency: value }))}
+                    placeholder="Currency"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Quantity</label>
+                  <input
+                    data-testid="investing-edit-holding-quantity"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    type="number"
+                    step="0.00000001"
+                    value={editHoldingForm.quantity}
+                    onChange={(e) => setEditHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Avg Cost</label>
+                  <input
+                    data-testid="investing-edit-holding-avg-cost"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    type="number"
+                    step="0.01"
+                    value={editHoldingForm.avg_cost}
+                    onChange={(e) => setEditHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditHoldingModalOpen(false);
+                    setSelectedHolding(null);
+                  }}
+                  className="h-10 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  data-testid="investing-edit-holding-submit"
+                  disabled={updateHoldingMutation.isPending}
+                  type="submit"
+                  className="h-10 flex-1 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {updateHoldingMutation.isPending ? 'Saving...' : 'Save Holding'}
                 </button>
               </div>
             </form>
