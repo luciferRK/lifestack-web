@@ -1698,7 +1698,7 @@ export const SpendingPage: React.FC = () => {
                   <label className="mb-2 block text-sm font-medium text-slate-300">Amount</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{displayCurrency}</span>
-                    <input
+                    <Input
                       data-testid="spending-transaction-amount"
                       type="number"
                       step="0.01"
@@ -1706,7 +1706,7 @@ export const SpendingPage: React.FC = () => {
                       required
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950/50 py-3 pl-16 pr-4 text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                      className="pl-16"
                       placeholder="0.00"
                     />
                   </div>
@@ -1762,12 +1762,11 @@ export const SpendingPage: React.FC = () => {
                 {/* Description */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Description (Optional)</label>
-                  <input
+                  <Input
                     data-testid="spending-transaction-description"
                     type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                     placeholder="What did you spend on?"
                   />
                 </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
+import { vi } from 'vitest';
 
 import { TodoPage } from './TodoPage';
 import { server } from '../test/setup';
@@ -14,6 +15,15 @@ const renderWithQuery = (ui: React.ReactNode) => {
     },
   });
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+};
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
+const selectDropdownOption = async (testId: string, optionName: string) => {
+  fireEvent.click(screen.getByTestId(testId));
+  fireEvent.click(await screen.findByRole('option', { name: optionName }));
 };
 
 describe('TodoPage', () => {
@@ -76,7 +86,7 @@ describe('TodoPage', () => {
     expect(screen.getByText('Medium')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Add Task/i }));
-    expect(await screen.findByTestId('todo-new-priority')).toHaveValue('low');
+    expect(await screen.findByTestId('todo-new-priority')).toHaveTextContent('Low');
     fireEvent.change(screen.getByTestId('todo-new-title'), {
       target: { value: 'Plan groceries' },
     });
@@ -96,13 +106,11 @@ describe('TodoPage', () => {
     });
 
     fireEvent.click(await screen.findByTestId('todo-edit-todo-1'));
-    expect(await screen.findByTestId('todo-new-priority')).toHaveValue('medium');
+    expect(await screen.findByTestId('todo-new-priority')).toHaveTextContent('Medium');
     fireEvent.change(screen.getByTestId('todo-new-description'), {
       target: { value: 'Updated notes' },
     });
-    fireEvent.change(screen.getByTestId('todo-new-priority'), {
-      target: { value: 'high' },
-    });
+    await selectDropdownOption('todo-new-priority', 'High');
     fireEvent.click(screen.getByTestId('todo-new-submit'));
 
     await waitFor(() => {
@@ -165,20 +173,18 @@ describe('TodoPage', () => {
     renderWithQuery(<TodoPage />);
 
     fireEvent.click(await screen.findByRole('button', { name: /New recurring todo/i }));
-    expect(await screen.findByTestId('todo-recurring-priority')).toHaveValue('low');
+    expect(await screen.findByTestId('todo-recurring-priority')).toHaveTextContent('Low');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     const recurringTab = await screen.findByTestId('todo-tab-recurring');
     recurringTab.focus();
     fireEvent.keyDown(recurringTab, { key: 'Enter', code: 'Enter' });
     fireEvent.click(await screen.findByTestId('todo-recurring-edit-rule-1'));
-    expect(await screen.findByTestId('todo-recurring-priority')).toHaveValue('medium');
+    expect(await screen.findByTestId('todo-recurring-priority')).toHaveTextContent('Medium');
     fireEvent.change(screen.getByTestId('todo-recurring-description'), {
       target: { value: 'Updated recurring notes' },
     });
-    fireEvent.change(screen.getByTestId('todo-recurring-priority'), {
-      target: { value: 'high' },
-    });
+    await selectDropdownOption('todo-recurring-priority', 'High');
     fireEvent.click(screen.getByRole('button', { name: /Save recurring todo/i }));
 
     await waitFor(() => {

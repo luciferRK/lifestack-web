@@ -133,7 +133,7 @@ export const ExportsPage: React.FC = () => {
                   data-testid="exports-format-select"
                   value={format}
                   onChange={(event) => setFormat(event.target.value as ExportFormat)}
-                  className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white text-sm"
+                  className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-white text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 >
                   <option value="json">JSON</option>
                   <option value="csv">CSV zip</option>

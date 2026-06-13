@@ -974,7 +974,7 @@ export const InvestingPage: React.FC = () => {
                                 <td className="px-2 py-1.5 font-medium text-slate-100">
                                   {editingInstrumentId === instrument.public_id ? (
                                     <input
-                                      className="w-28 rounded border border-slate-600 bg-slate-950 px-1.5 py-1 text-xs text-white"
+                                      className="w-28 rounded border border-slate-600 bg-slate-950 px-1.5 py-1 text-xs text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                                       value={instrumentEditForm.name}
                                       onChange={(e) =>
                                         setInstrumentEditForm((s) => ({ ...s, name: e.target.value }))
@@ -1141,7 +1141,7 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Symbol</label>
                   <input
                     data-testid="investing-holding-symbol"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                     placeholder="Symbol (e.g. AAPL)"
                     value={holdingForm.symbol}
                     onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
@@ -1186,7 +1186,7 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Quantity</label>
                   <input
                     data-testid="investing-holding-quantity"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                     placeholder="Quantity"
                     type="number"
                     step="0.00000001"
@@ -1199,7 +1199,7 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Avg Cost</label>
                   <input
                     data-testid="investing-holding-avg-cost"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                     placeholder="Avg cost"
                     type="number"
                     step="0.01"
@@ -1246,7 +1246,7 @@ export const InvestingPage: React.FC = () => {
                     <label className="text-xs font-semibold text-slate-300">Account Name</label>
                     <input
                       data-testid="investing-account-name"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                      className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                       placeholder="Account name"
                       value={newAccountName}
                       onChange={(e) => setNewAccountName(e.target.value)}
@@ -1314,7 +1314,7 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Symbol</label>
                   <input
                     data-testid="investing-edit-holding-symbol"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-300 focus:outline-none"
                     value={selectedHolding.symbol}
                     readOnly
                   />
@@ -1341,7 +1341,7 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Account</label>
                   <input
                     data-testid="investing-edit-holding-account"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-300 focus:outline-none"
                     value={selectedHolding.account_name}
                     readOnly
                   />
@@ -1363,7 +1363,7 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Quantity</label>
                   <input
                     data-testid="investing-edit-holding-quantity"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                     type="number"
                     step="0.00000001"
                     value={editHoldingForm.quantity}
@@ -1375,7 +1375,7 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Avg Cost</label>
                   <input
                     data-testid="investing-edit-holding-avg-cost"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                     type="number"
                     step="0.01"
                     value={editHoldingForm.avg_cost}
@@ -1453,7 +1453,7 @@ export const InvestingPage: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-semibold text-slate-300">Balance</label>
                   <input
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                     placeholder="Balance"
                     type="number"
                     step="0.01"
@@ -1509,7 +1509,7 @@ export const InvestingPage: React.FC = () => {
                     <label className="text-xs font-semibold text-slate-300">Account Name</label>
                     <input
                       data-testid="investing-account-name"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                      className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                       placeholder="Account name"
                       value={newAccountName}
                       onChange={(e) => setNewAccountName(e.target.value)}
@@ -1565,7 +1565,7 @@ export const InvestingPage: React.FC = () => {
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-slate-300">Symbol (e.g. VTI)</label>
                 <input
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                  className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                   placeholder="Symbol (e.g. VTI)"
                   value={instrumentForm.symbol}
                   onChange={(e) => setInstrumentForm((s) => ({ ...s, symbol: e.target.value }))}
@@ -1575,7 +1575,7 @@ export const InvestingPage: React.FC = () => {
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-slate-300">Name</label>
                 <input
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                  className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                   placeholder="Name"
                   value={instrumentForm.name}
                   onChange={(e) => setInstrumentForm((s) => ({ ...s, name: e.target.value }))}
@@ -1658,7 +1658,7 @@ export const InvestingPage: React.FC = () => {
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-slate-300">Constituents (TICKER,WEIGHT)</label>
                 <textarea
-                  className="h-28 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-600 font-mono"
+                  className="h-28 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
                   value={constituentRowsText}
                   onChange={(e) => setConstituentRowsText(e.target.value)}
                   placeholder="AAPL,0.60&#10;MSFT,0.40"

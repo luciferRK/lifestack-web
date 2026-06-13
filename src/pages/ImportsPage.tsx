@@ -180,7 +180,7 @@ export const ImportsPage: React.FC = () => {
                   data-testid="imports-module-select"
                   value={module}
                   onChange={(e) => setModule(e.target.value as ImportModule)}
-                  className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white text-sm"
+                  className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-white text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 >
                   <option value="" disabled>
                     Select module
@@ -204,7 +204,7 @@ export const ImportsPage: React.FC = () => {
                     setFile(e.target.files?.[0] ?? null);
                     setUploadError(null);
                   }}
-                  className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 text-sm"
+                  className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-slate-200 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
               </div>
 

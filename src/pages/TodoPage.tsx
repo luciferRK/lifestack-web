@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Edit2, Plus, Trash2, X } from 'lucide-react';
 
+import { DropdownSelect } from '../components/DropdownSelect';
 import { CompactFilterBar, CompactFilterField } from '../components/filters/CompactFilterBar';
 import { DatePicker } from '../components/DatePicker';
 import { PageHero } from '../components/layout/PageHero';
@@ -19,6 +20,19 @@ const priorityOptions: Array<{ value: TodoPriority; label: string }> = [
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
+];
+
+const statusOptions = [
+  { value: 'all', label: 'All tasks' },
+  { value: 'open', label: 'Open tasks' },
+  { value: 'completed', label: 'Completed tasks' },
+] as const;
+
+const frequencyOptions: Array<{ value: TodoFrequency; label: string }> = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
 ];
 
 const priorityLabel = (priority: TodoPriority | undefined): string => {
@@ -326,7 +340,7 @@ export const TodoPage: React.FC = () => {
                   value={taskForm.title}
                   onChange={(e) => setTaskForm((s) => ({ ...s, title: e.target.value }))}
                   placeholder="What needs to be done?"
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white placeholder-slate-400 text-sm"
+                  className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-white placeholder-slate-400 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                   disabled={createMutation.isPending || updateMutation.isPending}
                   required
                 />
@@ -340,24 +354,21 @@ export const TodoPage: React.FC = () => {
                   placeholder="Add useful context"
                   rows={3}
                   maxLength={500}
-                  className="w-full resize-none rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-white placeholder-slate-400"
+                  className="w-full resize-none rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-sm text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                   disabled={createMutation.isPending || updateMutation.isPending}
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-300">Priority</label>
-                  <select
-                    data-testid="todo-new-priority"
+                  <DropdownSelect
+                    testId="todo-new-priority"
                     value={taskForm.priority}
-                    onChange={(e) => setTaskForm((s) => ({ ...s, priority: e.target.value as TodoPriority }))}
-                    className="h-12 w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white"
+                    onChange={(value) => setTaskForm((s) => ({ ...s, priority: value as TodoPriority }))}
+                    options={priorityOptions}
+                    placeholder="Priority"
                     disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {priorityOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-300">Due date (optional)</label>
@@ -409,18 +420,16 @@ export const TodoPage: React.FC = () => {
             }}
           >
             <CompactFilterField label="Status" className="max-w-[260px]">
-              <select
+              <DropdownSelect
+                testId="todo-status-filter"
                 value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as 'all' | 'open' | 'completed');
+                options={[...statusOptions]}
+                onChange={(value) => {
+                  setStatusFilter(value as 'all' | 'open' | 'completed');
                   setOffset(0);
                 }}
-                className="h-10 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100"
-              >
-                <option value="all">All tasks</option>
-                <option value="open">Open tasks</option>
-                <option value="completed">Completed tasks</option>
-              </select>
+                placeholder="Status"
+              />
             </CompactFilterField>
           </CompactFilterBar>
 
@@ -439,39 +448,39 @@ export const TodoPage: React.FC = () => {
                     <div
                       key={todo.public_id}
                       data-testid={`todo-item-${todo.public_id}`}
-                      className={`group flex items-center justify-between rounded-2xl border border-slate-700/50 bg-slate-800/50 p-5 transition-all hover:border-slate-600 ${todo.completed ? 'opacity-60' : ''}`}
+                      className={`group flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/45 px-4 py-3 transition-all hover:border-slate-600 ${todo.completed ? 'opacity-60' : ''}`}
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex min-w-0 items-center gap-3">
                         <button
                           data-testid={`todo-toggle-${todo.public_id}`}
                           aria-label={todo.completed ? `Mark todo as incomplete: ${todo.title}` : `Mark todo as complete: ${todo.title}`}
                           onClick={() => toggleMutation.mutate(todo)}
                           disabled={toggleMutation.isPending}
-                          className="text-slate-400 hover:text-cyan-500 transition-colors disabled:opacity-50"
+                          className="shrink-0 text-slate-400 transition-colors hover:text-cyan-500 disabled:opacity-50"
                         >
-                          {todo.completed ? <CheckCircle2 className="h-6 w-6 text-cyan-400" /> : <Circle className="h-6 w-6" />}
+                          {todo.completed ? <CheckCircle2 className="h-5 w-5 text-cyan-400" /> : <Circle className="h-5 w-5" />}
                         </button>
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className={`font-medium text-white ${todo.completed ? 'line-through text-slate-400' : ''}`}>
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                            <h3 className={`truncate text-sm font-semibold text-white ${todo.completed ? 'line-through text-slate-400' : ''}`}>
                               {todo.title}
                             </h3>
                             <span className={`inline-flex rounded border px-2 py-0.5 text-xs ${priorityTone(todo.priority)}`}>
                               {priorityLabel(todo.priority)}
                             </span>
+                            {formatUtcDate(todo.due_date) ? (
+                              <span className="text-xs text-slate-400">
+                                Due: {formatUtcDate(todo.due_date)}
+                              </span>
+                            ) : null}
                           </div>
                           {todo.description ? (
-                            <p className="mt-1 max-w-2xl text-sm text-slate-300">{todo.description}</p>
-                          ) : null}
-                          {formatUtcDate(todo.due_date) ? (
-                            <p className="mt-1 text-xs text-slate-400">
-                              Due: {formatUtcDate(todo.due_date)}
-                            </p>
+                            <p className="mt-0.5 truncate text-sm text-slate-300">{todo.description}</p>
                           ) : null}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 opacity-0 transition-all group-hover:opacity-100">
+                      <div className="ml-3 flex shrink-0 items-center gap-1 opacity-0 transition-all group-hover:opacity-100">
                         <button
                           type="button"
                           data-testid={`todo-edit-${todo.public_id}`}
@@ -479,7 +488,7 @@ export const TodoPage: React.FC = () => {
                           className="rounded p-2 text-slate-500 hover:bg-slate-700/60 hover:text-slate-100"
                           title="Edit task"
                         >
-                          <Edit2 className="h-5 w-5" />
+                          <Edit2 className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
@@ -487,7 +496,7 @@ export const TodoPage: React.FC = () => {
                           className="rounded p-2 text-slate-500 hover:bg-red-500/10 hover:text-red-500"
                           title="Delete task"
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -604,7 +613,7 @@ export const TodoPage: React.FC = () => {
                 value={ruleTitle}
                 onChange={(e) => setRuleTitle(e.target.value)}
                 placeholder="Title (e.g. Weekly grocery planning)"
-                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white placeholder-slate-400"
+                className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 required
               />
               <input
@@ -613,37 +622,30 @@ export const TodoPage: React.FC = () => {
                 value={ruleDescription}
                 onChange={(e) => setRuleDescription(e.target.value)}
                 placeholder="Description (optional)"
-                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white placeholder-slate-400"
+                className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
               />
-              <select
-                data-testid="todo-recurring-priority"
+              <DropdownSelect
+                testId="todo-recurring-priority"
                 value={rulePriority}
-                onChange={(e) => setRulePriority(e.target.value as TodoPriority)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white"
-              >
-                {priorityOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+                onChange={(value) => setRulePriority(value as TodoPriority)}
+                options={priorityOptions}
+                placeholder="Priority"
+              />
               <div className="grid grid-cols-2 gap-3">
-                <select
-                  data-testid="todo-recurring-frequency"
+                <DropdownSelect
+                  testId="todo-recurring-frequency"
                   value={ruleFrequency}
-                  onChange={(e) => setRuleFrequency(e.target.value as TodoFrequency)}
-                  className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white"
-                >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
+                  onChange={(value) => setRuleFrequency(value as TodoFrequency)}
+                  options={frequencyOptions}
+                  placeholder="Frequency"
+                />
                 <input
                   data-testid="todo-recurring-interval"
                   type="number"
                   min={1}
                   value={ruleInterval}
                   onChange={(e) => setRuleInterval(Number(e.target.value) || 1)}
-                  className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white"
+                  className="h-10 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
