@@ -46,6 +46,7 @@ describe('ExportsPage', () => {
 
     renderWithQuery(<ExportsPage />);
 
+    fireEvent.click(screen.getByText('Create Export'));
     fireEvent.click(screen.getByTestId('exports-create'));
 
     await waitFor(() =>
@@ -73,6 +74,7 @@ describe('ExportsPage', () => {
 
     renderWithQuery(<ExportsPage />);
 
+    fireEvent.click(screen.getByText('Create Export'));
     fireEvent.click(screen.getByTestId('exports-create'));
     expect(await screen.findByTestId('exports-status')).toHaveTextContent('ready');
     fireEvent.click(screen.getByTestId('exports-delete'));
@@ -97,6 +99,7 @@ describe('ExportsPage', () => {
 
     renderWithQuery(<ExportsPage />);
 
+    fireEvent.click(screen.getByText('Create Export'));
     fireEvent.click(screen.getByTestId('exports-create'));
 
     expect(await screen.findByText('Created: -')).toBeInTheDocument();

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, X } from 'lucide-react';
 
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
@@ -46,6 +47,7 @@ export const ExportsPage: React.FC = () => {
   const [format, setFormat] = useState<ExportFormat>('json');
   const [modules, setModules] = useState<ExportModule[]>(['todo', 'spending', 'investing']);
   const [currentExport, setCurrentExport] = useState<ExportRecord | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const detailQuery = useQuery({
     queryKey: ['exports', 'detail', currentExport?.public_id],
@@ -61,6 +63,7 @@ export const ExportsPage: React.FC = () => {
     mutationFn: () => exportsService.createExport({ format, modules }),
     onSuccess: (record) => {
       setCurrentExport(record);
+      setIsCreateModalOpen(false);
       void queryClient.invalidateQueries({ queryKey: ['exports', 'detail', record.public_id] });
     },
   });
@@ -92,70 +95,107 @@ export const ExportsPage: React.FC = () => {
       <PageHero
         title="Data Exports"
         subtitle="Create a workspace export, download it when ready, and delete the artifact when you are done."
+        actions={(
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-cyan-600 px-5 text-sm font-semibold text-white hover:bg-cyan-500"
+          >
+            <Plus className="h-4 w-4" />
+            Create Export
+          </button>
+        )}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),minmax(360px,0.8fr)]">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">New export</h2>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-200">Format</span>
-              <select
-                data-testid="exports-format-select"
-                value={format}
-                onChange={(event) => setFormat(event.target.value as ExportFormat)}
-                className="h-10 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white"
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setIsCreateModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+              <h2 className="text-lg font-semibold text-white">Create Export</h2>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                title="Close dialog"
               >
-                <option value="json">JSON</option>
-                <option value="csv">CSV zip</option>
-              </select>
-            </label>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-            <div>
-              <p className="mb-2 text-sm font-semibold text-slate-200">Modules</p>
-              <div className="flex flex-wrap gap-2">
-                {MODULE_OPTIONS.map((option) => (
-                  <label
-                    key={option.value}
-                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-200"
-                  >
-                    <input
-                      data-testid={`exports-module-${option.value}`}
-                      type="checkbox"
-                      checked={selectedModules.has(option.value)}
-                      onChange={() => toggleModule(option.value)}
-                      className="h-4 w-4 accent-cyan-500"
-                    />
-                    {option.label}
-                  </label>
-                ))}
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-300">Format</span>
+                <select
+                  data-testid="exports-format-select"
+                  value={format}
+                  onChange={(event) => setFormat(event.target.value as ExportFormat)}
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white text-sm"
+                >
+                  <option value="json">JSON</option>
+                  <option value="csv">CSV zip</option>
+                </select>
               </div>
+
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-300">Modules</span>
+                <div className="flex flex-wrap gap-2">
+                  {MODULE_OPTIONS.map((option) => (
+                    <label
+                      key={option.value}
+                      className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-200 select-none cursor-pointer hover:border-slate-600 transition-colors"
+                    >
+                      <input
+                        data-testid={`exports-module-${option.value}`}
+                        type="checkbox"
+                        checked={selectedModules.has(option.value)}
+                        onChange={() => toggleModule(option.value)}
+                        className="h-4 w-4 accent-cyan-500 animate-none"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="flex-1 h-10 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  data-testid="exports-create"
+                  type="button"
+                  disabled={modules.length === 0 || createMutation.isPending}
+                  onClick={() => createMutation.mutate()}
+                  className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {createMutation.isPending ? 'Creating...' : 'Create export'}
+                </button>
+              </div>
+
+              {createMutation.isError ? (
+                <p className="mt-3 text-sm text-rose-300">
+                  Export creation failed. Check the selected modules and try again.
+                </p>
+              ) : null}
             </div>
           </div>
+        </div>
+      )}
 
-          <button
-            data-testid="exports-create"
-            type="button"
-            disabled={modules.length === 0 || createMutation.isPending}
-            onClick={() => createMutation.mutate()}
-            className="mt-5 h-10 rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {createMutation.isPending ? 'Creating...' : 'Create export'}
-          </button>
-
-          {createMutation.isError ? (
-            <p className="mt-3 text-sm text-rose-300">
-              Export creation failed. Check the selected modules and try again.
-            </p>
-          ) : null}
-        </section>
-
+      <div className="max-w-2xl mx-auto">
         <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">Current export</h2>
 
           {!activeExport ? (
-            <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400 text-center">
               Create an export to see its status, download link, and delete control here.
             </div>
           ) : (
@@ -184,7 +224,7 @@ export const ExportsPage: React.FC = () => {
                 ) : null}
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2 justify-end">
                 <button
                   data-testid="exports-download"
                   type="button"
@@ -206,10 +246,10 @@ export const ExportsPage: React.FC = () => {
               </div>
 
               {downloadMutation.isError ? (
-                <p className="mt-3 text-sm text-rose-300">Download failed. Refresh status and try again.</p>
+                <p className="mt-3 text-sm text-rose-300 text-right">Download failed. Refresh status and try again.</p>
               ) : null}
               {deleteMutation.isError ? (
-                <p className="mt-3 text-sm text-rose-300">
+                <p className="mt-3 text-sm text-rose-300 text-right">
                   Delete failed. Pending exports cannot be deleted until they complete.
                 </p>
               ) : null}

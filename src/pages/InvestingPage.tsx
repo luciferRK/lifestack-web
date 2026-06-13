@@ -52,7 +52,10 @@ export const InvestingPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'holdings' | 'cash' | 'analytics'>('holdings');
   const [analyticsAsOf, setAnalyticsAsOf] = useState(formatDateInput(new Date()));
-  const [isAddFormOpen, setIsAddFormOpen] = useState(true);
+  const [isAddHoldingModalOpen, setIsAddHoldingModalOpen] = useState(false);
+  const [isAddCashModalOpen, setIsAddCashModalOpen] = useState(false);
+  const [isCreateInstrumentModalOpen, setIsCreateInstrumentModalOpen] = useState(false);
+  const [isSeedConstituentsModalOpen, setIsSeedConstituentsModalOpen] = useState(false);
 
   const [holdingForm, setHoldingForm] = useState({
     symbol: '',
@@ -84,52 +87,62 @@ export const InvestingPage: React.FC = () => {
   const [constituentRowsText, setConstituentRowsText] = useState('AAPL,0.60\nMSFT,0.40');
   const [constituentError, setConstituentError] = useState('');
 
-  const { data: holdingsRes } = useQuery({
+  const holdingsRes = useQuery({
     queryKey: ['investing', 'holdings'],
     queryFn: () => investingService.getHoldings(200, 0),
   });
 
-  const { data: cashRes } = useQuery({
+  const cashRes = useQuery({
     queryKey: ['investing', 'cash-balances'],
     queryFn: () => investingService.getCashBalances(200, 0),
   });
 
-  const { data: summary } = useQuery({
+  const summary = useQuery({
     queryKey: ['investing', 'summary'],
     queryFn: () => investingService.getSummary(),
   });
-  const { data: performanceSummary, isLoading: performanceLoading } = useQuery({
+  const performanceSummary = useQuery({
     queryKey: ['investing', 'performance', 'summary'],
     queryFn: () => investingService.getPerformanceSummary(),
   });
-  const { data: instruments = [], isLoading: instrumentsLoading } = useQuery({
+  const instrumentsRes = useQuery({
     queryKey: ['investing', 'instruments'],
     queryFn: () => investingService.getInstruments(),
   });
-  const { data: exposure, isLoading: exposureLoading } = useQuery({
+  const instruments = useMemo(() => instrumentsRes.data ?? [], [instrumentsRes.data]);
+  const instrumentsLoading = instrumentsRes.isLoading;
+
+  const exposureRes = useQuery({
     queryKey: ['investing', 'analytics', 'exposure', analyticsAsOf],
     queryFn: () => investingService.getExposureAnalytics(analyticsAsOf),
     enabled: tab === 'analytics',
   });
-  const { data: overlap, isLoading: overlapLoading } = useQuery({
+  const exposure = exposureRes.data;
+  const exposureLoading = exposureRes.isLoading;
+
+  const overlapRes = useQuery({
     queryKey: ['investing', 'analytics', 'overlap', analyticsAsOf],
     queryFn: () => investingService.getOverlapAnalytics(analyticsAsOf),
     enabled: tab === 'analytics',
   });
+  const overlap = overlapRes.data;
+  const overlapLoading = overlapRes.isLoading;
 
-  const { data: currencies = [] } = useQuery({
+  const currenciesRes = useQuery({
     queryKey: ['finance', 'currencies'],
     queryFn: () => financeService.getCurrencies(),
   });
+  const currencies = useMemo(() => currenciesRes.data ?? [], [currenciesRes.data]);
 
-  const { data: accountsRes } = useQuery({
+  const accountsRes = useQuery({
     queryKey: ['finance', 'accounts'],
     queryFn: () => financeService.getAccounts(200, 0),
   });
-  const { data: userFinanceSettings } = useQuery({
+  const userFinanceSettingsRes = useQuery({
     queryKey: ['finance', 'settings', 'user'],
     queryFn: () => financeService.getUserSettings(),
   });
+  const userFinanceSettings = userFinanceSettingsRes.data;
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ['investing'] });
@@ -141,6 +154,7 @@ export const InvestingPage: React.FC = () => {
     mutationFn: (payload: HoldingCreate) => investingService.createHolding(payload),
     onSuccess: () => {
       setHoldingForm((prev) => ({ ...prev, symbol: '', quantity: '', avg_cost: '' }));
+      setIsAddHoldingModalOpen(false);
       refresh();
     },
   });
@@ -153,6 +167,7 @@ export const InvestingPage: React.FC = () => {
         instrument_type: created.instrument_type,
       });
       setSelectedInstrumentId(created.public_id);
+      setIsCreateInstrumentModalOpen(false);
       refresh();
     },
   });
@@ -161,7 +176,10 @@ export const InvestingPage: React.FC = () => {
       if (!selectedInstrumentId) return [];
       return investingService.upsertInstrumentConstituents(selectedInstrumentId, payload);
     },
-    onSuccess: refresh,
+    onSuccess: () => {
+      setIsSeedConstituentsModalOpen(false);
+      refresh();
+    },
   });
 
   const deleteHoldingMutation = useMutation({
@@ -178,6 +196,7 @@ export const InvestingPage: React.FC = () => {
         currency: cashForm.currency,
         as_of: formatDateTimeLocalInput(new Date()),
       });
+      setIsAddCashModalOpen(false);
       refresh();
     },
   });
@@ -229,15 +248,15 @@ export const InvestingPage: React.FC = () => {
   };
 
   const performancePctRaw =
-    performanceSummary?.total_gain_loss_pct != null
-      ? Number(performanceSummary.total_gain_loss_pct)
+    performanceSummary.data?.total_gain_loss_pct != null
+      ? Number(performanceSummary.data.total_gain_loss_pct)
       : Number.NaN;
   const performancePctLabel = Number.isNaN(performancePctRaw)
     ? 'N/A'
     : `${performancePctRaw.toFixed(2)}%`;
-  const holdings = useMemo(() => holdingsRes?.items ?? [], [holdingsRes]);
-  const cashBalances = useMemo(() => cashRes?.items ?? [], [cashRes]);
-  const accounts = useMemo(() => accountsRes?.items ?? [], [accountsRes]);
+  const holdings = useMemo(() => holdingsRes.data?.items ?? [], [holdingsRes.data]);
+  const cashBalances = useMemo(() => cashRes.data?.items ?? [], [cashRes.data]);
+  const accounts = useMemo(() => accountsRes.data?.items ?? [], [accountsRes.data]);
   const accountOptions = useMemo(() => accounts.map((account) => account.name), [accounts]);
   const currencyOptions = useMemo(() => currencies.map((currency) => currency.code), [currencies]);
   const accountDropdownOptions = useMemo(
@@ -343,7 +362,6 @@ export const InvestingPage: React.FC = () => {
 
     const qty = Number(holdingForm.quantity);
     const cost = Number(holdingForm.avg_cost);
-    // Guard against NaN/Infinity before sending to server
     if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0) return;
 
     createHoldingMutation.mutate({
@@ -360,7 +378,6 @@ export const InvestingPage: React.FC = () => {
     if (!cashForm.balance || !cashForm.as_of || !selectedCashAccount) return;
 
     const balance = Number(cashForm.balance);
-    // Guard against NaN/Infinity before sending to server
     if (!Number.isFinite(balance)) return;
     const asOfDate = new Date(cashForm.as_of);
     if (Number.isNaN(asOfDate.getTime())) return;
@@ -432,27 +449,27 @@ export const InvestingPage: React.FC = () => {
       <div className="mb-6 grid gap-6 md:grid-cols-3">
         <SummaryCard
           label="Portfolio value"
-          value={summary?.portfolio_value != null ? formatCurrency(summary.portfolio_value, summary.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
+          value={summary.data?.portfolio_value != null ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-portfolio-value"
         />
         <SummaryCard
           label="Cash total"
-          value={summary?.cash_total != null ? formatCurrency(summary.cash_total, summary.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
+          value={summary.data?.cash_total != null ? formatCurrency(summary.data.cash_total, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
           icon={<WalletCards className="h-5 w-5" />}
         />
-        <SummaryCard label="Holdings" value={summary ? summary.holdings_count.toString() : '0'} icon={<Plus className="h-5 w-5" />} />
+        <SummaryCard label="Holdings" value={summary.data ? summary.data.holdings_count.toString() : '0'} icon={<Plus className="h-5 w-5" />} />
       </div>
 
       <div className="mb-6 rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3 text-sm text-slate-300">
         <p data-testid="investing-reporting-currency">
           <span className="font-semibold text-slate-100">Reporting currency:</span>{' '}
-          {summary?.reporting_currency ?? 'Not configured'}
+          {summary.data?.reporting_currency ?? 'Not configured'}
         </p>
-        {summary?.currency_breakdown && Object.keys(summary.currency_breakdown).length > 0 ? (
+        {summary.data?.currency_breakdown && Object.keys(summary.data.currency_breakdown).length > 0 ? (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-400">Original currency mix:</span>
-            {Object.entries(summary.currency_breakdown).map(([code, value]) => (
+            {Object.entries(summary.data.currency_breakdown).map(([code, value]) => (
               <span key={code} className="inline-flex items-center gap-1.5">
                 <CurrencyBadge code={code} title={`Book total in ${code}`} />
                 <span className="text-xs text-slate-300">{formatCurrency(value, code, currencyDisplayPreference)}</span>
@@ -462,570 +479,831 @@ export const InvestingPage: React.FC = () => {
         ) : null}
         <p className="mt-1">
           <span className="font-semibold text-slate-100">Valuation status:</span>{' '}
-          {statusLabel(summary?.valuation_status)}
+          {statusLabel(summary.data?.valuation_status)}
         </p>
-        {summary?.valuation_status === 'converted_available' && summary?.fx_rates_used && Object.keys(summary.fx_rates_used).length > 0 ? (
+        {summary.data?.valuation_status === 'converted_available' && summary.data?.fx_rates_used && Object.keys(summary.data.fx_rates_used).length > 0 ? (
           <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="investing-fx-rates-used">
             <span className="text-xs text-slate-400">FX conversion rates used:</span>
-            {Object.entries(summary.fx_rates_used).map(([base, rate]) => (
+            {Object.entries(summary.data.fx_rates_used).map(([base, rate]) => (
               <span key={base} className="inline-flex items-center gap-1 text-xs text-slate-300">
                 <span className="font-medium text-slate-100">1 {base}</span>
                 <span>=</span>
                 <span className="font-medium text-slate-100">{toNumber(rate).toFixed(4)}</span>
-                <span>{summary.reporting_currency}</span>
+                <span>{summary.data.reporting_currency}</span>
               </span>
             ))}
           </div>
         ) : null}
         <p className="mt-1">
           <span className="font-semibold text-slate-100">Performance (gain/loss):</span>{' '}
-          {performanceLoading
+          {performanceSummary.isLoading
             ? 'Loading...'
-            : performanceSummary
-              ? `${formatCurrency(performanceSummary.total_gain_loss, performanceSummary.currency, currencyDisplayPreference)} (${performancePctLabel})`
+            : performanceSummary.data
+              ? `${formatCurrency(performanceSummary.data.total_gain_loss, performanceSummary.data.currency, currencyDisplayPreference)} (${performancePctLabel})`
               : 'N/A'}
         </p>
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as 'holdings' | 'cash' | 'analytics')}>
-          <TabsList className="mb-6">
-            <TabsTrigger data-testid="investing-tab-holdings" value="holdings">Holdings</TabsTrigger>
-            <TabsTrigger data-testid="investing-tab-cash" value="cash">Cash Balances</TabsTrigger>
-            <TabsTrigger data-testid="investing-tab-analytics" value="analytics">Look-through Analytics</TabsTrigger>
-          </TabsList>
+        <TabsList className="mb-6">
+          <TabsTrigger data-testid="investing-tab-holdings" value="holdings">Holdings</TabsTrigger>
+          <TabsTrigger data-testid="investing-tab-cash" value="cash">Cash Balances</TabsTrigger>
+          <TabsTrigger data-testid="investing-tab-analytics" value="analytics">Look-through Analytics</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="holdings">
-            <div className="space-y-6">
-              {isAddFormOpen && (
-                <form
-                  data-testid="investing-add-holding-form"
-                  onSubmit={onCreateHolding}
-                  className="space-y-4 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-5"
-                >
-                  <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
-                    <h3 className="font-semibold text-white text-base">Add New Holding</h3>
-                    <button
-                      type="button"
-                      onClick={() => setIsAddFormOpen(false)}
-                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
-                      title="Hide form"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  {accountOptions.length === 0 ? (
-                    <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-                      Create an account below before adding holdings.
-                    </div>
-                  ) : null}
-
-                  {/* Horizontal grid for holding fields */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-300">Symbol</label>
-                      <input
-                        data-testid="investing-holding-symbol"
-                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-                        placeholder="Symbol (e.g. AAPL)"
-                        value={holdingForm.symbol}
-                        onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-300">Account</label>
-                      <Combobox
-                        testId="investing-holding-account"
-                        value={selectedHoldingAccount}
-                        options={accountDropdownOptions}
-                        onChange={(value) => setHoldingForm((s) => ({ ...s, account_id: value }))}
-                        placeholder="Select account"
-                        searchPlaceholder="Search accounts..."
-                        clearLabel="Clear selection"
-                        emptyText="No accounts found."
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-300">Quantity</label>
-                      <input
-                        data-testid="investing-holding-quantity"
-                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-                        placeholder="Quantity"
-                        type="number"
-                        step="0.00000001"
-                        value={holdingForm.quantity}
-                        onChange={(e) => setHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-300">Avg Cost</label>
-                      <input
-                        data-testid="investing-holding-avg-cost"
-                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-                        placeholder="Avg cost"
-                        type="number"
-                        step="0.01"
-                        value={holdingForm.avg_cost}
-                        onChange={(e) => setHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-300">Currency</label>
-                      <DropdownSelect
-                        testId="investing-holding-currency"
-                        value={selectedHoldingCurrency}
-                        options={currencyDropdownOptions}
-                        onChange={(value) => setHoldingForm((s) => ({ ...s, currency: value }))}
-                        placeholder="Currency"
-                      />
-                    </div>
-                    <button
-                      data-testid="investing-holding-submit"
-                      disabled={createHoldingMutation.isPending || accountOptions.length === 0}
-                      type="submit"
-                      className="w-full h-[38px] rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-cyan-500 transition-colors"
-                    >
-                      Add holding
-                    </button>
-                  </div>
-
-                  {/* Horizontal grid for quick create account */}
-                  <div className="mt-4 border-t border-slate-700/60 pt-4">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Quick Create Account</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-300">Account Name</label>
-                        <input
-                          data-testid="investing-account-name"
-                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-                          placeholder="Account name"
-                          value={newAccountName}
-                          onChange={(e) => setNewAccountName(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-300">Account Type</label>
-                        <DropdownSelect
-                          testId="investing-account-type"
-                          value={newAccountType}
-                          options={[...accountTypeOptions]}
-                          onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
-                          placeholder="Account type"
-                        />
-                      </div>
-                      <button
-                        data-testid="investing-account-create"
-                        type="button"
-                        disabled={!newAccountName.trim() || createAccountMutation.isPending}
-                        onClick={() => createAccountMutation.mutate()}
-                        className="w-full h-[38px] rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
-                      >
-                        Create account
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              )}
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-white text-base">Active Holdings</h3>
-                  <div className="flex items-center gap-2">
-                    {!isAddFormOpen && (
-                      <button
-                        type="button"
-                        onClick={() => setIsAddFormOpen(true)}
-                        className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Holding
-                      </button>
-                    )}
-                    <button
-                      data-testid="investing-refresh-prices-btn"
-                      type="button"
-                      disabled={refreshPricesMutation.isPending}
-                      onClick={() => refreshPricesMutation.mutate()}
-                      className="flex items-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
-                    >
-                      <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
-                      {refreshPricesMutation.isPending ? 'Refreshing...' : 'Refresh Prices'}
-                    </button>
-                  </div>
+        <TabsContent value="holdings">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-white text-base">Active Holdings</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddHoldingModalOpen(true)}
+                    className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Holding
+                  </button>
+                  <button
+                    data-testid="investing-refresh-prices-btn"
+                    type="button"
+                    disabled={refreshPricesMutation.isPending}
+                    onClick={() => refreshPricesMutation.mutate()}
+                    className="flex items-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
+                    {refreshPricesMutation.isPending ? 'Refreshing...' : 'Refresh Prices'}
+                  </button>
                 </div>
-            <CompactFilterBar
-              title="Holdings filters"
-              onReset={() => {
-                setHoldingsAccountFilter('');
-                setHoldingsCurrencyFilter('');
-              }}
-            >
-              <CompactFilterField label="Account">
-                <DropdownSelect
-                  value={holdingsAccountFilter}
-                  options={accountDropdownOptions}
-                  onChange={setHoldingsAccountFilter}
-                  placeholder="All accounts"
-                  clearLabel="All accounts"
-                />
-              </CompactFilterField>
-              <CompactFilterField label="Currency">
-                <DropdownSelect
-                  value={holdingsCurrencyFilter}
-                  options={currencyDropdownOptions}
-                  onChange={setHoldingsCurrencyFilter}
-                  placeholder="All currencies"
-                  clearLabel="All currencies"
-                />
-              </CompactFilterField>
-            </CompactFilterBar>
-            <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30">
-              <table className="w-full text-left text-sm text-slate-300 min-w-[1000px]">
-                <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
-                  <tr>
-                    <th className="px-4 py-3">Symbol</th>
-                    <th className="px-4 py-3">Account</th>
-                    <th className="px-4 py-3">Currency</th>
-                    <th className="px-4 py-3">Qty</th>
-                    <th className="px-4 py-3">Avg Cost</th>
-                    <th className="px-4 py-3">Book Value</th>
-                    <th className="px-4 py-3">Unit Price</th>
-                    <th className="px-4 py-3">Current Value</th>
-                    <th className="px-4 py-3">Gain / Loss</th>
-                    <th className="px-4 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700/50">
-                  {filteredHoldings.length === 0 ? (
-                    <tr><td className="px-4 py-6 text-slate-400" colSpan={10}>No holdings yet.</td></tr>
-                  ) : (
-                    filteredHoldings.map((h) => {
-                      const gainLoss = toNumber(h.gain_loss ?? 0);
-                      const gainLossPct = toNumber(h.gain_loss_pct ?? 0);
-                      const isPositive = gainLoss > 0;
-                      const isNegative = gainLoss < 0;
-                      const colorClass = isPositive ? 'text-green-400' : isNegative ? 'text-red-400' : 'text-slate-400';
-                      const sign = isPositive ? '+' : '';
-                      return (
-                        <tr key={h.public_id} data-testid={`investing-holding-row-${h.public_id}`}>
-                          <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">{h.symbol}</td>
-                          <td className="px-4 py-3">{h.account_name}</td>
-                          <td className="px-4 py-3">
-                            <CurrencyBadge code={h.currency} />
-                          </td>
-                          <td className="px-4 py-3">{toNumber(h.quantity).toFixed(8)}</td>
-                          <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</td>
-                          <td className="px-4 py-3">{formatCurrency(toNumber(h.quantity) * toNumber(h.avg_cost), h.currency, currencyDisplayPreference)}</td>
-                          <td className="px-4 py-3">
-                            {editingHoldingId === h.public_id ? (
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  data-testid={`investing-price-input-${h.public_id}`}
-                                  type="number"
-                                  step="0.01"
-                                  className="w-20 rounded border border-slate-600 bg-slate-900 px-1.5 py-0.5 text-xs text-white"
-                                  value={editPriceValue}
-                                  onChange={(e) => setEditPriceValue(e.target.value)}
-                                  autoFocus
-                                />
-                                <button
-                                  data-testid={`investing-save-price-${h.public_id}`}
-                                  onClick={() => handleSavePrice(h)}
-                                  className="text-green-400 hover:text-green-300"
-                                >
-                                  <Check className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => setEditingHoldingId(null)}
-                                  className="text-red-400 hover:text-red-300"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 group">
-                                <span>{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference)}</span>
-                                <button
-                                  data-testid={`investing-edit-price-${h.public_id}`}
-                                  onClick={() => handleStartEditPrice(h)}
-                                  className="text-slate-500 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  title="Override current price"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">{formatCurrency(h.current_value ?? (toNumber(h.quantity) * toNumber(h.avg_cost)), h.currency, currencyDisplayPreference)}</td>
-                          <td className="px-4 py-3 font-medium">
-                            <span className={colorClass}>
-                              {sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference)} ({sign}{gainLossPct.toFixed(2)}%)
-                            </span>
-                          </td>
+              </div>
+
+              <CompactFilterBar
+                title="Holdings filters"
+                onReset={() => {
+                  setHoldingsAccountFilter('');
+                  setHoldingsCurrencyFilter('');
+                }}
+              >
+                <CompactFilterField label="Account">
+                  <DropdownSelect
+                    value={holdingsAccountFilter}
+                    options={accountDropdownOptions}
+                    onChange={setHoldingsAccountFilter}
+                    placeholder="All accounts"
+                    clearLabel="All accounts"
+                  />
+                </CompactFilterField>
+                <CompactFilterField label="Currency">
+                  <DropdownSelect
+                    value={holdingsCurrencyFilter}
+                    options={currencyDropdownOptions}
+                    onChange={setHoldingsCurrencyFilter}
+                    placeholder="All currencies"
+                    clearLabel="All currencies"
+                  />
+                </CompactFilterField>
+              </CompactFilterBar>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30">
+                <table className="w-full text-left text-sm text-slate-300 min-w-[1000px]">
+                  <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
+                    <tr>
+                      <th className="px-4 py-3">Symbol</th>
+                      <th className="px-4 py-3">Account</th>
+                      <th className="px-4 py-3">Currency</th>
+                      <th className="px-4 py-3">Qty</th>
+                      <th className="px-4 py-3">Avg Cost</th>
+                      <th className="px-4 py-3">Book Value</th>
+                      <th className="px-4 py-3">Unit Price</th>
+                      <th className="px-4 py-3">Current Value</th>
+                      <th className="px-4 py-3">Gain / Loss</th>
+                      <th className="px-4 py-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700/50">
+                    {filteredHoldings.length === 0 ? (
+                      <tr><td className="px-4 py-6 text-slate-400" colSpan={10}>No holdings yet.</td></tr>
+                    ) : (
+                      filteredHoldings.map((h) => {
+                        const gainLoss = toNumber(h.gain_loss ?? 0);
+                        const gainLossPct = toNumber(h.gain_loss_pct ?? 0);
+                        const isPositive = gainLoss > 0;
+                        const isNegative = gainLoss < 0;
+                        const colorClass = isPositive ? 'text-green-400' : isNegative ? 'text-red-400' : 'text-slate-400';
+                        const sign = isPositive ? '+' : '';
+                        return (
+                          <tr key={h.public_id} data-testid={`investing-holding-row-${h.public_id}`}>
+                            <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">{h.symbol}</td>
+                            <td className="px-4 py-3">{h.account_name}</td>
+                            <td className="px-4 py-3">
+                              <CurrencyBadge code={h.currency} />
+                            </td>
+                            <td className="px-4 py-3">{toNumber(h.quantity).toFixed(8)}</td>
+                            <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</td>
+                            <td className="px-4 py-3">{formatCurrency(toNumber(h.quantity) * toNumber(h.avg_cost), h.currency, currencyDisplayPreference)}</td>
+                            <td className="px-4 py-3">
+                              {editingHoldingId === h.public_id ? (
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    data-testid={`investing-price-input-${h.public_id}`}
+                                    type="number"
+                                    step="0.01"
+                                    className="w-20 rounded border border-slate-600 bg-slate-900 px-1.5 py-0.5 text-xs text-white"
+                                    value={editPriceValue}
+                                    onChange={(e) => setEditPriceValue(e.target.value)}
+                                    autoFocus
+                                  />
+                                  <button
+                                    data-testid={`investing-save-price-${h.public_id}`}
+                                    onClick={() => handleSavePrice(h)}
+                                    className="text-green-400 hover:text-green-300"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingHoldingId(null)}
+                                    className="text-red-400 hover:text-red-300"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 group">
+                                  <span>{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference)}</span>
+                                  <button
+                                    data-testid={`investing-edit-price-${h.public_id}`}
+                                    onClick={() => handleStartEditPrice(h)}
+                                    className="text-slate-500 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Override current price"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">{formatCurrency(h.current_value ?? (toNumber(h.quantity) * toNumber(h.avg_cost)), h.currency, currencyDisplayPreference)}</td>
+                            <td className="px-4 py-3 font-medium">
+                              <span className={colorClass}>
+                                {sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference)} ({sign}{gainLossPct.toFixed(2)}%)
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button disabled={deleteHoldingMutation.isPending} onClick={() => deleteHoldingMutation.mutate(h.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                  {filteredHoldings.length > 0 ? (
+                    <tfoot>
+                      <tr className="border-t border-slate-700/50 bg-slate-900/40">
+                        <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={5}>Total Cost & Value</td>
+                        <td className="px-4 py-3 font-semibold text-white">
+                          {totalBookCost != null
+                            ? formatCurrency(totalBookCost, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
+                            : 'N/A (multi-currency)'}
+                        </td>
+                        <td />
+                        <td className="px-4 py-3 font-semibold text-white">
+                          {totalCurrentValue != null
+                            ? formatCurrency(totalCurrentValue, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
+                            : 'N/A (multi-currency)'}
+                        </td>
+                        <td colSpan={2} />
+                      </tr>
+                    </tfoot>
+                  ) : null}
+                </table>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="cash">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-white text-base">Cash Balances</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCashModalOpen(true)}
+                  className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Cash Balance
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <CompactFilterBar
+                title="Cash filters"
+                onReset={() => {
+                  setCashAccountFilter('');
+                  setCashCurrencyFilter('');
+                }}
+              >
+                <CompactFilterField label="Account">
+                  <DropdownSelect
+                    value={cashAccountFilter}
+                    options={accountDropdownOptions}
+                    onChange={setCashAccountFilter}
+                    placeholder="All accounts"
+                    clearLabel="All accounts"
+                  />
+                </CompactFilterField>
+                <CompactFilterField label="Currency">
+                  <DropdownSelect
+                    value={cashCurrencyFilter}
+                    options={currencyDropdownOptions}
+                    onChange={setCashCurrencyFilter}
+                    placeholder="All currencies"
+                    clearLabel="All currencies"
+                  />
+                </CompactFilterField>
+              </CompactFilterBar>
+              <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30">
+                <table className="w-full text-left text-sm text-slate-300 min-w-[600px]">
+                  <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
+                    <tr>
+                      <th className="px-4 py-3">Account</th>
+                      <th className="px-4 py-3">Balance</th>
+                      <th className="px-4 py-3">As Of</th>
+                      <th className="px-4 py-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700/50">
+                    {filteredCashBalances.length === 0 ? (
+                      <tr><td className="px-4 py-6 text-slate-400" colSpan={4}>No cash balances yet.</td></tr>
+                    ) : (
+                      filteredCashBalances.map((c) => (
+                        <tr key={c.public_id}>
+                          <td className="px-4 py-3 text-white">{c.account_name}</td>
+                          <td className="px-4 py-3">{formatCurrency(c.balance, c.currency, currencyDisplayPreference)}</td>
+                          <td className="px-4 py-3">{Number.isNaN(new Date(c.as_of).getTime()) ? "N/A" : new Date(c.as_of).toLocaleString()}</td>
                           <td className="px-4 py-3 text-right">
-                            <button disabled={deleteHoldingMutation.isPending} onClick={() => deleteHoldingMutation.mutate(h.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
+                            <button disabled={deleteCashMutation.isPending} onClick={() => deleteCashMutation.mutate(c.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-                {filteredHoldings.length > 0 ? (
-                  <tfoot>
-                    <tr className="border-t border-slate-700/50 bg-slate-900/40">
-                      <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={5}>Total Cost & Value</td>
-                      <td className="px-4 py-3 font-semibold text-white">
-                        {totalBookCost != null
-                          ? formatCurrency(totalBookCost, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
-                          : 'N/A (multi-currency)'}
-                      </td>
-                      <td />
-                      <td className="px-4 py-3 font-semibold text-white">
-                        {totalCurrentValue != null
-                          ? formatCurrency(totalCurrentValue, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
-                          : 'N/A (multi-currency)'}
-                      </td>
-                      <td colSpan={2} />
-                    </tr>
-                  </tfoot>
-                ) : null}
-              </table>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-white text-base">Look-through Analytics</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateInstrumentModalOpen(true)}
+                  className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Instrument
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsSeedConstituentsModalOpen(true)}
+                  className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Seed Constituents
+                </button>
+              </div>
             </div>
-          </TabsContent>
 
-          <TabsContent value="cash">
-            <div className="grid gap-6 lg:grid-cols-5">
-          <form onSubmit={onCreateCash} className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 lg:col-span-2">
-            <h3 className="font-semibold text-white">Add Cash Balance</h3>
-            <Combobox
-              value={selectedCashAccount}
-              options={accountDropdownOptions}
-              onChange={(value) => setCashForm((s) => ({ ...s, account_id: value }))}
-              placeholder="Select account"
-              searchPlaceholder="Search accounts..."
-              clearLabel="Clear selection"
-              emptyText="No accounts found."
-            />
-            <input className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white" placeholder="Balance" type="number" step="0.01" value={cashForm.balance} onChange={(e) => setCashForm((s) => ({ ...s, balance: e.target.value }))} />
-            <DropdownSelect
-              value={selectedCashCurrency}
-              options={currencyDropdownOptions}
-              onChange={(value) => setCashForm((s) => ({ ...s, currency: value }))}
-              placeholder="Currency"
-            />
-            <DateTimePicker
-              value={cashForm.as_of}
-              onChange={(value) => setCashForm((s) => ({ ...s, as_of: value }))}
-              required
-            />
-            <button disabled={createCashMutation.isPending || accountOptions.length === 0} type="submit" className="w-full rounded-lg bg-cyan-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-cyan-500">Add cash balance</button>
-          </form>
-
-          <div className="space-y-3 lg:col-span-3">
-            <CompactFilterBar
-              title="Cash filters"
-              onReset={() => {
-                setCashAccountFilter('');
-                setCashCurrencyFilter('');
-              }}
-            >
-              <CompactFilterField label="Account">
-                <DropdownSelect
-                  value={cashAccountFilter}
-                  options={accountDropdownOptions}
-                  onChange={setCashAccountFilter}
-                  placeholder="All accounts"
-                  clearLabel="All accounts"
-                />
-              </CompactFilterField>
-              <CompactFilterField label="Currency">
-                <DropdownSelect
-                  value={cashCurrencyFilter}
-                  options={currencyDropdownOptions}
-                  onChange={setCashCurrencyFilter}
-                  placeholder="All currencies"
-                  clearLabel="All currencies"
-                />
-              </CompactFilterField>
-            </CompactFilterBar>
-          <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30">
-            <table className="w-full text-left text-sm text-slate-300 min-w-[600px]">
-              <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">Account</th>
-                  <th className="px-4 py-3">Balance</th>
-                  <th className="px-4 py-3">As Of</th>
-                  <th className="px-4 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/50">
-                {filteredCashBalances.length === 0 ? (
-                  <tr><td className="px-4 py-6 text-slate-400" colSpan={4}>No cash balances yet.</td></tr>
-                ) : (
-                  filteredCashBalances.map((c) => (
-                    <tr key={c.public_id}>
-                      <td className="px-4 py-3 text-white">{c.account_name}</td>
-                      <td className="px-4 py-3">{formatCurrency(c.balance, c.currency, currencyDisplayPreference)}</td>
-                      <td className="px-4 py-3">{Number.isNaN(new Date(c.as_of).getTime()) ? "N/A" : new Date(c.as_of).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button disabled={deleteCashMutation.isPending} onClick={() => deleteCashMutation.mutate(c.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="analytics">
-            <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-4 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4">
-            <h3 className="font-semibold text-white">Analytics Controls</h3>
-            <label className="block text-xs text-slate-300">
-              As of date
-              <DatePicker
-                value={analyticsAsOf}
-                onChange={setAnalyticsAsOf}
-                placeholder="Select date"
-                className="mt-1"
-              />
-            </label>
-            <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3 text-xs text-slate-300">
-              <p>Coverage: {exposure?.snapshot_coverage ?? 'N/A'}</p>
-              <p>Status: {exposure?.analysis_status ?? 'N/A'}</p>
-              {!!exposure?.warnings?.length && (
-                <ul className="mt-2 list-disc space-y-1 pl-4 text-amber-300">
-                  {exposure.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <form onSubmit={onCreateInstrument} className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4">
-            <h3 className="font-semibold text-white">Create Instrument</h3>
-            <input
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-              placeholder="Symbol (e.g. VTI)"
-              value={instrumentForm.symbol}
-              onChange={(e) => setInstrumentForm((s) => ({ ...s, symbol: e.target.value }))}
-            />
-            <input
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-              placeholder="Name"
-              value={instrumentForm.name}
-              onChange={(e) => setInstrumentForm((s) => ({ ...s, name: e.target.value }))}
-            />
-            <DropdownSelect
-              value={instrumentForm.instrument_type}
-              options={[...instrumentTypeOptions]}
-              onChange={(value) =>
-                setInstrumentForm((s) => ({
-                  ...s,
-                  instrument_type: value as InstrumentCreate['instrument_type'],
-                }))
-              }
-              placeholder="Instrument type"
-            />
-            <button disabled={createInstrumentMutation.isPending} className="w-full rounded-lg bg-cyan-600 px-4 py-2 font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60">
-              Create instrument
-            </button>
-            <p className="text-xs text-slate-400">
-              Instruments: {instrumentsLoading ? 'Loading...' : instruments.length}
-            </p>
-          </form>
-
-          <form onSubmit={onUpsertConstituents} className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4">
-            <h3 className="font-semibold text-white">Seed Constituents</h3>
-            <Combobox
-              value={selectedInstrumentId}
-              options={pooledInstrumentOptions}
-              onChange={setSelectedInstrumentId}
-              placeholder="Select pooled instrument"
-              searchPlaceholder="Search instruments..."
-              clearLabel="Clear selection"
-              emptyText="No pooled instruments found."
-            />
-            <textarea
-              className="h-28 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-              value={constituentRowsText}
-              onChange={(e) => setConstituentRowsText(e.target.value)}
-            />
-            {constituentError ? <p className="text-xs text-rose-300">{constituentError}</p> : null}
-            <button disabled={upsertConstituentsMutation.isPending} className="w-full rounded-lg border border-slate-600 px-4 py-2 font-semibold text-slate-100 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60">
-              Upsert constituents
-            </button>
-          </form>
-
-          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4 lg:col-span-2">
-            <div className="mb-3 flex items-center gap-2 text-slate-100">
-              <Layers className="h-4 w-4" />
-              <h3 className="font-semibold">Exposure (Look-through)</h3>
-            </div>
-            {exposureLoading ? (
-              <p className="text-sm text-slate-400">Loading exposure…</p>
-            ) : (
-              <div className="space-y-2 text-sm text-slate-300">
-                <p data-testid="investing-total-direct">Total direct: {formatCurrency(exposure?.total_direct_exposure ?? '0', preferredWorkspaceCurrency, currencyDisplayPreference)}</p>
-                <p data-testid="investing-total-lookthrough">Total look-through: {formatCurrency(exposure?.total_lookthrough_exposure ?? '0', preferredWorkspaceCurrency, currencyDisplayPreference)}</p>
-                <div className="max-h-56 overflow-auto rounded-lg border border-slate-700/40">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-800/60 text-slate-400">
-                      <tr>
-                        <th className="px-3 py-2">Company</th>
-                        <th className="px-3 py-2">Direct</th>
-                        <th className="px-3 py-2">Look-through</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(exposure?.exposure ?? []).map((row) => (
-                        <tr key={row.company_id} className="border-t border-slate-700/40">
-                          <td className="px-3 py-2">{row.company_ticker ?? row.company_name}</td>
-                          <td className="px-3 py-2">{formatCurrency(row.direct_exposure, preferredWorkspaceCurrency, currencyDisplayPreference)}</td>
-                          <td className="px-3 py-2">{formatCurrency(row.lookthrough_exposure, preferredWorkspaceCurrency, currencyDisplayPreference)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <div className="grid gap-6 lg:grid-cols-4">
+              <div className="lg:col-span-1 space-y-4">
+                <div className="space-y-4 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4">
+                  <h3 className="font-semibold text-white">Analytics Controls</h3>
+                  <label className="block text-xs text-slate-300">
+                    As of date
+                    <DatePicker
+                      value={analyticsAsOf}
+                      onChange={setAnalyticsAsOf}
+                      placeholder="Select date"
+                      className="mt-1"
+                    />
+                  </label>
+                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-3 text-xs text-slate-300">
+                    <p>Coverage: {exposure?.snapshot_coverage ?? 'N/A'}</p>
+                    <p>Status: {exposure?.analysis_status ?? 'N/A'}</p>
+                    {!!exposure?.warnings?.length && (
+                      <ul className="mt-2 list-disc space-y-1 pl-4 text-amber-300">
+                        {exposure.warnings.map((warning) => (
+                          <li key={warning}>{warning}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
 
-          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
-            <div className="mb-3 flex items-center gap-2 text-slate-100">
-              <BarChart3 className="h-4 w-4" />
-              <h3 className="font-semibold">Overlap</h3>
-            </div>
-            {overlapLoading ? (
-              <p className="text-sm text-slate-400">Loading overlap…</p>
-            ) : (
-              <div className="space-y-2 text-sm text-slate-300">
-                <p>Top 5 concentration: {(toNumber(overlap?.top_5_concentration_pct ?? 0) * 100).toFixed(2)}%</p>
-                <p>Duplicate exposure index: {(toNumber(overlap?.duplicate_exposure_index ?? 0) * 100).toFixed(2)}%</p>
-                <ol className="space-y-1 text-xs">
-                  {(overlap?.overlaps ?? []).slice(0, 8).map((row) => (
-                    <li key={row.company_id} className="flex items-center justify-between rounded border border-slate-700/50 px-2 py-1">
-                      <span>{row.company_ticker ?? row.company_name}</span>
-                      <span>{(toNumber(row.portfolio_share) * 100).toFixed(2)}%</span>
-                    </li>
-                  ))}
-                </ol>
+              <div className="lg:col-span-2 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
+                <div className="mb-3 flex items-center gap-2 text-slate-100">
+                  <Layers className="h-4 w-4" />
+                  <h3 className="font-semibold">Exposure (Look-through)</h3>
+                </div>
+                {exposureLoading ? (
+                  <p className="text-sm text-slate-400">Loading exposure…</p>
+                ) : (
+                  <div className="space-y-2 text-sm text-slate-300">
+                    <p data-testid="investing-total-direct">Total direct: {formatCurrency(exposure?.total_direct_exposure ?? '0', preferredWorkspaceCurrency, currencyDisplayPreference)}</p>
+                    <p data-testid="investing-total-lookthrough">Total look-through: {formatCurrency(exposure?.total_lookthrough_exposure ?? '0', preferredWorkspaceCurrency, currencyDisplayPreference)}</p>
+                    <div className="max-h-96 overflow-auto rounded-lg border border-slate-700/40">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-800/60 text-slate-400">
+                          <tr>
+                            <th className="px-3 py-2">Company</th>
+                            <th className="px-3 py-2">Direct</th>
+                            <th className="px-3 py-2">Look-through</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(exposure?.exposure ?? []).map((row) => (
+                            <tr key={row.company_id} className="border-t border-slate-700/40">
+                              <td className="px-3 py-2">{row.company_ticker ?? row.company_name}</td>
+                              <td className="px-3 py-2">{formatCurrency(row.direct_exposure, preferredWorkspaceCurrency, currencyDisplayPreference)}</td>
+                              <td className="px-3 py-2">{formatCurrency(row.lookthrough_exposure, preferredWorkspaceCurrency, currencyDisplayPreference)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+
+              <div className="lg:col-span-1 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
+                <div className="mb-3 flex items-center gap-2 text-slate-100">
+                  <BarChart3 className="h-4 w-4" />
+                  <h3 className="font-semibold">Overlap</h3>
+                </div>
+                {overlapLoading ? (
+                  <p className="text-sm text-slate-400">Loading overlap…</p>
+                ) : (
+                  <div className="space-y-2 text-sm text-slate-300">
+                    <p>Top 5 concentration: {(toNumber(overlap?.top_5_concentration_pct ?? 0) * 100).toFixed(2)}%</p>
+                    <p>Duplicate exposure index: {(toNumber(overlap?.duplicate_exposure_index ?? 0) * 100).toFixed(2)}%</p>
+                    <ol className="space-y-1 text-xs">
+                      {(overlap?.overlaps ?? []).slice(0, 8).map((row) => (
+                        <li key={row.company_id} className="flex items-center justify-between rounded border border-slate-700/50 px-2 py-1">
+                          <span>{row.company_ticker ?? row.company_name}</span>
+                          <span>{(toNumber(row.portfolio_share) * 100).toFixed(2)}%</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Add Holding Modal */}
+      {isAddHoldingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setIsAddHoldingModalOpen(false)}
+          />
+          <div className="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+              <h2 className="text-lg font-semibold text-white">Add New Holding</h2>
+              <button
+                type="button"
+                onClick={() => setIsAddHoldingModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                title="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form
+              data-testid="investing-add-holding-form"
+              onSubmit={onCreateHolding}
+              className="space-y-4"
+            >
+              {accountOptions.length === 0 ? (
+                <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-200 animate-none">
+                  Create an account below before adding holdings.
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Symbol</label>
+                  <input
+                    data-testid="investing-holding-symbol"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    placeholder="Symbol (e.g. AAPL)"
+                    value={holdingForm.symbol}
+                    onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Account</label>
+                  <Combobox
+                    testId="investing-holding-account"
+                    value={selectedHoldingAccount}
+                    options={accountDropdownOptions}
+                    onChange={(value) => setHoldingForm((s) => ({ ...s, account_id: value }))}
+                    placeholder="Select account"
+                    searchPlaceholder="Search accounts..."
+                    clearLabel="Clear selection"
+                    emptyText="No accounts found."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Quantity</label>
+                  <input
+                    data-testid="investing-holding-quantity"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    placeholder="Quantity"
+                    type="number"
+                    step="0.00000001"
+                    value={holdingForm.quantity}
+                    onChange={(e) => setHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Avg Cost</label>
+                  <input
+                    data-testid="investing-holding-avg-cost"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    placeholder="Avg cost"
+                    type="number"
+                    step="0.01"
+                    value={holdingForm.avg_cost}
+                    onChange={(e) => setHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Currency</label>
+                  <DropdownSelect
+                    testId="investing-holding-currency"
+                    value={selectedHoldingCurrency}
+                    options={currencyDropdownOptions}
+                    onChange={(value) => setHoldingForm((s) => ({ ...s, currency: value }))}
+                    placeholder="Currency"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddHoldingModalOpen(false)}
+                  className="flex-1 h-10 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  data-testid="investing-holding-submit"
+                  disabled={createHoldingMutation.isPending || accountOptions.length === 0}
+                  type="submit"
+                  className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-cyan-500 transition-colors"
+                >
+                  {createHoldingMutation.isPending ? 'Adding...' : 'Add Holding'}
+                </button>
+              </div>
+
+              {/* Quick create account sub-form */}
+              <div className="mt-4 border-t border-slate-800 pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Quick Create Account</p>
+                <div className="grid grid-cols-2 gap-4 items-end">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Account Name</label>
+                    <input
+                      data-testid="investing-account-name"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                      placeholder="Account name"
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Account Type</label>
+                    <DropdownSelect
+                      testId="investing-account-type"
+                      value={newAccountType}
+                      options={[...accountTypeOptions]}
+                      onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
+                      placeholder="Account type"
+                    />
+                  </div>
+                </div>
+                <button
+                  data-testid="investing-account-create"
+                  type="button"
+                  disabled={!newAccountName.trim() || createAccountMutation.isPending}
+                  onClick={() => createAccountMutation.mutate()}
+                  className="mt-3 w-full h-10 rounded-lg border border-slate-700 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                >
+                  Create account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Cash Modal */}
+      {isAddCashModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setIsAddCashModalOpen(false)}
+          />
+          <div className="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+              <h2 className="text-lg font-semibold text-white">Add Cash Balance</h2>
+              <button
+                type="button"
+                onClick={() => setIsAddCashModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                title="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={onCreateCash} className="space-y-4">
+              {accountOptions.length === 0 ? (
+                <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-200 animate-none">
+                  Create an account below before adding cash balances.
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Account</label>
+                  <Combobox
+                    value={selectedCashAccount}
+                    options={accountDropdownOptions}
+                    onChange={(value) => setCashForm((s) => ({ ...s, account_id: value }))}
+                    placeholder="Select account"
+                    searchPlaceholder="Search accounts..."
+                    clearLabel="Clear selection"
+                    emptyText="No accounts found."
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Balance</label>
+                  <input
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                    placeholder="Balance"
+                    type="number"
+                    step="0.01"
+                    value={cashForm.balance}
+                    onChange={(e) => setCashForm((s) => ({ ...s, balance: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">Currency</label>
+                  <DropdownSelect
+                    value={selectedCashCurrency}
+                    options={currencyDropdownOptions}
+                    onChange={(value) => setCashForm((s) => ({ ...s, currency: value }))}
+                    placeholder="Currency"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-300">As Of</label>
+                  <DateTimePicker
+                    value={cashForm.as_of}
+                    onChange={(value) => setCashForm((s) => ({ ...s, as_of: value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCashModalOpen(false)}
+                  className="flex-1 h-10 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={createCashMutation.isPending || accountOptions.length === 0}
+                  type="submit"
+                  className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                >
+                  {createCashMutation.isPending ? 'Adding...' : 'Add Cash Balance'}
+                </button>
+              </div>
+
+              {/* Quick create account sub-form */}
+              <div className="mt-4 border-t border-slate-800 pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Quick Create Account</p>
+                <div className="grid grid-cols-2 gap-4 items-end">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Account Name</label>
+                    <input
+                      data-testid="investing-account-name"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                      placeholder="Account name"
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Account Type</label>
+                    <DropdownSelect
+                      testId="investing-account-type"
+                      value={newAccountType}
+                      options={[...accountTypeOptions]}
+                      onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
+                      placeholder="Account type"
+                    />
+                  </div>
+                </div>
+                <button
+                  data-testid="investing-account-create"
+                  type="button"
+                  disabled={!newAccountName.trim() || createAccountMutation.isPending}
+                  onClick={() => createAccountMutation.mutate()}
+                  className="mt-3 w-full h-10 rounded-lg border border-slate-700 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                >
+                  Create account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Instrument Modal */}
+      {isCreateInstrumentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setIsCreateInstrumentModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+              <h2 className="text-lg font-semibold text-white">Create Instrument</h2>
+              <button
+                type="button"
+                onClick={() => setIsCreateInstrumentModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                title="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={onCreateInstrument} className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">Symbol (e.g. VTI)</label>
+                <input
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                  placeholder="Symbol (e.g. VTI)"
+                  value={instrumentForm.symbol}
+                  onChange={(e) => setInstrumentForm((s) => ({ ...s, symbol: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">Name</label>
+                <input
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                  placeholder="Name"
+                  value={instrumentForm.name}
+                  onChange={(e) => setInstrumentForm((s) => ({ ...s, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">Instrument Type</label>
+                <DropdownSelect
+                  value={instrumentForm.instrument_type}
+                  options={[...instrumentTypeOptions]}
+                  onChange={(value) =>
+                    setInstrumentForm((s) => ({
+                      ...s,
+                      instrument_type: value as InstrumentCreate['instrument_type'],
+                    }))
+                  }
+                  placeholder="Instrument type"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateInstrumentModalOpen(false)}
+                  className="flex-1 h-10 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={createInstrumentMutation.isPending}
+                  type="submit"
+                  className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                >
+                  {createInstrumentMutation.isPending ? 'Creating...' : 'Create instrument'}
+                </button>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 text-center">
+                Instruments: {instrumentsLoading ? 'Loading...' : instruments.length}
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Seed Constituents Modal */}
+      {isSeedConstituentsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setIsSeedConstituentsModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+              <h2 className="text-lg font-semibold text-white">Seed Constituents</h2>
+              <button
+                type="button"
+                onClick={() => setIsSeedConstituentsModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                title="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={onUpsertConstituents} className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">Select Pooled Instrument</label>
+                <Combobox
+                  value={selectedInstrumentId}
+                  options={pooledInstrumentOptions}
+                  onChange={setSelectedInstrumentId}
+                  placeholder="Select pooled instrument"
+                  searchPlaceholder="Search instruments..."
+                  clearLabel="Clear selection"
+                  emptyText="No pooled instruments found."
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">Constituents (TICKER,WEIGHT)</label>
+                <textarea
+                  className="h-28 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-600 font-mono"
+                  value={constituentRowsText}
+                  onChange={(e) => setConstituentRowsText(e.target.value)}
+                  placeholder="AAPL,0.60&#10;MSFT,0.40"
+                />
+                {constituentError ? <p className="text-xs text-rose-300">{constituentError}</p> : null}
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSeedConstituentsModalOpen(false)}
+                  className="flex-1 h-10 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={upsertConstituentsMutation.isPending}
+                  type="submit"
+                  className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                >
+                  {upsertConstituentsMutation.isPending ? 'Upserting...' : 'Upsert constituents'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 };

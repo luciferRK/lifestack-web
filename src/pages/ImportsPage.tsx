@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, X } from 'lucide-react';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { importsService } from '../services/imports';
@@ -38,6 +39,7 @@ export const ImportsPage: React.FC = () => {
   const [latestValidation, setLatestValidation] = useState<ImportValidateResponse | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const { data: importsResponse, isLoading: isLoadingImports } = useQuery({
     queryKey: ['imports', 'list'],
@@ -68,6 +70,7 @@ export const ImportsPage: React.FC = () => {
       setSelectedImportId(data.import_batch.public_id);
       setFile(null);
       setUploadError(null);
+      setIsUploadModalOpen(false);
       void queryClient.invalidateQueries({ queryKey: ['imports', 'list'] });
     },
   });
@@ -139,65 +142,103 @@ export const ImportsPage: React.FC = () => {
       <PageHero
         title="Bulk Imports"
         subtitle="Upload CSV templates for transactions, budgets, and holdings."
+        actions={(
+          <button
+            type="button"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-cyan-600 px-5 text-sm font-semibold text-white hover:bg-cyan-500"
+          >
+            <Plus className="h-4 w-4" />
+            New Import
+          </button>
+        )}
       />
 
-      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">New import</h2>
-        <div className="grid gap-3 md:grid-cols-[2fr,3fr,auto,auto]">
-          <select
-            data-testid="imports-module-select"
-            value={module}
-            onChange={(e) => setModule(e.target.value as ImportModule)}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-          >
-            <option value="" disabled>
-              Select module
-            </option>
-            {MODULE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-
-          <input
-            data-testid="imports-file-input"
-            key={file ? `selected-${file.name}-${file.lastModified}` : 'no-file-selected'}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
-              setUploadError(null);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200"
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setIsUploadModalOpen(false)}
           />
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+              <h2 className="text-lg font-semibold text-white">New Import</h2>
+              <button
+                type="button"
+                onClick={() => setIsUploadModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                title="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-          <button
-            data-testid="imports-download-template"
-            type="button"
-            onClick={() => void handleTemplateDownload()}
-            disabled={!module || isDownloadingTemplate}
-            className="h-10 rounded-lg border border-slate-600 bg-slate-900 px-4 text-sm font-semibold text-slate-100 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isDownloadingTemplate ? 'Downloading...' : 'Download template'}
-          </button>
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-300">Select module</label>
+                <select
+                  data-testid="imports-module-select"
+                  value={module}
+                  onChange={(e) => setModule(e.target.value as ImportModule)}
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white text-sm"
+                >
+                  <option value="" disabled>
+                    Select module
+                  </option>
+                  {MODULE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <button
-            data-testid="imports-upload-validate"
-            type="button"
-            onClick={handleUpload}
-            disabled={!module || !file || uploadMutation.isPending}
-            className="h-10 rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {uploadMutation.isPending ? 'Validating...' : 'Upload + validate'}
-          </button>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-300">Choose CSV File</label>
+                <input
+                  data-testid="imports-file-input"
+                  key={file ? `selected-${file.name}-${file.lastModified}` : 'no-file-selected'}
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(e) => {
+                    setFile(e.target.files?.[0] ?? null);
+                    setUploadError(null);
+                  }}
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 text-sm"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  data-testid="imports-download-template"
+                  type="button"
+                  onClick={() => void handleTemplateDownload()}
+                  disabled={!module || isDownloadingTemplate}
+                  className="flex-1 h-10 rounded-lg border border-slate-600 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isDownloadingTemplate ? 'Downloading...' : 'Download template'}
+                </button>
+
+                <button
+                  data-testid="imports-upload-validate"
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={!module || !file || uploadMutation.isPending}
+                  className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {uploadMutation.isPending ? 'Validating...' : 'Upload + validate'}
+                </button>
+              </div>
+
+              {uploadError ? (
+                <p className="mt-2 text-sm text-rose-300" data-testid="imports-upload-error">{uploadError}</p>
+              ) : uploadMutation.isError ? (
+                <p className="mt-2 text-sm text-rose-300">Import validation failed to submit. Check file and try again.</p>
+              ) : null}
+            </div>
+          </div>
         </div>
-        {uploadError ? (
-          <p className="mt-3 text-sm text-rose-300" data-testid="imports-upload-error">{uploadError}</p>
-        ) : uploadMutation.isError ? (
-          <p className="mt-3 text-sm text-rose-300">Import validation failed to submit. Check file and try again.</p>
-        ) : null}
-      </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">

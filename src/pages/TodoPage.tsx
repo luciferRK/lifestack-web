@@ -25,7 +25,7 @@ export const TodoPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoDueDate, setNewTodoDueDate] = useState('');
-  const [isNewTaskFormOpen, setIsNewTaskFormOpen] = useState(true);
+  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const limit = 50;
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'completed'>('all');
@@ -57,6 +57,7 @@ export const TodoPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setNewTodoTitle('');
       setNewTodoDueDate('');
+      setIsNewTaskModalOpen(false);
     },
   });
 
@@ -128,14 +129,11 @@ export const TodoPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsNewTaskFormOpen((prev) => !prev)}
-              className={`inline-flex h-12 items-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors ${
-                isNewTaskFormOpen
-                  ? 'bg-slate-700/80 text-slate-100 hover:bg-slate-600'
-                  : 'bg-cyan-600 text-white hover:bg-cyan-500'
-              }`}
+              onClick={() => setIsNewTaskModalOpen(true)}
+              className="inline-flex h-12 items-center gap-2 rounded-xl bg-cyan-600 px-5 text-sm font-semibold text-white hover:bg-cyan-500"
             >
-              {isNewTaskFormOpen ? 'Hide Task Form' : 'Add Task'}
+              <Plus className="h-4 w-4" />
+              Add Task
             </button>
             <button
               type="button"
@@ -149,32 +147,40 @@ export const TodoPage: React.FC = () => {
         )}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section>
-          {isNewTaskFormOpen && (
-            <form data-testid="todo-new-form" onSubmit={handleCreate} className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-semibold text-white">New task</h2>
-                <button
-                  type="button"
-                  onClick={() => setIsNewTaskFormOpen(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
-                  title="Close form"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+      {isNewTaskModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => setIsNewTaskModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+              <h2 className="text-lg font-semibold text-white">New task</h2>
+              <button
+                type="button"
+                onClick={() => setIsNewTaskModalOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                title="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-300">What needs to be done?</label>
+                <input
+                  data-testid="todo-new-title"
+                  type="text"
+                  value={newTodoTitle}
+                  onChange={(e) => setNewTodoTitle(e.target.value)}
+                  placeholder="What needs to be done?"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white placeholder-slate-400 text-sm"
+                  disabled={createMutation.isPending}
+                  required
+                />
               </div>
-              <input
-                data-testid="todo-new-title"
-                type="text"
-                value={newTodoTitle}
-                onChange={(e) => setNewTodoTitle(e.target.value)}
-                placeholder="What needs to be done?"
-                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-white placeholder-slate-400"
-                disabled={createMutation.isPending}
-              />
-              <div>
-                <label className="mb-1 block text-sm text-slate-300">Due date (optional)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-300">Due date (optional)</label>
                 <DatePicker
                   value={newTodoDueDate}
                   onChange={setNewTodoDueDate}
@@ -182,17 +188,30 @@ export const TodoPage: React.FC = () => {
                   disabled={createMutation.isPending}
                 />
               </div>
-              <button
-                data-testid="todo-new-submit"
-                type="submit"
-                disabled={createMutation.isPending || !newTodoTitle.trim()}
-                className="h-10 rounded-lg bg-cyan-600 px-5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
-              >
-                Add Task
-              </button>
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsNewTaskModalOpen(false)}
+                  className="flex-1 h-10 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  data-testid="todo-new-submit"
+                  type="submit"
+                  disabled={createMutation.isPending || !newTodoTitle.trim()}
+                  className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+                >
+                  {createMutation.isPending ? 'Adding...' : 'Add Task'}
+                </button>
+              </div>
             </form>
-          )}
+          </div>
+        </div>
+      )}
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section>
           <CompactFilterBar
             className="mb-6"
             title="Task filters"

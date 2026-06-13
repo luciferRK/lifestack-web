@@ -203,6 +203,10 @@ describe('InvestingPage', () => {
     renderWithQuery(<InvestingPage />);
 
     await screen.findByText('Investing');
+    
+    // Open the Add Holding Modal
+    fireEvent.click(await screen.findByRole('button', { name: /Add Holding/i }));
+
     fireEvent.change(await screen.findByPlaceholderText('Account name'), {
       target: { value: 'Primary Brokerage' },
     });
@@ -221,7 +225,7 @@ describe('InvestingPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Avg cost'), {
       target: { value: '150.25' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add holding' }));
+    fireEvent.click(screen.getByTestId('investing-holding-submit'));
 
     await waitFor(() => {
       expect(holdingPayload).not.toBeNull();
