@@ -495,15 +495,15 @@ export const InvestingPage: React.FC = () => {
           </TabsList>
 
           <TabsContent value="holdings">
-            <div className="grid gap-6 lg:grid-cols-5">
+            <div className="space-y-6">
               {isAddFormOpen && (
                 <form
                   data-testid="investing-add-holding-form"
                   onSubmit={onCreateHolding}
-                  className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 lg:col-span-2 h-fit"
+                  className="space-y-4 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-5"
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-white">Add Holding</h3>
+                  <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
+                    <h3 className="font-semibold text-white text-base">Add New Holding</h3>
                     <button
                       type="button"
                       onClick={() => setIsAddFormOpen(false)}
@@ -518,87 +518,115 @@ export const InvestingPage: React.FC = () => {
                       Create an account below before adding holdings.
                     </div>
                   ) : null}
-                  <input
-                    data-testid="investing-holding-symbol"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-                    placeholder="Symbol (e.g. AAPL)"
-                    value={holdingForm.symbol}
-                    onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
-                  />
-                  <Combobox
-                    testId="investing-holding-account"
-                    value={selectedHoldingAccount}
-                    options={accountDropdownOptions}
-                    onChange={(value) => setHoldingForm((s) => ({ ...s, account_id: value }))}
-                    placeholder="Select account"
-                    searchPlaceholder="Search accounts..."
-                    clearLabel="Clear selection"
-                    emptyText="No accounts found."
-                  />
-                  <input
-                    data-testid="investing-holding-quantity"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-                    placeholder="Quantity"
-                    type="number"
-                    step="0.00000001"
-                    value={holdingForm.quantity}
-                    onChange={(e) => setHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
-                  />
-                  <input
-                    data-testid="investing-holding-avg-cost"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-                    placeholder="Avg cost"
-                    type="number"
-                    step="0.01"
-                    value={holdingForm.avg_cost}
-                    onChange={(e) => setHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
-                  />
-                  <DropdownSelect
-                    testId="investing-holding-currency"
-                    value={selectedHoldingCurrency}
-                    options={currencyDropdownOptions}
-                    onChange={(value) => setHoldingForm((s) => ({ ...s, currency: value }))}
-                    placeholder="Currency"
-                  />
-                  <button
-                    data-testid="investing-holding-submit"
-                    disabled={createHoldingMutation.isPending || accountOptions.length === 0}
-                    type="submit"
-                    className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500"
-                  >
-                    Add holding
-                  </button>
 
-                  <div className="mt-3 border-t border-slate-700/60 pt-3">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Quick Create Account</p>
-                    <input
-                      data-testid="investing-account-name"
-                      className="mb-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
-                      placeholder="Account name"
-                      value={newAccountName}
-                      onChange={(e) => setNewAccountName(e.target.value)}
-                    />
-                    <DropdownSelect
-                      testId="investing-account-type"
-                      value={newAccountType}
-                      options={[...accountTypeOptions]}
-                      onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
-                      placeholder="Account type"
-                    />
+                  {/* Horizontal grid for holding fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-300">Symbol</label>
+                      <input
+                        data-testid="investing-holding-symbol"
+                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                        placeholder="Symbol (e.g. AAPL)"
+                        value={holdingForm.symbol}
+                        onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-300">Account</label>
+                      <Combobox
+                        testId="investing-holding-account"
+                        value={selectedHoldingAccount}
+                        options={accountDropdownOptions}
+                        onChange={(value) => setHoldingForm((s) => ({ ...s, account_id: value }))}
+                        placeholder="Select account"
+                        searchPlaceholder="Search accounts..."
+                        clearLabel="Clear selection"
+                        emptyText="No accounts found."
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-300">Quantity</label>
+                      <input
+                        data-testid="investing-holding-quantity"
+                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                        placeholder="Quantity"
+                        type="number"
+                        step="0.00000001"
+                        value={holdingForm.quantity}
+                        onChange={(e) => setHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-300">Avg Cost</label>
+                      <input
+                        data-testid="investing-holding-avg-cost"
+                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                        placeholder="Avg cost"
+                        type="number"
+                        step="0.01"
+                        value={holdingForm.avg_cost}
+                        onChange={(e) => setHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-300">Currency</label>
+                      <DropdownSelect
+                        testId="investing-holding-currency"
+                        value={selectedHoldingCurrency}
+                        options={currencyDropdownOptions}
+                        onChange={(value) => setHoldingForm((s) => ({ ...s, currency: value }))}
+                        placeholder="Currency"
+                      />
+                    </div>
                     <button
-                      data-testid="investing-account-create"
-                      type="button"
-                      disabled={!newAccountName.trim() || createAccountMutation.isPending}
-                      onClick={() => createAccountMutation.mutate()}
-                      className="w-full rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60"
+                      data-testid="investing-holding-submit"
+                      disabled={createHoldingMutation.isPending || accountOptions.length === 0}
+                      type="submit"
+                      className="w-full h-[38px] rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500 transition-colors"
                     >
-                      Create account
+                      Add holding
                     </button>
+                  </div>
+
+                  {/* Horizontal grid for quick create account */}
+                  <div className="mt-4 border-t border-slate-700/60 pt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Quick Create Account</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-300">Account Name</label>
+                        <input
+                          data-testid="investing-account-name"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                          placeholder="Account name"
+                          value={newAccountName}
+                          onChange={(e) => setNewAccountName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-300">Account Type</label>
+                        <DropdownSelect
+                          testId="investing-account-type"
+                          value={newAccountType}
+                          options={[...accountTypeOptions]}
+                          onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
+                          placeholder="Account type"
+                        />
+                      </div>
+                      <button
+                        data-testid="investing-account-create"
+                        type="button"
+                        disabled={!newAccountName.trim() || createAccountMutation.isPending}
+                        onClick={() => createAccountMutation.mutate()}
+                        className="w-full h-[38px] rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                      >
+                        Create account
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
 
-              <div className={`space-y-3 ${isAddFormOpen ? 'lg:col-span-3' : 'lg:col-span-5'}`}>
+              <div className="space-y-3">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold text-white text-base">Active Holdings</h3>
                   <div className="flex items-center gap-2">
