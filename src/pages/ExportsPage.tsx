@@ -95,7 +95,7 @@ export const ExportsPage: React.FC = () => {
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),minmax(360px,0.8fr)]">
-        <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">New export</h2>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -151,7 +151,7 @@ export const ExportsPage: React.FC = () => {
           ) : null}
         </section>
 
-        <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">Current export</h2>
 
           {!activeExport ? (

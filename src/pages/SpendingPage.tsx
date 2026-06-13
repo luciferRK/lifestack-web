@@ -791,7 +791,7 @@ export const SpendingPage: React.FC = () => {
           <button
             onClick={openTransactionModalForNew}
             data-testid="spending-open-new-transaction"
-            className="group relative flex h-12 min-w-[170px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.01] hover:shadow-blue-500/40 active:scale-95"
+            className="group relative flex h-12 min-w-[170px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-tr from-cyan-600 to-cyan-500 px-5 font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.01] hover:shadow-cyan-500/40 active:scale-95"
           >
             <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
             <Plus className="h-5 w-5" />
@@ -899,9 +899,9 @@ export const SpendingPage: React.FC = () => {
         </div>
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-800 to-slate-800/80 p-6 backdrop-blur-xl transition-all hover:border-slate-600">
-          <div className={`absolute -right-4 -top-4 rounded-full p-8 blur-2xl ${summary.net >= 0 ? 'bg-blue-500/10' : 'bg-red-500/10'}`} />
-          <div className="flex items-center gap-4">
-            <div className={`rounded-xl p-3 ${summary.net >= 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
+          <div className={`absolute -right-4 -top-4 rounded-full p-8 blur-2xl ${summary.net >= 0 ? 'bg-cyan-500/10' : 'bg-red-500/10'}`} />
+          <div className="flex items-start justify-between gap-4">
+            <div className={`rounded-xl p-3 ${summary.net >= 0 ? 'bg-cyan-500/20 text-cyan-400' : 'bg-red-500/20 text-red-400'}`}>
               <Wallet className="h-8 w-8" />
             </div>
             <div>
@@ -920,36 +920,36 @@ export const SpendingPage: React.FC = () => {
         <button
           data-testid="spending-tab-transactions"
           onClick={() => setActiveTab('transactions')}
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'transactions' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'transactions' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
         >
           Transactions
         </button>
         <button
           data-testid="spending-tab-budgets"
           onClick={() => setActiveTab('budgets')}
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'budgets' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'budgets' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
         >
           Budgets
         </button>
         <button
           data-testid="spending-tab-recurring"
           onClick={() => setActiveTab('recurring')}
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'recurring' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'recurring' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
         >
-          Recurring
+          Recurring rules
         </button>
         <button
           data-testid="spending-tab-transfers"
           onClick={() => setActiveTab('transfers')}
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'transfers' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'transfers' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
         >
           Transfers
         </button>
       </div>
 
       {isRecurringLoading && activeTab === 'recurring' ? (
-        <div className="flex h-32 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-blue-500" />
+        <div className="flex min-h-[300px] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-cyan-500" />
         </div>
       ) : isTransfersLoading && activeTab === 'transfers' ? (
         <SkeletonList rows={4} />
@@ -1079,7 +1079,7 @@ export const SpendingPage: React.FC = () => {
                         <td className="px-6 py-4 text-right">
                           <button
                             onClick={() => openTransactionModalForEdit(tx)}
-                            className="inline-flex rounded-lg p-2 text-slate-500 transition-all hover:bg-blue-500/10 hover:text-blue-400"
+                            className="inline-flex rounded-lg p-2 text-slate-500 transition-all hover:bg-cyan-500/10 hover:text-cyan-400"
                             title="Edit transaction"
                           >
                             <Edit2 className="h-4 w-4" />
@@ -1191,7 +1191,7 @@ export const SpendingPage: React.FC = () => {
               <p className="text-slate-400">Set up recurring transactions for rent, subscriptions, or salary.</p>
               <button
                 onClick={openRecurringModalForNew}
-                className="mt-6 flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-blue-500 transition-colors"
+                className="mt-6 flex items-center gap-2 rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-cyan-500 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Add First Rule
@@ -1641,7 +1641,7 @@ export const SpendingPage: React.FC = () => {
                   type="submit"
                   data-testid={editingRecurring ? 'spending-recurring-update' : 'spending-recurring-create'}
                   disabled={createRecurringMutation.isPending || updateRecurringMutation.isPending}
-                  className="flex-1 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-gradient-to-tr from-cyan-600 to-cyan-500 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {(createRecurringMutation.isPending || updateRecurringMutation.isPending)
                     ? 'Saving...'
@@ -1706,7 +1706,7 @@ export const SpendingPage: React.FC = () => {
                       required
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950/50 py-3 pl-16 pr-4 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950/50 py-3 pl-16 pr-4 text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                       placeholder="0.00"
                     />
                   </div>
@@ -1740,7 +1740,7 @@ export const SpendingPage: React.FC = () => {
                       setNewAccountCurrency(displayCurrency || 'USD');
                       setIsQuickAccountModalOpen(true);
                     }}
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300"
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-cyan-400 hover:text-cyan-300"
                   >
                     <Landmark className="h-3.5 w-3.5" />
                     Create account
@@ -1767,7 +1767,7 @@ export const SpendingPage: React.FC = () => {
                     type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                     placeholder="What did you spend on?"
                   />
                 </div>
@@ -1785,7 +1785,7 @@ export const SpendingPage: React.FC = () => {
                   type="submit"
                   data-testid="spending-transaction-save"
                   disabled={(createMutation.isPending || updateMutation.isPending) || !amount || !categoryId || !type || !date}
-                  className="flex-1 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-blue-500/40 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-cyan-600 px-4 py-3 font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:bg-cyan-500 hover:shadow-cyan-500/40 disabled:opacity-50"
                 >
                   {(createMutation.isPending || updateMutation.isPending) ? 'Saving...' : 'Save Transaction'}
                 </button>
@@ -2164,7 +2164,7 @@ export const SpendingPage: React.FC = () => {
                     setNewAccountCurrency(displayCurrency || 'USD');
                     setIsQuickAccountModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-400 hover:text-cyan-300"
                 >
                   <Landmark className="h-3.5 w-3.5" />
                   Need another account? Create one now

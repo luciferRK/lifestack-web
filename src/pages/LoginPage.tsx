@@ -39,7 +39,7 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
-      <div className="w-full max-w-md space-y-8 rounded-xl bg-slate-800 p-10 shadow-2xl">
+      <div className="w-full max-w-md space-y-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-8 sm:p-10 shadow-2xl backdrop-blur-xl">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-white tracking-tight">Lifestack</h2>
           <p className="mt-2 text-sm text-slate-400">Sign in to your account</p>
@@ -70,7 +70,7 @@ export const LoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-blue-500 transition-all"
+                className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-cyan-500 transition-all"
               />
             </div>
             <div>
@@ -84,7 +84,7 @@ export const LoginPage: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-blue-500 transition-all"
+                className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-cyan-500 transition-all"
               />
             </div>
           </div>
@@ -92,7 +92,7 @@ export const LoginPage: React.FC = () => {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 p-3.5 font-semibold text-white shadow-lg hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all disabled:opacity-50"
+            className="w-full rounded-lg bg-cyan-600 p-3.5 font-semibold text-white shadow-lg hover:bg-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -100,7 +100,7 @@ export const LoginPage: React.FC = () => {
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Don't have an account?{' '}
-          <Link to="/register" className="font-semibold text-blue-500 hover:text-blue-400 transition-colors">
+          <Link to="/register" className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
             Create one
           </Link>
         </p>

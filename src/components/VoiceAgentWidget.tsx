@@ -634,7 +634,7 @@ export const VoiceAgentWidget: React.FC = () => {
             if (msg.role === 'user') {
               return (
                 <div key={msg.id} className="flex justify-end">
-                  <div className="max-w-[80%] rounded-2xl rounded-tr-none bg-blue-600/80 border border-blue-500/30 px-3.5 py-2 text-sm text-white shadow-sm">
+                  <div className="max-w-[80%] rounded-2xl rounded-tr-none bg-cyan-600/80 border border-cyan-500/30 px-3.5 py-2 text-sm text-white shadow-sm">
                     <p className="leading-relaxed">{msg.content}</p>
                   </div>
                 </div>

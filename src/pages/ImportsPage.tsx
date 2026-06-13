@@ -141,7 +141,7 @@ export const ImportsPage: React.FC = () => {
         subtitle="Upload CSV templates for transactions, budgets, and holdings."
       />
 
-      <section className="mb-6 rounded-xl border border-slate-800 bg-slate-800/30 p-5">
+      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">New import</h2>
         <div className="grid gap-3 md:grid-cols-[2fr,3fr,auto,auto]">
           <select
@@ -187,7 +187,7 @@ export const ImportsPage: React.FC = () => {
             type="button"
             onClick={handleUpload}
             disabled={!module || !file || uploadMutation.isPending}
-            className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {uploadMutation.isPending ? 'Validating...' : 'Upload + validate'}
           </button>
@@ -200,7 +200,7 @@ export const ImportsPage: React.FC = () => {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">Recent imports</h2>
           {isLoadingImports ? <p className="text-slate-400">Loading imports...</p> : null}
           <div className="space-y-2">
@@ -216,7 +216,7 @@ export const ImportsPage: React.FC = () => {
                 key={item.public_id}
                 type="button"
                 onClick={() => setSelectedImportId(item.public_id)}
-                className={`w-full rounded-lg border px-3 py-3 text-left ${selectedImportId === item.public_id ? 'border-blue-500 bg-blue-950/30' : 'border-slate-700 bg-slate-800/30 hover:bg-slate-800/60'}`}
+                className={`w-full rounded-lg border px-3 py-3 text-left ${selectedImportId === item.public_id ? 'border-cyan-500 bg-cyan-950/30' : 'border-slate-700 bg-slate-800/30 hover:bg-slate-800/60'}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-white">{item.filename}</span>
@@ -230,7 +230,7 @@ export const ImportsPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">Import detail</h2>
           {!selectedImportId ? <p className="text-slate-400">Select an import to inspect validation and commit state.</p> : null}
 

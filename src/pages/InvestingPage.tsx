@@ -582,7 +582,7 @@ export const InvestingPage: React.FC = () => {
                       data-testid="investing-holding-submit"
                       disabled={createHoldingMutation.isPending || accountOptions.length === 0}
                       type="submit"
-                      className="w-full h-[38px] rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500 transition-colors"
+                      className="w-full h-[38px] rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-cyan-500 transition-colors"
                     >
                       Add holding
                     </button>
@@ -634,7 +634,7 @@ export const InvestingPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setIsAddFormOpen(true)}
-                        className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
+                        className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
                       >
                         <Plus className="h-3.5 w-3.5" />
                         Add Holding
@@ -821,7 +821,7 @@ export const InvestingPage: React.FC = () => {
               onChange={(value) => setCashForm((s) => ({ ...s, as_of: value }))}
               required
             />
-            <button disabled={createCashMutation.isPending || accountOptions.length === 0} type="submit" className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-blue-500">Add cash balance</button>
+            <button disabled={createCashMutation.isPending || accountOptions.length === 0} type="submit" className="w-full rounded-lg bg-cyan-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 hover:bg-cyan-500">Add cash balance</button>
           </form>
 
           <div className="space-y-3 lg:col-span-3">
@@ -936,7 +936,7 @@ export const InvestingPage: React.FC = () => {
               }
               placeholder="Instrument type"
             />
-            <button disabled={createInstrumentMutation.isPending} className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60">
+            <button disabled={createInstrumentMutation.isPending} className="w-full rounded-lg bg-cyan-600 px-4 py-2 font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60">
               Create instrument
             </button>
             <p className="text-xs text-slate-400">

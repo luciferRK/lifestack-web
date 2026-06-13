@@ -132,7 +132,7 @@ export const TodoPage: React.FC = () => {
               className={`inline-flex h-12 items-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors ${
                 isNewTaskFormOpen
                   ? 'bg-slate-700/80 text-slate-100 hover:bg-slate-600'
-                  : 'bg-blue-600 text-white hover:bg-blue-500'
+                  : 'bg-cyan-600 text-white hover:bg-cyan-500'
               }`}
             >
               {isNewTaskFormOpen ? 'Hide Task Form' : 'Add Task'}
@@ -152,7 +152,7 @@ export const TodoPage: React.FC = () => {
       <div className="grid gap-6 lg:grid-cols-2">
         <section>
           {isNewTaskFormOpen && (
-            <form data-testid="todo-new-form" onSubmit={handleCreate} className="mb-6 rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
+            <form data-testid="todo-new-form" onSubmit={handleCreate} className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-lg font-semibold text-white">New task</h2>
                 <button
@@ -186,7 +186,7 @@ export const TodoPage: React.FC = () => {
                 data-testid="todo-new-submit"
                 type="submit"
                 disabled={createMutation.isPending || !newTodoTitle.trim()}
-                className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                className="h-10 rounded-lg bg-cyan-600 px-5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
               >
                 Add Task
               </button>
@@ -240,9 +240,9 @@ export const TodoPage: React.FC = () => {
                           aria-label={todo.completed ? `Mark todo as incomplete: ${todo.title}` : `Mark todo as complete: ${todo.title}`}
                           onClick={() => toggleMutation.mutate(todo)}
                           disabled={toggleMutation.isPending}
-                          className="text-slate-400 hover:text-blue-500 transition-colors disabled:opacity-50"
+                          className="text-slate-400 hover:text-cyan-500 transition-colors disabled:opacity-50"
                         >
-                          {todo.completed ? <CheckCircle2 className="h-6 w-6 text-blue-500" /> : <Circle className="h-6 w-6" />}
+                          {todo.completed ? <CheckCircle2 className="h-6 w-6 text-cyan-400" /> : <Circle className="h-6 w-6" />}
                         </button>
                         <div>
                           <h3 className={`font-medium text-white ${todo.completed ? 'line-through text-slate-400' : ''}`}>
