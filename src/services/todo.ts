@@ -48,6 +48,10 @@ export interface RecurringTodoCreate {
   end_date?: string | null;
 }
 
+export type RecurringTodoUpdate = Partial<Omit<RecurringTodoCreate, 'anchor_date'>> & {
+  is_active?: boolean;
+};
+
 export const todoService = {
   getTodos: async (completed?: boolean, limit: number = 50, offset: number = 0): Promise<PaginatedResponse<Todo>> => {
     const params: Record<string, string | number | boolean> = { limit, offset };
@@ -79,6 +83,11 @@ export const todoService = {
 
   createRecurringRule: async (rule: RecurringTodoCreate): Promise<RecurringTodoRule> => {
     const response = await api.post('/todo/recurring/', rule);
+    return response.data;
+  },
+
+  updateRecurringRule: async (publicId: string, rule: RecurringTodoUpdate): Promise<RecurringTodoRule> => {
+    const response = await api.patch(`/todo/recurring/${publicId}`, rule);
     return response.data;
   },
 
