@@ -669,4 +669,130 @@ describe('InvestingPage', () => {
       instrument_type: 'etf',
     });
   });
+
+  it('calculates converted table totals and shows portfolio value with date under multi-currency converted summary', async () => {
+    server.use(
+      http.get('*/v1/investing/holdings', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: 'holding-usd',
+              symbol: 'AAPL',
+              account_id: '11111111-1111-1111-1111-111111111111',
+              account_name: 'Brokerage A',
+              quantity: '10.00000000',
+              avg_cost: '150.00',
+              currency: 'USD',
+              current_price: '180.00',
+              current_value: '1800.00',
+              gain_loss: '300.00',
+              gain_loss_pct: '20.00',
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+            {
+              public_id: 'holding-cad',
+              symbol: 'SHOP',
+              account_id: '11111111-1111-1111-1111-111111111111',
+              account_name: 'Brokerage A',
+              quantity: '20.00000000',
+              avg_cost: '80.00',
+              currency: 'CAD',
+              current_price: '90.00',
+              current_value: '1800.00',
+              gain_loss: '200.00',
+              gain_loss_pct: '12.50',
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 2,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/investing/cash-balances', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
+      http.get('*/v1/finance/accounts', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: '11111111-1111-1111-1111-111111111111',
+              name: 'Brokerage A',
+              account_type: 'brokerage',
+              default_currency_code: 'USD',
+              is_active: true,
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/finance/currencies', () =>
+        HttpResponse.json([
+          { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
+          { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', minor_unit: 2, is_active: true },
+        ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
+      ),
+      http.get('*/v1/investing/summary', () =>
+        HttpResponse.json({
+          portfolio_value: '2668.00',
+          holdings_count: 2,
+          cash_total: '0.00',
+          currency_breakdown: { USD: '1500.00', CAD: '1600.00' },
+          daily_change: null,
+          reporting_currency: 'USD',
+          valuation_status: 'converted_available',
+          fx_rates_used: { CAD: '0.73' },
+        }),
+      ),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '3114.00',
+          total_cost: '2668.00',
+          total_gain_loss: '446.00',
+          total_gain_loss_pct: '16.72',
+          snapshot_date: '2026-06-13',
+          currency: 'USD',
+          fx_rates_used: { CAD: '0.73' },
+        }),
+      ),
+      http.get('*/v1/investing/instruments', () => HttpResponse.json([])),
+    );
+
+    renderWithQuery(<InvestingPage />);
+
+    // Wait for the rows to render
+    expect(await screen.findByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('SHOP')).toBeInTheDocument();
+
+    // Verify converted table footer totals:
+    // Book Cost: 10 * 150 (USD) + 20 * 80 * 0.73 (CAD -> USD) = 1500 + 1168 = 2668.00 USD
+    // Current Value: 10 * 180 (USD) + 20 * 90 * 0.73 (CAD -> USD) = 1800 + 1314 = 3114.00 USD
+    expect(screen.getByText('$2,668.00')).toBeInTheDocument();
+    expect(screen.getAllByText('$3,114.00').length).toBe(2);
+
+    // Verify Portfolio value card uses performance summary current market value and contains the snapshot date
+    const portfolioCardHeader = screen.getByText(/Portfolio value \(as of 2026-06-13\)/i);
+    expect(portfolioCardHeader).toBeInTheDocument();
+
+    const portfolioCardValue = screen.getByTestId('investing-portfolio-value');
+    expect(portfolioCardValue).toHaveTextContent('$3,114.00');
+  });
 });
+

@@ -463,14 +463,70 @@ export const InvestingPage: React.FC = () => {
     }, {});
   }, [filteredHoldings]);
   const holdingCurrencies = Object.keys(holdingsByCurrency);
-  const totalBookCost = holdingCurrencies.length === 1 ? holdingsByCurrency[holdingCurrencies[0]] : null;
+
+  const totalBookCost = useMemo(() => {
+    if (holdingCurrencies.length === 0) return null;
+    if (holdingCurrencies.length === 1) {
+      return {
+        amount: holdingsByCurrency[holdingCurrencies[0]],
+        currency: holdingCurrencies[0],
+      };
+    }
+    const reportingCurrency = summary.data?.reporting_currency;
+    if (!reportingCurrency) return null;
+    const fxRates = summary.data?.fx_rates_used ?? {};
+    let total = 0;
+    for (const h of filteredHoldings) {
+      const c = (h.currency ?? 'USD').toUpperCase();
+      const value = toNumber(h.quantity) * toNumber(h.avg_cost);
+      if (c === reportingCurrency.toUpperCase()) {
+        total += value;
+      } else {
+        const rate = fxRates[c];
+        if (rate == null) return null; // Missing FX rate, cannot convert
+        total += value * toNumber(rate);
+      }
+    }
+    return {
+      amount: total,
+      currency: reportingCurrency,
+    };
+  }, [filteredHoldings, holdingCurrencies, holdingsByCurrency, summary.data]);
+
   const totalCurrentValue = useMemo(() => {
-    if (holdingCurrencies.length !== 1) return null;
-    return filteredHoldings.reduce((acc, item) => {
-      const price = toNumber(item.current_price ?? item.avg_cost);
-      return acc + toNumber(item.quantity) * price;
-    }, 0);
-  }, [filteredHoldings, holdingCurrencies]);
+    if (holdingCurrencies.length === 0) return null;
+    if (holdingCurrencies.length === 1) {
+      const total = filteredHoldings.reduce((acc, item) => {
+        const price = toNumber(item.current_price ?? item.avg_cost);
+        return acc + toNumber(item.quantity) * price;
+      }, 0);
+      return {
+        amount: total,
+        currency: holdingCurrencies[0],
+      };
+    }
+    const reportingCurrency = summary.data?.reporting_currency;
+    if (!reportingCurrency) return null;
+    const fxRates = summary.data?.fx_rates_used ?? {};
+    let total = 0;
+    for (const h of filteredHoldings) {
+      const c = (h.currency ?? 'USD').toUpperCase();
+      const price = toNumber(h.current_price ?? h.avg_cost);
+      const value = toNumber(h.quantity) * price;
+      if (c === reportingCurrency.toUpperCase()) {
+        total += value;
+      } else {
+        const rate = fxRates[c];
+        if (rate == null) return null; // Missing FX rate, cannot convert
+        total += value * toNumber(rate);
+      }
+    }
+    return {
+      amount: total,
+      currency: reportingCurrency,
+    };
+  }, [filteredHoldings, holdingCurrencies, summary.data]);
+
 
   const onCreateHolding = (e: React.FormEvent) => {
     e.preventDefault();
@@ -565,8 +621,12 @@ export const InvestingPage: React.FC = () => {
 
       <div className="mb-6 grid gap-6 md:grid-cols-3">
         <SummaryCard
-          label="Portfolio value"
-          value={summary.data?.portfolio_value != null ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
+          label={`Portfolio value${performanceSummary.data?.snapshot_date ? ` (as of ${performanceSummary.data.snapshot_date})` : ''}`}
+          value={performanceSummary.data?.total_value != null
+            ? formatCurrency(performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference)
+            : (summary.data?.portfolio_value != null
+              ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference)
+              : 'N/A')}
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-portfolio-value"
         />
@@ -805,13 +865,13 @@ export const InvestingPage: React.FC = () => {
                         <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={6}>Total Cost & Value</td>
                         <td className="px-4 py-3 font-semibold text-white">
                           {totalBookCost != null
-                            ? formatCurrency(totalBookCost, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
+                            ? formatCurrency(totalBookCost.amount, totalBookCost.currency, currencyDisplayPreference)
                             : 'N/A (multi-currency)'}
                         </td>
                         <td />
                         <td className="px-4 py-3 font-semibold text-white">
                           {totalCurrentValue != null
-                            ? formatCurrency(totalCurrentValue, holdingCurrencies[0] ?? 'USD', currencyDisplayPreference)
+                            ? formatCurrency(totalCurrentValue.amount, totalCurrentValue.currency, currencyDisplayPreference)
                             : 'N/A (multi-currency)'}
                         </td>
                         <td colSpan={2} />
