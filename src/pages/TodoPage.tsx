@@ -492,8 +492,9 @@ export const TodoPage: React.FC = () => {
                         </button>
                         <button
                           type="button"
+                          disabled={deleteMutation.isPending}
                           onClick={() => deleteMutation.mutate(todo.public_id)}
-                          className="rounded p-2 text-slate-500 hover:bg-red-500/10 hover:text-red-500"
+                          className="rounded p-2 text-slate-500 hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
                           title="Delete task"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -571,8 +572,9 @@ export const TodoPage: React.FC = () => {
                         </button>
                         <button
                           type="button"
+                          disabled={deleteRuleMutation.isPending}
                           onClick={() => deleteRuleMutation.mutate(rule.public_id)}
-                          className="rounded p-2 text-slate-500 hover:bg-red-500/10 hover:text-red-500"
+                          className="rounded p-2 text-slate-500 hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
                           title="Delete recurring todo"
                         >
                           <Trash2 className="h-4 w-4" />

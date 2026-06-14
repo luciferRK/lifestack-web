@@ -801,7 +801,8 @@ export const InvestingPage: React.FC = () => {
                                   <button
                                     data-testid={`investing-save-price-${h.public_id}`}
                                     onClick={() => handleSavePrice(h)}
-                                    className="text-green-400 hover:text-green-300"
+                                    disabled={submitPricesMutation.isPending}
+                                    className="text-green-400 hover:text-green-300 disabled:opacity-50"
                                   >
                                     <Check className="h-4 w-4" />
                                   </button>
