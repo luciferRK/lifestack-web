@@ -10,6 +10,7 @@ const MODULE_OPTIONS: Array<{ value: ImportModule; label: string }> = [
   { value: 'spending-transactions', label: 'Spending Transactions' },
   { value: 'spending-budgets', label: 'Spending Budgets' },
   { value: 'investing-holdings', label: 'Investing Holdings' },
+  { value: 'investing-constituents', label: 'Investing Constituents' },
 ];
 
 const lifecycleCopy = (status: string) => {
@@ -141,7 +142,7 @@ export const ImportsPage: React.FC = () => {
     <PageShell>
       <PageHero
         title="Bulk Imports"
-        subtitle="Upload CSV templates for transactions, budgets, and holdings."
+        subtitle="Upload CSV templates for transactions, budgets, holdings, and constituents."
         actions={(
           <button
             type="button"
