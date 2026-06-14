@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TodoPage } from './pages/TodoPage';
 import { SpendingPage } from './pages/SpendingPage';
@@ -553,6 +555,16 @@ function App() {
         <Route
           path="/register"
           element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />}
+        />
+
+        <Route
+          path="/forgot-password"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPasswordPage />}
+        />
+
+        <Route
+          path="/reset-password"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <ResetPasswordPage />}
         />
 
         <Route

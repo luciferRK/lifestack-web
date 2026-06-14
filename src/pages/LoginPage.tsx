@@ -87,6 +87,11 @@ export const LoginPage: React.FC = () => {
                 className="w-full rounded-lg bg-slate-700/50 p-3.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border border-slate-600 focus:border-transparent focus:ring-cyan-500 transition-all"
               />
             </div>
+            <div className="flex justify-end text-xs">
+              <Link to="/forgot-password" className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+                Forgot password?
+              </Link>
+            </div>
           </div>
           
           <button 
