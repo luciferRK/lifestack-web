@@ -18,10 +18,24 @@ const getPasswordStrength = (score: number) => {
   return { label: 'Weak', color: 'bg-rose-500' };
 };
 
+const getErrorDetail = (err: unknown): string => {
+  const detail = (err as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => (typeof item === 'object' && item !== null && 'msg' in item ? item.msg : null))
+      .filter((message): message is string => typeof message === 'string')
+      .join(', ');
+    return messages || 'Invalid input. Please check your password requirements.';
+  }
+
+  return 'Failed to reset password. The link may have expired or already been used.';
+};
+
 export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get('token')?.trim() || null;
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -41,6 +55,11 @@ export const ResetPasswordPage: React.FC = () => {
       return;
     }
 
+    if (password.length < 8 || passwordScore < 3) {
+      setError('Password is too weak. Please follow the strength guidelines.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -54,14 +73,8 @@ export const ResetPasswordPage: React.FC = () => {
         state: { message: 'Your password has been successfully reset. Please sign in with your new password.' },
         replace: true,
       });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      const detail = err.response?.data?.detail;
-      if (typeof detail === 'string') {
-        setError(detail);
-      } else {
-        setError('Failed to reset password. The link may have expired or already been used.');
-      }
+    } catch (err) {
+      setError(getErrorDetail(err));
     } finally {
       setLoading(false);
     }
@@ -105,6 +118,7 @@ export const ResetPasswordPage: React.FC = () => {
                   <input
                     id="reset-password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="New Password"
                     required
                     value={password}
@@ -136,6 +150,7 @@ export const ResetPasswordPage: React.FC = () => {
                   <input
                     id="confirm-password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="Confirm New Password"
                     required
                     value={confirmPassword}
