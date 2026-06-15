@@ -15,7 +15,7 @@ export const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await authService.forgotPassword(email);
+      await authService.forgotPassword(email.trim());
       setMessage('If the email is registered, a password reset link has been sent.');
       setEmail('');
     } catch {

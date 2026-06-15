@@ -2,28 +2,20 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services/auth';
 
-const getPasswordStrength = (value: string) => {
+const getPasswordScore = (value: string) => {
   let score = 0;
   if (value.length >= 8) score += 1;
   if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
   if (/\d/.test(value)) score += 1;
   if (/[^A-Za-z0-9]/.test(value)) score += 1;
+  return score;
+};
 
+const getPasswordStrength = (score: number) => {
   if (score >= 4) return { label: 'Strong', color: 'bg-emerald-500' };
   if (score >= 3) return { label: 'Good', color: 'bg-cyan-500' };
   if (score >= 2) return { label: 'Fair', color: 'bg-amber-500' };
   return { label: 'Weak', color: 'bg-rose-500' };
-};
-
-const getPasswordStrengthWidth = (value: string) => {
-  if (!value) return 0;
-  let score = 0;
-  if (value.length >= 8) score += 1;
-  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
-  if (/\d/.test(value)) score += 1;
-  if (/[^A-Za-z0-9]/.test(value)) score += 1;
-
-  return Math.max(25, score * 25);
 };
 
 export const ResetPasswordPage: React.FC = () => {
@@ -36,8 +28,9 @@ export const ResetPasswordPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const passwordStrength = getPasswordStrength(password);
-  const passwordStrengthWidth = getPasswordStrengthWidth(password);
+  const passwordScore = getPasswordScore(password);
+  const passwordStrength = getPasswordStrength(passwordScore);
+  const passwordStrengthWidth = password ? Math.max(25, passwordScore * 25) : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
