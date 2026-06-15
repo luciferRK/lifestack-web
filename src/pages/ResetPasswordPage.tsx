@@ -2,42 +2,49 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services/auth';
 
-const getPasswordStrength = (value: string) => {
+const getPasswordScore = (value: string) => {
   let score = 0;
   if (value.length >= 8) score += 1;
   if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
   if (/\d/.test(value)) score += 1;
   if (/[^A-Za-z0-9]/.test(value)) score += 1;
+  return score;
+};
 
+const getPasswordStrength = (score: number) => {
   if (score >= 4) return { label: 'Strong', color: 'bg-emerald-500' };
   if (score >= 3) return { label: 'Good', color: 'bg-cyan-500' };
   if (score >= 2) return { label: 'Fair', color: 'bg-amber-500' };
   return { label: 'Weak', color: 'bg-rose-500' };
 };
 
-const getPasswordStrengthWidth = (value: string) => {
-  if (!value) return 0;
-  let score = 0;
-  if (value.length >= 8) score += 1;
-  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
-  if (/\d/.test(value)) score += 1;
-  if (/[^A-Za-z0-9]/.test(value)) score += 1;
+const getErrorDetail = (err: unknown): string => {
+  const detail = (err as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => (typeof item === 'object' && item !== null && 'msg' in item ? item.msg : null))
+      .filter((message): message is string => typeof message === 'string')
+      .join(', ');
+    return messages || 'Invalid input. Please check your password requirements.';
+  }
 
-  return Math.max(25, score * 25);
+  return 'Failed to reset password. The link may have expired or already been used.';
 };
 
 export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get('token')?.trim() || null;
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const passwordStrength = getPasswordStrength(password);
-  const passwordStrengthWidth = getPasswordStrengthWidth(password);
+  const passwordScore = getPasswordScore(password);
+  const passwordStrength = getPasswordStrength(passwordScore);
+  const passwordStrengthWidth = password ? Math.max(25, passwordScore * 25) : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +52,11 @@ export const ResetPasswordPage: React.FC = () => {
 
     if (!token) {
       setError('Invalid or missing password reset token.');
+      return;
+    }
+
+    if (password.length < 8 || passwordScore < 3) {
+      setError('Password is too weak. Please follow the strength guidelines.');
       return;
     }
 
@@ -61,14 +73,8 @@ export const ResetPasswordPage: React.FC = () => {
         state: { message: 'Your password has been successfully reset. Please sign in with your new password.' },
         replace: true,
       });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      const detail = err.response?.data?.detail;
-      if (typeof detail === 'string') {
-        setError(detail);
-      } else {
-        setError('Failed to reset password. The link may have expired or already been used.');
-      }
+    } catch (err) {
+      setError(getErrorDetail(err));
     } finally {
       setLoading(false);
     }
@@ -112,6 +118,7 @@ export const ResetPasswordPage: React.FC = () => {
                   <input
                     id="reset-password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="New Password"
                     required
                     value={password}
@@ -143,6 +150,7 @@ export const ResetPasswordPage: React.FC = () => {
                   <input
                     id="confirm-password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="Confirm New Password"
                     required
                     value={confirmPassword}

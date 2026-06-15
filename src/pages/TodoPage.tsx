@@ -295,6 +295,7 @@ export const TodoPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              data-testid="todo-add-task"
               onClick={openNewTaskModal}
               className="inline-flex h-12 items-center gap-2 rounded-xl bg-cyan-600 px-5 text-sm font-semibold text-white hover:bg-cyan-500"
             >
@@ -646,7 +647,10 @@ export const TodoPage: React.FC = () => {
                   type="number"
                   min={1}
                   value={ruleInterval}
-                  onChange={(e) => setRuleInterval(Number(e.target.value) || 1)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setRuleInterval(Number.isNaN(val) ? 1 : val);
+                  }}
                   className="h-10 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
               </div>

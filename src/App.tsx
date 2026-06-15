@@ -277,14 +277,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem('lifestack:sidebar-collapsed');
-    return saved === 'true';
+    try {
+      const saved = localStorage.getItem('lifestack:sidebar-collapsed');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
   });
 
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem('lifestack:sidebar-collapsed', String(next));
+      try {
+        localStorage.setItem('lifestack:sidebar-collapsed', String(next));
+      } catch {
+        // Ignore restricted storage environments.
+      }
       return next;
     });
   };

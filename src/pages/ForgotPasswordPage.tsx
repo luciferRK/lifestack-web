@@ -54,6 +54,7 @@ export const ForgotPasswordPage: React.FC = () => {
               <input
                 id="forgot-email"
                 type="email"
+                autoComplete="email"
                 placeholder="Email address"
                 required
                 value={email}

@@ -28,6 +28,9 @@ const formatDateInput = (d: Date): string => {
   return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
 };
 
+const formatLocalDateInput = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 const formatDateTimeLocalInput = (d: Date): string => {
   const tzOffsetMs = d.getTimezoneOffset() * 60_000;
   return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 16);
@@ -224,7 +227,7 @@ export const InvestingPage: React.FC = () => {
       });
       if (payload.instrument_type !== (payload.holding.instrument_type ?? 'stock')) {
         const instrument = instruments.find(
-          (item) => item.symbol.toUpperCase() === payload.holding.symbol.toUpperCase(),
+          (item) => item.symbol?.toUpperCase() === payload.holding.symbol?.toUpperCase(),
         );
         if (instrument) {
           await investingService.updateInstrument(instrument.public_id, {
@@ -316,7 +319,7 @@ export const InvestingPage: React.FC = () => {
   const handleSavePrice = (h: Holding) => {
     const priceNum = Number(editPriceValue);
     if (!Number.isFinite(priceNum) || priceNum <= 0) return;
-    const todayStr = formatDateInput(new Date());
+    const todayStr = formatLocalDateInput(new Date());
     submitPricesMutation.mutate({
       price_date: todayStr,
       prices: [
