@@ -52,10 +52,12 @@ describe('investingService', () => {
     vi.spyOn(api, 'post')
       .mockResolvedValueOnce({ data: { public_id: 'i1' } } as never)
       .mockResolvedValueOnce({ data: [] } as never);
+    vi.spyOn(api, 'patch').mockResolvedValueOnce({ data: { public_id: 'i1' } } as never);
 
     await investingService.getSummary();
     await investingService.getInstruments();
     await investingService.createInstrument({} as never);
+    await investingService.updateInstrument('i1', { instrument_type: 'etf' });
     await investingService.getInstrumentConstituents('i1', '2026-05-24');
     await investingService.upsertInstrumentConstituents('i1', {} as never);
     await investingService.getExposureAnalytics('2026-05-24');
@@ -64,6 +66,7 @@ describe('investingService', () => {
     expect(api.get).toHaveBeenNthCalledWith(1, '/investing/summary');
     expect(api.get).toHaveBeenNthCalledWith(2, '/investing/instruments');
     expect(api.post).toHaveBeenNthCalledWith(1, '/investing/instruments', {});
+    expect(api.patch).toHaveBeenCalledWith('/investing/instruments/i1', { instrument_type: 'etf' });
     expect(api.get).toHaveBeenNthCalledWith(3, '/investing/instruments/i1/constituents', {
       params: { as_of: '2026-05-24' },
     });

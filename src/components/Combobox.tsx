@@ -50,7 +50,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            'h-12 w-full justify-between rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 font-normal text-slate-100 hover:bg-slate-900',
+            'h-10 w-full justify-between rounded-lg border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm font-normal text-slate-100 hover:bg-slate-900',
             className,
           )}
         >

@@ -28,6 +28,10 @@ describe('ImportsPage', () => {
   it('renders the page and forms', async () => {
     renderWithQuery(<ImportsPage />);
     expect(await screen.findByText('Bulk Imports')).toBeInTheDocument();
+
+    // Open Modal
+    fireEvent.click(screen.getByText('New Import'));
+
     expect(screen.getByTestId('imports-module-select')).toBeInTheDocument();
     expect(screen.getByTestId('imports-file-input')).toBeInTheDocument();
     expect(screen.getByTestId('imports-download-template')).toBeDisabled();
@@ -36,6 +40,9 @@ describe('ImportsPage', () => {
 
   it('shows error for file size > 10MB', async () => {
     renderWithQuery(<ImportsPage />);
+
+    // Open Modal
+    fireEvent.click(screen.getByText('New Import'));
 
     // Select module
     const select = screen.getByTestId('imports-module-select');
@@ -58,6 +65,9 @@ describe('ImportsPage', () => {
 
   it('shows error for non-CSV file', async () => {
     renderWithQuery(<ImportsPage />);
+
+    // Open Modal
+    fireEvent.click(screen.getByText('New Import'));
 
     // Select module
     const select = screen.getByTestId('imports-module-select');
@@ -102,6 +112,9 @@ describe('ImportsPage', () => {
     );
 
     renderWithQuery(<ImportsPage />);
+
+    // Open Modal
+    fireEvent.click(screen.getByText('New Import'));
 
     // Select module
     const select = screen.getByTestId('imports-module-select');

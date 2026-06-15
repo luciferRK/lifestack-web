@@ -54,7 +54,7 @@ export const NotificationsPage: React.FC = () => {
         )}
       />
 
-      <section className="mb-6 rounded-xl border border-slate-800 bg-slate-800/30 p-4">
+      <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">Preferences</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {(preferences ?? []).map((pref) => (
@@ -78,7 +78,7 @@ export const NotificationsPage: React.FC = () => {
         <>
           <div className="space-y-3">
             {data.items.map((n) => (
-              <article key={n.public_id} className={`rounded-xl border p-4 ${n.is_read ? 'border-slate-800 bg-slate-900/40' : 'border-blue-700/50 bg-blue-900/10'}`}>
+              <article key={n.public_id} className={`rounded-xl border p-4 ${n.is_read ? 'border-slate-800 bg-slate-900/40' : 'border-cyan-800 bg-cyan-950/40'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm text-slate-400">{n.category} · {n.severity}</p>

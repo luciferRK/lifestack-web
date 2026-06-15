@@ -438,8 +438,8 @@ export const MasterConfigPage: React.FC = () => {
           </div>
         ) : null}
 
-        <div className="mt-6 overflow-hidden rounded-xl border border-slate-800">
-          <table className="w-full text-sm text-slate-300">
+        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800">
+          <table className="w-full text-sm text-slate-300 min-w-[800px]">
             <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Name</th>
@@ -578,8 +578,8 @@ export const MasterConfigPage: React.FC = () => {
           </div>
         ) : null}
 
-        <div className="mt-6 overflow-hidden rounded-xl border border-slate-800">
-          <table className="w-full text-sm text-slate-300">
+        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800">
+          <table className="w-full text-sm text-slate-300 min-w-[600px]">
             <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Name</th>

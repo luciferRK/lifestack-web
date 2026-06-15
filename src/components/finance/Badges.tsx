@@ -21,7 +21,7 @@ const Badge: React.FC<BadgeProps> = ({ children, className, title }) => {
 export const CurrencyBadge: React.FC<{ code: string; title?: string }> = ({ code, title }) => (
   <Badge
     title={title}
-    className="border-blue-500/40 bg-blue-500/10 font-medium text-blue-300"
+    className="border-cyan-500/40 bg-cyan-500/10 font-medium text-cyan-300"
   >
     {code}
   </Badge>

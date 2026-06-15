@@ -1,11 +1,16 @@
 export interface Holding {
   public_id: string;
   symbol: string;
+  instrument_type?: InstrumentType;
   account_id: string;
   account_name: string;
   quantity: number | string;
   avg_cost: number | string;
   currency: string;
+  current_price?: number | string;
+  current_value?: number | string;
+  gain_loss?: number | string;
+  gain_loss_pct?: number | string;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +33,11 @@ export interface InstrumentCreate {
   name: string;
   instrument_type: InstrumentType;
   ticker?: string;
+}
+
+export interface InstrumentUpdate {
+  name?: string;
+  instrument_type?: InstrumentType;
 }
 
 export interface InstrumentConstituentInput {
@@ -58,6 +68,7 @@ export interface HoldingCreate {
   quantity: number;
   avg_cost: number;
   currency: string;
+  instrument_type?: InstrumentType;
 }
 
 export interface HoldingUpdate {

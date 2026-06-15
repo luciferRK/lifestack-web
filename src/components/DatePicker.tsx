@@ -45,7 +45,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           variant="secondary"
           disabled={disabled}
           className={cn(
-            'h-12 w-full justify-between border border-slate-700/80 bg-slate-950/50 px-4 font-normal text-slate-100 shadow-none hover:bg-slate-900',
+            'h-10 w-full justify-between rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 text-sm font-normal text-slate-100 shadow-none hover:bg-slate-900',
             !selectedDate && 'text-slate-500',
             className,
           )}
