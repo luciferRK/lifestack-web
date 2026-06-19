@@ -203,6 +203,7 @@ export const SpendingPage: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
+  const [selectedAccountFilter, setSelectedAccountFilter] = useState('');
 
   // Tabs
   const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'recurring' | 'transfers'>('transactions');
@@ -305,9 +306,10 @@ export const SpendingPage: React.FC = () => {
   });
 
   const { data: transactionsResponse, isLoading: isTxLoading } = useQuery({
-    queryKey: ['transactions', txOffset, selectedMonth, selectedCategoryFilter],
+    queryKey: ['transactions', txOffset, selectedMonth, selectedCategoryFilter, selectedAccountFilter],
     queryFn: () => spendingService.getTransactions(limit, txOffset, {
       categoryId: selectedCategoryFilter || undefined,
+      accountId: selectedAccountFilter || undefined,
       fromDate: monthRange.fromDate,
       toDate: monthRange.toDate,
     }),
@@ -316,10 +318,12 @@ export const SpendingPage: React.FC = () => {
   const transactions = transactionsResponse?.items;
 
   const { data: summaryResponse, isLoading: isSummaryLoading } = useQuery({
-    queryKey: ['transactions-summary', selectedMonth],
+    queryKey: ['transactions-summary', selectedMonth, selectedCategoryFilter, selectedAccountFilter],
     queryFn: () => spendingService.getTransactionSummary({
       fromDate: monthRange.fromDate,
       toDate: monthRange.toDate,
+      categoryId: selectedCategoryFilter || undefined,
+      accountId: selectedAccountFilter || undefined,
     }),
     enabled: monthRange.isValid,
   });
@@ -837,6 +841,7 @@ export const SpendingPage: React.FC = () => {
         onReset={() => {
           setSelectedMonth(getCurrentMonthValue());
           setSelectedCategoryFilter('');
+          setSelectedAccountFilter('');
           setTxOffset(0);
           setBudgetOffset(0);
         }}
@@ -864,6 +869,19 @@ export const SpendingPage: React.FC = () => {
             options={categoryFilterOptions}
             placeholder="All categories"
             clearLabel="All categories"
+          />
+        </CompactFilterField>
+        <CompactFilterField label="Account">
+          <DropdownSelect
+            testId="spending-account-filter"
+            value={selectedAccountFilter}
+            onChange={(value) => {
+              setSelectedAccountFilter(value);
+              setTxOffset(0);
+            }}
+            options={accountOptions}
+            placeholder="All accounts"
+            clearLabel="All accounts"
           />
         </CompactFilterField>
       </CompactFilterBar>

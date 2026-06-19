@@ -728,6 +728,7 @@ export const InvestingPage: React.FC = () => {
               >
                 <CompactFilterField label="Account">
                   <DropdownSelect
+                    testId="investing-holdings-account-filter"
                     value={holdingsAccountFilter}
                     options={accountDropdownOptions}
                     onChange={setHoldingsAccountFilter}
@@ -914,6 +915,7 @@ export const InvestingPage: React.FC = () => {
               >
                 <CompactFilterField label="Account">
                   <DropdownSelect
+                    testId="investing-cash-account-filter"
                     value={cashAccountFilter}
                     options={accountDropdownOptions}
                     onChange={setCashAccountFilter}
