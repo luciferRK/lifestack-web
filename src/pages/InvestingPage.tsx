@@ -685,23 +685,25 @@ export const InvestingPage: React.FC = () => {
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as 'holdings' | 'cash' | 'analytics')}>
-        <TabsList className="mb-6">
-          <TabsTrigger data-testid="investing-tab-holdings" value="holdings">Holdings</TabsTrigger>
-          <TabsTrigger data-testid="investing-tab-cash" value="cash">Cash Balances</TabsTrigger>
-          <TabsTrigger data-testid="investing-tab-analytics" value="analytics">Look-through Analytics</TabsTrigger>
-        </TabsList>
+        <div className="-mx-1 mb-6 overflow-x-auto px-1 pb-1">
+          <TabsList className="min-w-max">
+            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-holdings" value="holdings">Holdings</TabsTrigger>
+            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-cash" value="cash">Cash Balances</TabsTrigger>
+            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-analytics" value="analytics">Look-through Analytics</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="holdings">
           <div className="space-y-6">
             <div className="space-y-3">
-              <div className="flex items-center justify-between mb-2">
+              <div data-testid="investing-holdings-heading" className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="font-semibold text-white text-base">Active Holdings</h3>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                   <button
                     type="button"
                     data-testid="investing-add-holding-btn"
                     onClick={() => setIsAddHoldingModalOpen(true)}
-                    className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                    className="flex w-full items-center justify-center gap-1 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 sm:w-auto"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Add Holding
@@ -711,7 +713,7 @@ export const InvestingPage: React.FC = () => {
                     type="button"
                     disabled={refreshPricesMutation.isPending}
                     onClick={() => refreshPricesMutation.mutate()}
-                    className="flex items-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-2 text-xs font-semibold text-slate-100 transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
                     {refreshPricesMutation.isPending ? 'Refreshing...' : 'Refresh Prices'}
@@ -891,13 +893,13 @@ export const InvestingPage: React.FC = () => {
 
         <TabsContent value="cash">
           <div className="space-y-6">
-            <div className="flex items-center justify-between mb-2">
+            <div data-testid="investing-cash-heading" className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="font-semibold text-white text-base">Cash Balances</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setIsAddCashModalOpen(true)}
-                  className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                  className="flex w-full items-center justify-center gap-1 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 sm:w-auto"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Add Cash Balance
@@ -969,13 +971,13 @@ export const InvestingPage: React.FC = () => {
 
         <TabsContent value="analytics">
           <div className="space-y-6">
-            <div className="flex items-center justify-between mb-2">
+            <div data-testid="investing-analytics-heading" className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="font-semibold text-white text-base">Look-through Analytics</h3>
-              <div className="flex items-center gap-2">
+              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setIsCreateInstrumentModalOpen(true)}
-                  className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                  className="flex w-full items-center justify-center gap-1 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 sm:w-auto"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Create Instrument
@@ -983,7 +985,7 @@ export const InvestingPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsSeedConstituentsModalOpen(true)}
-                  className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors"
+                  className="flex w-full items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 sm:w-auto"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Seed Constituents

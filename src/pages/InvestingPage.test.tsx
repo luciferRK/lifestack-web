@@ -96,6 +96,25 @@ describe('InvestingPage', () => {
     expect(naValues.length).toBeGreaterThan(0);
     expect(screen.getByText(/Multiple currencies detected/)).toBeInTheDocument();
     expect(screen.getByText('Not configured')).toBeInTheDocument();
+
+    const holdingsHeading = screen.getByTestId('investing-holdings-heading');
+    expect(holdingsHeading).toHaveClass('flex-col', 'sm:flex-row');
+
+    const cashTab = screen.getByTestId('investing-tab-cash');
+    cashTab.focus();
+    fireEvent.keyDown(cashTab, { key: 'Enter', code: 'Enter' });
+    expect(await screen.findByTestId('investing-cash-heading')).toHaveClass(
+      'flex-col',
+      'sm:flex-row',
+    );
+
+    const analyticsTab = screen.getByTestId('investing-tab-analytics');
+    analyticsTab.focus();
+    fireEvent.keyDown(analyticsTab, { key: 'Enter', code: 'Enter' });
+    expect(await screen.findByTestId('investing-analytics-heading')).toHaveClass(
+      'flex-col',
+      'sm:flex-row',
+    );
   });
 
   it('creates an account and submits a holding using selected account/currency', async () => {
@@ -795,4 +814,3 @@ describe('InvestingPage', () => {
     expect(portfolioCardValue).toHaveTextContent('$3,114.00');
   });
 });
-
