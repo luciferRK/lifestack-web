@@ -57,14 +57,31 @@ const priorityTone = (priority: TodoPriority | undefined): string => {
   }
 };
 
-const toDateInput = (value: string | null | undefined): string => {
+const toLocalDateInput = (value: string | null | undefined): string => {
   if (!value || Number.isNaN(Date.parse(value))) return '';
-  return value.slice(0, 10);
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
-const toIsoStartOfDay = (yyyyMmDd: string): string | null => {
+const toLocalTimeInput = (value: string | null | undefined): string => {
+  if (!value || Number.isNaN(Date.parse(value))) return '';
+  const date = new Date(value);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
+const toIsoDueDate = (yyyyMmDd: string, hhMm: string): string | null => {
   if (!yyyyMmDd) return null;
-  return `${yyyyMmDd}T00:00:00Z`;
+  const localDateTime = new Date(`${yyyyMmDd}T${hhMm || '00:00'}:00`);
+  if (Number.isNaN(localDateTime.getTime())) return null;
+  return localDateTime.toISOString();
+};
+
+const formatDueDateTime = (value: string | null | undefined): string | null => {
+  if (!value || Number.isNaN(Date.parse(value))) return null;
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 };
 
 const formatUtcDate = (value: string | null | undefined): string | null => {
@@ -78,6 +95,7 @@ export const TodoPage: React.FC = () => {
     title: '',
     description: '',
     due_date: '',
+    due_time: '',
     priority: 'low' as TodoPriority,
   });
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
@@ -172,6 +190,7 @@ export const TodoPage: React.FC = () => {
       title: '',
       description: '',
       due_date: '',
+      due_time: '',
       priority: 'low',
     });
     setEditingTodo(null);
@@ -183,6 +202,7 @@ export const TodoPage: React.FC = () => {
       title: '',
       description: '',
       due_date: '',
+      due_time: '',
       priority: 'low',
     });
     setEditingTodo(null);
@@ -193,7 +213,8 @@ export const TodoPage: React.FC = () => {
     setTaskForm({
       title: todo.title,
       description: todo.description ?? '',
-      due_date: toDateInput(todo.due_date),
+      due_date: toLocalDateInput(todo.due_date),
+      due_time: toLocalTimeInput(todo.due_date),
       priority: todo.priority ?? 'low',
     });
     setEditingTodo(todo);
@@ -242,7 +263,7 @@ export const TodoPage: React.FC = () => {
     const payload: TodoCreate = {
       title: taskForm.title.trim(),
       description: taskForm.description.trim() || undefined,
-      due_date: toIsoStartOfDay(taskForm.due_date),
+      due_date: toIsoDueDate(taskForm.due_date, taskForm.due_time),
       priority: taskForm.priority,
     };
     if (editingTodo) {
@@ -359,7 +380,7 @@ export const TodoPage: React.FC = () => {
                   disabled={createMutation.isPending || updateMutation.isPending}
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-300">Priority</label>
                   <DropdownSelect
@@ -374,10 +395,22 @@ export const TodoPage: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-300">Due date (optional)</label>
                   <DatePicker
+                    testId="todo-new-due-date"
                     value={taskForm.due_date}
                     onChange={(value) => setTaskForm((s) => ({ ...s, due_date: value }))}
                     placeholder="Select due date"
                     disabled={createMutation.isPending || updateMutation.isPending}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-300">Due time (optional)</label>
+                  <input
+                    data-testid="todo-new-due-time"
+                    type="time"
+                    value={taskForm.due_time}
+                    onChange={(e) => setTaskForm((s) => ({ ...s, due_time: e.target.value }))}
+                    disabled={!taskForm.due_date || createMutation.isPending || updateMutation.isPending}
+                    className="h-10 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -469,9 +502,9 @@ export const TodoPage: React.FC = () => {
                             <span className={`inline-flex rounded border px-2 py-0.5 text-xs ${priorityTone(todo.priority)}`}>
                               {priorityLabel(todo.priority)}
                             </span>
-                            {formatUtcDate(todo.due_date) ? (
+                            {formatDueDateTime(todo.due_date) ? (
                               <span className="text-xs text-slate-400">
-                                Due: {formatUtcDate(todo.due_date)}
+                                Due: {formatDueDateTime(todo.due_date)}
                               </span>
                             ) : null}
                           </div>
