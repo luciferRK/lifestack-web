@@ -749,7 +749,7 @@ export const InvestingPage: React.FC = () => {
                     className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-2 text-xs font-semibold text-slate-100 transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
-                    {refreshPricesMutation.isPending ? 'Refreshing...' : 'Refresh Prices'}
+                    {refreshPricesMutation.isPending ? 'Syncing close...' : 'Sync Latest Close'}
                   </button>
                 </div>
               </div>
