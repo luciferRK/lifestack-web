@@ -84,6 +84,7 @@ export const InvestingPage: React.FC = () => {
   });
   const [selectedHolding, setSelectedHolding] = useState<Holding | null>(null);
   const [editHoldingForm, setEditHoldingForm] = useState({
+    symbol: '',
     quantity: '',
     avg_cost: '',
     currency: 'USD',
@@ -215,27 +216,19 @@ export const InvestingPage: React.FC = () => {
   const updateHoldingMutation = useMutation({
     mutationFn: async (payload: {
       holding: Holding;
+      symbol: string;
       quantity: number;
       avg_cost: number;
       currency: string;
       instrument_type: InstrumentType;
     }) => {
       const updatedHolding = await investingService.updateHolding(payload.holding.public_id, {
+        symbol: payload.symbol,
         quantity: payload.quantity,
         avg_cost: payload.avg_cost,
         currency: payload.currency,
+        instrument_type: payload.instrument_type,
       });
-      if (payload.instrument_type !== (payload.holding.instrument_type ?? 'stock')) {
-        const instrument = instruments.find(
-          (item) => item.symbol?.toUpperCase() === payload.holding.symbol?.toUpperCase(),
-        );
-        if (instrument) {
-          await investingService.updateInstrument(instrument.public_id, {
-            name: instrument.name,
-            instrument_type: payload.instrument_type,
-          });
-        }
-      }
       return updatedHolding;
     },
     onSuccess: () => {
@@ -308,6 +301,7 @@ export const InvestingPage: React.FC = () => {
   const handleStartEditHolding = (holding: Holding) => {
     setSelectedHolding(holding);
     setEditHoldingForm({
+      symbol: holding.symbol,
       quantity: toNumber(holding.quantity).toString(),
       avg_cost: toNumber(holding.avg_cost).toString(),
       currency: holding.currency || 'USD',
@@ -354,11 +348,13 @@ export const InvestingPage: React.FC = () => {
 
     const qty = Number(editHoldingForm.quantity);
     const cost = Number(editHoldingForm.avg_cost);
+    const symbol = editHoldingForm.symbol.trim().toUpperCase();
     const currency = editHoldingForm.currency.trim().toUpperCase();
-    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !currency) return;
+    if (!symbol || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !currency) return;
 
     updateHoldingMutation.mutate({
       holding: selectedHolding,
+      symbol,
       quantity: qty,
       avg_cost: cost,
       currency,
@@ -1248,6 +1244,10 @@ export const InvestingPage: React.FC = () => {
                     onChange={(e) => setHoldingForm((s) => ({ ...s, symbol: e.target.value }))}
                     required
                   />
+                  <p className="text-xs text-slate-500">
+                    Stocks/ETFs: exchange ticker, e.g. DRREDDY or PHARMABEES. Indian mutual funds:
+                    numeric AMFI scheme code, e.g. 122639—not the fund name or ISIN.
+                  </p>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-semibold text-slate-300">Asset Type</label>
@@ -1415,9 +1415,11 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Symbol</label>
                   <input
                     data-testid="investing-edit-holding-symbol"
-                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-300 focus:outline-none"
-                    value={selectedHolding.symbol}
-                    readOnly
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                    value={editHoldingForm.symbol}
+                    onChange={(event) =>
+                      setEditHoldingForm((state) => ({ ...state, symbol: event.target.value }))
+                    }
                   />
                 </div>
                 <div className="flex flex-col gap-2">
