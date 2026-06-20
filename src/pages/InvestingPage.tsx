@@ -622,13 +622,13 @@ export const InvestingPage: React.FC = () => {
         subtitle="Manage holdings and cash balances for your workspace."
       />
 
-      <div className="mb-6 grid gap-6 md:grid-cols-3">
+      <div className="mb-6 grid gap-6 md:grid-cols-2 xl:grid-cols-5">
         <SummaryCard
           label={`Portfolio value${performanceSummary.data?.snapshot_date ? ` (as of ${performanceSummary.data.snapshot_date})` : ''}`}
           value={summary.data?.valuation_status === 'multi_currency_unconverted'
             ? 'N/A'
-            : performanceSummary.data?.total_value != null
-              ? formatCurrency(performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference)
+            : performanceSummary.data
+              ? formatCurrency(performanceSummary.data.portfolio_value ?? performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference)
               : (summary.data?.portfolio_value != null
                 ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference)
                 : 'N/A')}
@@ -636,11 +636,37 @@ export const InvestingPage: React.FC = () => {
           testId="investing-portfolio-value"
         />
         <SummaryCard
-          label="Cash total"
-          value={summary.data?.cash_total != null ? formatCurrency(summary.data.cash_total, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
-          icon={<WalletCards className="h-5 w-5" />}
+          label="Invested"
+          value={performanceSummary.data
+            ? formatCurrency(performanceSummary.data.invested_value ?? performanceSummary.data.total_cost, performanceSummary.data.currency, currencyDisplayPreference)
+            : 'N/A'}
+          icon={<Landmark className="h-5 w-5" />}
+          testId="investing-invested-value"
         />
-        <SummaryCard label="Holdings" value={summary.data ? summary.data.holdings_count.toString() : '0'} icon={<Plus className="h-5 w-5" />} />
+        <SummaryCard
+          label="Total gain/loss"
+          value={performanceSummary.data
+            ? formatPerformanceMetric(performanceSummary.data.total_gain_loss, performanceSummary.data.total_gain_loss_pct, performanceSummary.data.currency, currencyDisplayPreference)
+            : 'N/A'}
+          icon={<Landmark className="h-5 w-5" />}
+          testId="investing-total-gain-loss"
+        />
+        <SummaryCard
+          label="Daily change"
+          value={performanceSummary.data?.daily_change != null
+            ? formatPerformanceMetric(performanceSummary.data.daily_change, performanceSummary.data.daily_change_pct, performanceSummary.data.currency, currencyDisplayPreference)
+            : 'N/A'}
+          icon={<Landmark className="h-5 w-5" />}
+          testId="investing-daily-change"
+        />
+        <SummaryCard
+          label="Cash total"
+          value={performanceSummary.data?.cash_total != null
+            ? formatCurrency(performanceSummary.data.cash_total, performanceSummary.data.currency, currencyDisplayPreference)
+            : 'N/A'}
+          icon={<WalletCards className="h-5 w-5" />}
+          testId="investing-cash-total"
+        />
       </div>
 
       <div className="mb-6 rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3 text-sm text-slate-300">
@@ -662,6 +688,11 @@ export const InvestingPage: React.FC = () => {
         <p className="mt-1">
           <span className="font-semibold text-slate-100">Valuation status:</span>{' '}
           {statusLabel(summary.data?.valuation_status)}
+        </p>
+        <p className="mt-1 text-xs text-slate-400">
+          {performanceSummary.data?.snapshot_date
+            ? `Valuation as of ${performanceSummary.data.snapshot_date} · ${performanceSummary.data.valuation_status}`
+            : 'Valuation date unavailable'}
         </p>
         {summary.data?.valuation_status === 'converted_available' && summary.data?.fx_rates_used && Object.keys(summary.data.fx_rates_used).length > 0 ? (
           <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="investing-fx-rates-used">
@@ -1767,3 +1798,17 @@ const SummaryCard = ({ label, value, icon, testId }: { label: string; value: str
     <p data-testid={testId} className="mt-2 text-2xl font-bold text-white">{value}</p>
   </div>
 );
+
+const formatPerformanceMetric = (
+  amount: number | string,
+  percentage: number | string | null,
+  currency: string,
+  preference: 'symbol' | 'code',
+) => {
+  const numericAmount = toNumber(amount);
+  const sign = numericAmount > 0 ? '+' : '';
+  const percentageLabel = percentage == null
+    ? ''
+    : ` (${toNumber(percentage) > 0 ? '+' : ''}${toNumber(percentage).toFixed(2)}%)`;
+  return `${sign}${formatCurrency(numericAmount, currency, preference)}${percentageLabel}`;
+};

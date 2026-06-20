@@ -31,8 +31,16 @@ describe('DashboardPage', () => {
           },
           investing: {
             portfolio_value: '1680.00',
-            daily_change: null,
+            invested_value: '1500.00',
+            total_gain_loss: '180.00',
+            total_gain_loss_pct: '12.00',
+            daily_change: '-20.00',
+            daily_change_pct: '-1.18',
+            snapshot_date: '2026-05-24',
+            previous_snapshot_date: '2026-05-23',
+            valuation_status: 'current',
             holdings_count: 1,
+            cash_total: '250.00',
           },
           system: { generated_at: '2026-05-24T10:00:00Z' },
         }),
@@ -43,6 +51,10 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText('Dashboard')).toBeInTheDocument();
     expect(await screen.findByText('$84.50')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-portfolio-value')).toHaveTextContent('$1,680.00');
+    expect(screen.getByText('Invested $1,500.00 · Gain +$180.00 (+12.00%)')).toBeInTheDocument();
+    expect(screen.getByText('-$20.00 (-1.18%)')).toBeInTheDocument();
+    expect(screen.getByText('2026-05-24 · current')).toBeInTheDocument();
   });
 
   it('shows N/A budget remaining when month budget is null', async () => {

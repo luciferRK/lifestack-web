@@ -153,9 +153,17 @@ export interface OverlapAnalytics {
 export interface PerformanceSummary {
   total_value: number | string;
   total_cost: number | string;
+  portfolio_value: number | string;
+  invested_value: number | string;
+  cash_total: number | string;
   total_gain_loss: number | string;
   total_gain_loss_pct: number | string | null;
+  daily_change: number | string | null;
+  daily_change_pct: number | string | null;
   snapshot_date: string;
+  previous_snapshot_date: string | null;
   currency: string;
+  valuation_status: 'current' | 'estimated' | 'empty';
+  holdings_count: number;
   fx_rates_used?: Record<string, number | string>;
 }
