@@ -663,7 +663,10 @@ describe('InvestingPage', () => {
     await screen.findByTestId('investing-holding-row-holding-vti-id');
     fireEvent.click(screen.getByTestId('investing-edit-holding-holding-vti-id'));
 
-    fireEvent.change(await screen.findByTestId('investing-edit-holding-quantity'), {
+    fireEvent.change(await screen.findByTestId('investing-edit-holding-symbol'), {
+      target: { value: 'PHARMABEES' },
+    });
+    fireEvent.change(screen.getByTestId('investing-edit-holding-quantity'), {
       target: { value: '12.5' },
     });
     fireEvent.change(screen.getByTestId('investing-edit-holding-avg-cost'), {
@@ -677,17 +680,15 @@ describe('InvestingPage', () => {
 
     await waitFor(() => {
       expect(holdingPatchPayload).not.toBeNull();
-      expect(instrumentPatchPayload).not.toBeNull();
     });
     expect(holdingPatchPayload).toEqual({
+      symbol: 'PHARMABEES',
       quantity: 12.5,
       avg_cost: 155.75,
       currency: 'USD',
-    });
-    expect(instrumentPatchPayload).toEqual({
-      name: 'Vanguard Total Market ETF',
       instrument_type: 'etf',
     });
+    expect(instrumentPatchPayload).toBeNull();
   });
 
   it('calculates converted table totals and shows portfolio value with date under multi-currency converted summary', async () => {

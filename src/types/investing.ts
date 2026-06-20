@@ -72,9 +72,11 @@ export interface HoldingCreate {
 }
 
 export interface HoldingUpdate {
+  symbol?: string;
   quantity?: number;
   avg_cost?: number;
   currency?: string;
+  instrument_type?: InstrumentType;
 }
 
 export interface CashBalance {

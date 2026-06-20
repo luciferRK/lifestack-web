@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Check, Edit2, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
+import { BarChart3, Check, Edit2, Info, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { investingService } from '../services/investing';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
@@ -84,6 +84,7 @@ export const InvestingPage: React.FC = () => {
   });
   const [selectedHolding, setSelectedHolding] = useState<Holding | null>(null);
   const [editHoldingForm, setEditHoldingForm] = useState({
+    symbol: '',
     quantity: '',
     avg_cost: '',
     currency: 'USD',
@@ -215,27 +216,19 @@ export const InvestingPage: React.FC = () => {
   const updateHoldingMutation = useMutation({
     mutationFn: async (payload: {
       holding: Holding;
+      symbol: string;
       quantity: number;
       avg_cost: number;
       currency: string;
       instrument_type: InstrumentType;
     }) => {
       const updatedHolding = await investingService.updateHolding(payload.holding.public_id, {
+        symbol: payload.symbol,
         quantity: payload.quantity,
         avg_cost: payload.avg_cost,
         currency: payload.currency,
+        instrument_type: payload.instrument_type,
       });
-      if (payload.instrument_type !== (payload.holding.instrument_type ?? 'stock')) {
-        const instrument = instruments.find(
-          (item) => item.symbol?.toUpperCase() === payload.holding.symbol?.toUpperCase(),
-        );
-        if (instrument) {
-          await investingService.updateInstrument(instrument.public_id, {
-            name: instrument.name,
-            instrument_type: payload.instrument_type,
-          });
-        }
-      }
       return updatedHolding;
     },
     onSuccess: () => {
@@ -308,6 +301,7 @@ export const InvestingPage: React.FC = () => {
   const handleStartEditHolding = (holding: Holding) => {
     setSelectedHolding(holding);
     setEditHoldingForm({
+      symbol: holding.symbol || '',
       quantity: toNumber(holding.quantity).toString(),
       avg_cost: toNumber(holding.avg_cost).toString(),
       currency: holding.currency || 'USD',
@@ -354,11 +348,13 @@ export const InvestingPage: React.FC = () => {
 
     const qty = Number(editHoldingForm.quantity);
     const cost = Number(editHoldingForm.avg_cost);
+    const symbol = editHoldingForm.symbol.trim().toUpperCase();
     const currency = editHoldingForm.currency.trim().toUpperCase();
-    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !currency) return;
+    if (!symbol || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !currency) return;
 
     updateHoldingMutation.mutate({
       holding: selectedHolding,
+      symbol,
       quantity: qty,
       avg_cost: cost,
       currency,
@@ -1239,7 +1235,26 @@ export const InvestingPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Symbol</label>
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Symbol</label>
+                    <span className="group relative inline-flex">
+                      <button
+                        type="button"
+                        aria-label="Symbol input help"
+                        className="rounded-full text-slate-500 transition-colors hover:text-cyan-300 focus:text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      >
+                        <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                      <span
+                        role="tooltip"
+                        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-72 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal leading-relaxed text-slate-300 shadow-xl group-hover:block group-focus-within:block"
+                      >
+                        Stocks/ETFs: use the exchange ticker, such as DRREDDY or PHARMABEES.
+                        Indian mutual funds: use the numeric AMFI scheme code, such as 122639—not
+                        the fund name or ISIN.
+                      </span>
+                    </span>
+                  </div>
                   <input
                     data-testid="investing-holding-symbol"
                     className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
@@ -1412,12 +1427,34 @@ export const InvestingPage: React.FC = () => {
             >
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Symbol</label>
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Symbol</label>
+                    <span className="group relative inline-flex">
+                      <button
+                        type="button"
+                        aria-label="Symbol input help"
+                        className="rounded-full text-slate-500 transition-colors hover:text-cyan-300 focus:text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      >
+                        <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                      <span
+                        role="tooltip"
+                        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-72 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal leading-relaxed text-slate-300 shadow-xl group-hover:block group-focus-within:block"
+                      >
+                        Stocks/ETFs: use the exchange ticker, such as DRREDDY or PHARMABEES.
+                        Indian mutual funds: use the numeric AMFI scheme code, such as 122639—not
+                        the fund name or ISIN.
+                      </span>
+                    </span>
+                  </div>
                   <input
                     data-testid="investing-edit-holding-symbol"
-                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-300 focus:outline-none"
-                    value={selectedHolding.symbol}
-                    readOnly
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                    value={editHoldingForm.symbol}
+                    onChange={(event) =>
+                      setEditHoldingForm((state) => ({ ...state, symbol: event.target.value }))
+                    }
+                    required
                   />
                 </div>
                 <div className="flex flex-col gap-2">
