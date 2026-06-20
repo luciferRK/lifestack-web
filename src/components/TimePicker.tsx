@@ -21,7 +21,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     <input
       data-testid={testId}
       type="time"
-      value={value}
+      value={value ?? ''}
       aria-label={placeholder}
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled}

@@ -270,12 +270,15 @@ export const VoiceAgentWidget: React.FC = () => {
     
     else if (msg.type === 'tool_response') {
       setMessages(prev => {
-        const runningIndex = [...prev].reverse().findIndex(
-          (item) => item.type === 'tool_call' && item.toolName === msg.name,
-        );
-        const matchedIndex = runningIndex < 0 ? -1 : prev.length - 1 - runningIndex;
+        let matchedIndex = -1;
+        for (let index = prev.length - 1; index >= 0; index -= 1) {
+          if (prev[index].type === 'tool_call' && prev[index].toolName === msg.name) {
+            matchedIndex = index;
+            break;
+          }
+        }
         const next = matchedIndex < 0
-          ? [...prev]
+          ? prev
           : prev.filter((_, index) => index !== matchedIndex);
         return [...next, {
         id: Math.random().toString(),
