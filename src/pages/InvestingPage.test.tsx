@@ -96,6 +96,7 @@ describe('InvestingPage', () => {
     expect(naValues.length).toBeGreaterThan(0);
     expect(screen.getByText(/Multiple currencies detected/)).toBeInTheDocument();
     expect(screen.getByText('Not configured')).toBeInTheDocument();
+    expect(screen.getByTestId('investing-portfolio-value')).toHaveTextContent('N/A');
 
     const holdingsHeading = screen.getByTestId('investing-holdings-heading');
     expect(holdingsHeading).toHaveClass('flex-col', 'sm:flex-row');

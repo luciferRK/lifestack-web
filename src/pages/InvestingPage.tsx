@@ -625,11 +625,13 @@ export const InvestingPage: React.FC = () => {
       <div className="mb-6 grid gap-6 md:grid-cols-3">
         <SummaryCard
           label={`Portfolio value${performanceSummary.data?.snapshot_date ? ` (as of ${performanceSummary.data.snapshot_date})` : ''}`}
-          value={performanceSummary.data?.total_value != null
-            ? formatCurrency(performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference)
-            : (summary.data?.portfolio_value != null
-              ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference)
-              : 'N/A')}
+          value={summary.data?.valuation_status === 'multi_currency_unconverted'
+            ? 'N/A'
+            : performanceSummary.data?.total_value != null
+              ? formatCurrency(performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference)
+              : (summary.data?.portfolio_value != null
+                ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference)
+                : 'N/A')}
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-portfolio-value"
         />
