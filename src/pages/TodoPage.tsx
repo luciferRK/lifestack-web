@@ -59,25 +59,33 @@ const priorityTone = (priority: TodoPriority | undefined): string => {
 
 const toLocalDateInput = (value: string | null | undefined): string => {
   if (!value || Number.isNaN(Date.parse(value))) return '';
+  if (value.endsWith('T00:00:00Z')) return value.slice(0, 10);
   const date = new Date(value);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
 const toLocalTimeInput = (value: string | null | undefined): string => {
-  if (!value || Number.isNaN(Date.parse(value))) return '';
+  if (!value || Number.isNaN(Date.parse(value)) || value.endsWith('T00:00:00Z')) return '';
   const date = new Date(value);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
 const toIsoDueDate = (yyyyMmDd: string, hhMm: string): string | null => {
   if (!yyyyMmDd) return null;
-  const localDateTime = new Date(`${yyyyMmDd}T${hhMm || '00:00'}:00`);
+  if (!hhMm) return `${yyyyMmDd}T00:00:00Z`;
+  const localDateTime = new Date(`${yyyyMmDd}T${hhMm}:00`);
   if (Number.isNaN(localDateTime.getTime())) return null;
   return localDateTime.toISOString();
 };
 
 const formatDueDateTime = (value: string | null | undefined): string | null => {
   if (!value || Number.isNaN(Date.parse(value))) return null;
+  if (value.endsWith('T00:00:00Z')) {
+    return new Date(value).toLocaleDateString(undefined, {
+      dateStyle: 'medium',
+      timeZone: 'UTC',
+    });
+  }
   return new Date(value).toLocaleString(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',

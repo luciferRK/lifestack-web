@@ -29,5 +29,6 @@ describe('PWA assets', () => {
 
     expect(serviceWorker).toContain("url.pathname.startsWith('/v1/')")
     expect(serviceWorker).toContain("url.pathname.startsWith('/api/')")
+    expect(serviceWorker).toContain('response.ok && response.status === 200')
   })
 })
