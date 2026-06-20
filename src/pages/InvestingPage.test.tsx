@@ -96,6 +96,26 @@ describe('InvestingPage', () => {
     expect(naValues.length).toBeGreaterThan(0);
     expect(screen.getByText(/Multiple currencies detected/)).toBeInTheDocument();
     expect(screen.getByText('Not configured')).toBeInTheDocument();
+    expect(screen.getByTestId('investing-portfolio-value')).toHaveTextContent('N/A');
+
+    const holdingsHeading = screen.getByTestId('investing-holdings-heading');
+    expect(holdingsHeading).toHaveClass('flex-col', 'sm:flex-row');
+
+    const cashTab = screen.getByTestId('investing-tab-cash');
+    cashTab.focus();
+    fireEvent.keyDown(cashTab, { key: 'Enter', code: 'Enter' });
+    expect(await screen.findByTestId('investing-cash-heading')).toHaveClass(
+      'flex-col',
+      'sm:flex-row',
+    );
+
+    const analyticsTab = screen.getByTestId('investing-tab-analytics');
+    analyticsTab.focus();
+    fireEvent.keyDown(analyticsTab, { key: 'Enter', code: 'Enter' });
+    expect(await screen.findByTestId('investing-analytics-heading')).toHaveClass(
+      'flex-col',
+      'sm:flex-row',
+    );
   });
 
   it('creates an account and submits a holding using selected account/currency', async () => {
@@ -476,7 +496,7 @@ describe('InvestingPage', () => {
 
     expect(screen.getByText('$180.00')).toBeInTheDocument();
     expect(screen.getAllByText('$1,800.00').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('+$300.00 (+20.00%)')).toBeInTheDocument();
+    expect(screen.getByTestId('investing-total-gain-loss')).toHaveTextContent('+$300.00 (+20.00%)');
 
     // Test Refresh button
     const refreshBtn = screen.getByTestId('investing-refresh-prices-btn');
@@ -784,7 +804,7 @@ describe('InvestingPage', () => {
     // Verify converted table footer totals:
     // Book Cost: 10 * 150 (USD) + 20 * 80 * 0.73 (CAD -> USD) = 1500 + 1168 = 2668.00 USD
     // Current Value: 10 * 180 (USD) + 20 * 90 * 0.73 (CAD -> USD) = 1800 + 1314 = 3114.00 USD
-    expect(screen.getByText('$2,668.00')).toBeInTheDocument();
+    expect(screen.getByTestId('investing-invested-value')).toHaveTextContent('$2,668.00');
     expect(screen.getAllByText('$3,114.00').length).toBe(2);
 
     // Verify Portfolio value card uses performance summary current market value and contains the snapshot date
@@ -795,4 +815,3 @@ describe('InvestingPage', () => {
     expect(portfolioCardValue).toHaveTextContent('$3,114.00');
   });
 });
-

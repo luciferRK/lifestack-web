@@ -39,14 +39,24 @@ describe('TodoPage', () => {
               public_id: 'todo-1',
               title: 'Review budget',
               description: 'Check the month-end category totals',
-              due_date: '2026-06-20T00:00:00Z',
+              due_date: '2026-06-20T16:00:00Z',
               priority: 'medium',
               completed: false,
               created_at: '2026-06-13T00:00:00Z',
               updated_at: '2026-06-13T00:00:00Z',
             },
+            {
+              public_id: 'todo-2',
+              title: 'Date-only reminder',
+              description: null,
+              due_date: '2026-06-21T00:00:00.000Z',
+              priority: 'low',
+              completed: false,
+              created_at: '2026-06-13T00:00:00Z',
+              updated_at: '2026-06-13T00:00:00Z',
+            },
           ],
-          total: 1,
+          total: 2,
           limit: 50,
           offset: 0,
         }),
@@ -84,6 +94,8 @@ describe('TodoPage', () => {
     expect(await screen.findByText('Review budget')).toBeInTheDocument();
     expect(screen.getByText('Check the month-end category totals')).toBeInTheDocument();
     expect(screen.getByText('Medium')).toBeInTheDocument();
+    expect(screen.getByText(/Jun 21, 2026/)).toBeInTheDocument();
+    expect(screen.queryByText(/Jun 21, 2026.*12:00/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Add Task/i }));
     expect(await screen.findByTestId('todo-new-priority')).toHaveTextContent('Low');
@@ -110,6 +122,9 @@ describe('TodoPage', () => {
     fireEvent.change(screen.getByTestId('todo-new-description'), {
       target: { value: 'Updated notes' },
     });
+    fireEvent.change(screen.getByTestId('todo-new-due-time'), {
+      target: { value: '17:30' },
+    });
     await selectDropdownOption('todo-new-priority', 'High');
     fireEvent.click(screen.getByTestId('todo-new-submit'));
 
@@ -119,7 +134,7 @@ describe('TodoPage', () => {
     expect(updatePayload).toMatchObject({
       title: 'Review budget',
       description: 'Updated notes',
-      due_date: '2026-06-20T00:00:00Z',
+      due_date: new Date('2026-06-20T17:30:00').toISOString(),
       priority: 'high',
     });
   });

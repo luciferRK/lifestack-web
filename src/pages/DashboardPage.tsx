@@ -47,6 +47,15 @@ export const DashboardPage: React.FC = () => {
     data?.spending.month_budget != null
       ? toNumber(data.spending.month_budget) - toNumber(data.spending.month_spent)
       : null;
+  const portfolioGainLabel =
+    data?.investing.total_gain_loss != null
+      ? formatPerformanceMetric(
+          data.investing.total_gain_loss,
+          data.investing.total_gain_loss_pct,
+          displayCurrency,
+          currencyDisplayPreference,
+        )
+      : 'N/A';
 
   return (
     <PageShell>
@@ -103,8 +112,12 @@ export const DashboardPage: React.FC = () => {
               />
               <MetricCard
                 label="Portfolio value"
-                value={formatCurrency(data.investing.portfolio_value, displayCurrency, currencyDisplayPreference)}
-                note={`${data.investing.holdings_count} holdings`}
+                value={data.investing.portfolio_value != null
+                  ? formatCurrency(data.investing.portfolio_value, displayCurrency, currencyDisplayPreference)
+                  : 'N/A'}
+                note={data.investing.invested_value != null
+                  ? `Invested ${formatCurrency(data.investing.invested_value, displayCurrency, currencyDisplayPreference)} · Gain ${portfolioGainLabel}`
+                  : `${data.investing.holdings_count} holdings`}
                 icon={<BriefcaseBusiness className="h-5 w-5" />}
                 accent="from-amber-500/25 to-orange-500/10"
                 testId="dashboard-portfolio-value"
@@ -135,7 +148,26 @@ export const DashboardPage: React.FC = () => {
                   />
                   <StatRow
                     label="Daily portfolio change"
-                    value={data.investing.daily_change != null ? formatCurrency(data.investing.daily_change, displayCurrency, currencyDisplayPreference) : 'N/A'}
+                    value={data.investing.daily_change != null
+                      ? formatPerformanceMetric(
+                          data.investing.daily_change,
+                          data.investing.daily_change_pct,
+                          displayCurrency,
+                          currencyDisplayPreference,
+                        )
+                      : 'N/A'}
+                  />
+                  <StatRow
+                    label="Investment cash"
+                    value={data.investing.cash_total != null
+                      ? formatCurrency(data.investing.cash_total, displayCurrency, currencyDisplayPreference)
+                      : 'N/A'}
+                  />
+                  <StatRow
+                    label="Portfolio valuation"
+                    value={data.investing.snapshot_date
+                      ? `${data.investing.snapshot_date} · ${data.investing.valuation_status}`
+                      : 'N/A'}
                   />
                   <StatRow
                     label="Latest weekly summary"
@@ -182,3 +214,17 @@ const StatRow = ({ label, value }: { label: string; value: string }) => (
     <p className="mt-2 text-xl font-semibold text-white">{value}</p>
   </div>
 );
+
+const formatPerformanceMetric = (
+  amount: number | string,
+  percentage: number | string | null,
+  currency: string,
+  preference: 'symbol' | 'code',
+) => {
+  const numericAmount = toNumber(amount);
+  const sign = numericAmount > 0 ? '+' : '';
+  const percentageLabel = percentage == null
+    ? ''
+    : ` (${toNumber(percentage) > 0 ? '+' : ''}${toNumber(percentage).toFixed(2)}%)`;
+  return `${sign}${formatCurrency(numericAmount, currency, preference)}${percentageLabel}`;
+};

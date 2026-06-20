@@ -43,13 +43,14 @@ export const spendingService = {
   getTransactions: async (
     limit: number = 50,
     offset: number = 0,
-    params?: { categoryId?: string; fromDate?: string; toDate?: string }
+    params?: { categoryId?: string; accountId?: string; fromDate?: string; toDate?: string }
   ): Promise<PaginatedResponse<Transaction>> => {
     const response = await api.get('/spending/transactions', {
       params: {
         limit,
         offset,
         category_id: params?.categoryId,
+        account_id: params?.accountId,
         from_date: params?.fromDate,
         to_date: params?.toDate,
       },
@@ -58,13 +59,14 @@ export const spendingService = {
   },
 
   getTransactionSummary: async (
-    params: { fromDate: string; toDate: string; categoryId?: string }
+    params: { fromDate: string; toDate: string; categoryId?: string; accountId?: string }
   ): Promise<TransactionSummary> => {
     const response = await api.get('/spending/transactions/summary', {
       params: {
         from_date: params.fromDate,
         to_date: params.toDate,
         category_id: params.categoryId,
+        account_id: params.accountId,
       },
     });
     return response.data;

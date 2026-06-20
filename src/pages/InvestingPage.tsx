@@ -622,23 +622,51 @@ export const InvestingPage: React.FC = () => {
         subtitle="Manage holdings and cash balances for your workspace."
       />
 
-      <div className="mb-6 grid gap-6 md:grid-cols-3">
+      <div className="mb-6 grid gap-6 md:grid-cols-2 xl:grid-cols-5">
         <SummaryCard
           label={`Portfolio value${performanceSummary.data?.snapshot_date ? ` (as of ${performanceSummary.data.snapshot_date})` : ''}`}
-          value={performanceSummary.data?.total_value != null
-            ? formatCurrency(performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference)
-            : (summary.data?.portfolio_value != null
-              ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference)
-              : 'N/A')}
+          value={summary.data?.valuation_status === 'multi_currency_unconverted'
+            ? 'N/A'
+            : performanceSummary.data
+              ? formatCurrency(performanceSummary.data.portfolio_value ?? performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference)
+              : (summary.data?.portfolio_value != null
+                ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference)
+                : 'N/A')}
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-portfolio-value"
         />
         <SummaryCard
-          label="Cash total"
-          value={summary.data?.cash_total != null ? formatCurrency(summary.data.cash_total, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference) : 'N/A'}
-          icon={<WalletCards className="h-5 w-5" />}
+          label="Invested"
+          value={performanceSummary.data
+            ? formatCurrency(performanceSummary.data.invested_value ?? performanceSummary.data.total_cost, performanceSummary.data.currency, currencyDisplayPreference)
+            : 'N/A'}
+          icon={<Landmark className="h-5 w-5" />}
+          testId="investing-invested-value"
         />
-        <SummaryCard label="Holdings" value={summary.data ? summary.data.holdings_count.toString() : '0'} icon={<Plus className="h-5 w-5" />} />
+        <SummaryCard
+          label="Total gain/loss"
+          value={performanceSummary.data
+            ? formatPerformanceMetric(performanceSummary.data.total_gain_loss, performanceSummary.data.total_gain_loss_pct, performanceSummary.data.currency, currencyDisplayPreference)
+            : 'N/A'}
+          icon={<Landmark className="h-5 w-5" />}
+          testId="investing-total-gain-loss"
+        />
+        <SummaryCard
+          label="Daily change"
+          value={performanceSummary.data?.daily_change != null
+            ? formatPerformanceMetric(performanceSummary.data.daily_change, performanceSummary.data.daily_change_pct, performanceSummary.data.currency, currencyDisplayPreference)
+            : 'N/A'}
+          icon={<Landmark className="h-5 w-5" />}
+          testId="investing-daily-change"
+        />
+        <SummaryCard
+          label="Cash total"
+          value={performanceSummary.data?.cash_total != null
+            ? formatCurrency(performanceSummary.data.cash_total, performanceSummary.data.currency, currencyDisplayPreference)
+            : 'N/A'}
+          icon={<WalletCards className="h-5 w-5" />}
+          testId="investing-cash-total"
+        />
       </div>
 
       <div className="mb-6 rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3 text-sm text-slate-300">
@@ -660,6 +688,11 @@ export const InvestingPage: React.FC = () => {
         <p className="mt-1">
           <span className="font-semibold text-slate-100">Valuation status:</span>{' '}
           {statusLabel(summary.data?.valuation_status)}
+        </p>
+        <p className="mt-1 text-xs text-slate-400">
+          {performanceSummary.data?.snapshot_date
+            ? `Valuation as of ${performanceSummary.data.snapshot_date} · ${performanceSummary.data.valuation_status}`
+            : 'Valuation date unavailable'}
         </p>
         {summary.data?.valuation_status === 'converted_available' && summary.data?.fx_rates_used && Object.keys(summary.data.fx_rates_used).length > 0 ? (
           <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="investing-fx-rates-used">
@@ -685,23 +718,25 @@ export const InvestingPage: React.FC = () => {
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as 'holdings' | 'cash' | 'analytics')}>
-        <TabsList className="mb-6">
-          <TabsTrigger data-testid="investing-tab-holdings" value="holdings">Holdings</TabsTrigger>
-          <TabsTrigger data-testid="investing-tab-cash" value="cash">Cash Balances</TabsTrigger>
-          <TabsTrigger data-testid="investing-tab-analytics" value="analytics">Look-through Analytics</TabsTrigger>
-        </TabsList>
+        <div className="-mx-1 mb-6 overflow-x-auto px-1 pb-1">
+          <TabsList className="min-w-max">
+            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-holdings" value="holdings">Holdings</TabsTrigger>
+            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-cash" value="cash">Cash Balances</TabsTrigger>
+            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-analytics" value="analytics">Look-through Analytics</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="holdings">
           <div className="space-y-6">
             <div className="space-y-3">
-              <div className="flex items-center justify-between mb-2">
+              <div data-testid="investing-holdings-heading" className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="font-semibold text-white text-base">Active Holdings</h3>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                   <button
                     type="button"
                     data-testid="investing-add-holding-btn"
                     onClick={() => setIsAddHoldingModalOpen(true)}
-                    className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                    className="flex w-full items-center justify-center gap-1 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 sm:w-auto"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Add Holding
@@ -711,7 +746,7 @@ export const InvestingPage: React.FC = () => {
                     type="button"
                     disabled={refreshPricesMutation.isPending}
                     onClick={() => refreshPricesMutation.mutate()}
-                    className="flex items-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-2 text-xs font-semibold text-slate-100 transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
                     {refreshPricesMutation.isPending ? 'Refreshing...' : 'Refresh Prices'}
@@ -728,6 +763,7 @@ export const InvestingPage: React.FC = () => {
               >
                 <CompactFilterField label="Account">
                   <DropdownSelect
+                    testId="investing-holdings-account-filter"
                     value={holdingsAccountFilter}
                     options={accountDropdownOptions}
                     onChange={setHoldingsAccountFilter}
@@ -890,13 +926,13 @@ export const InvestingPage: React.FC = () => {
 
         <TabsContent value="cash">
           <div className="space-y-6">
-            <div className="flex items-center justify-between mb-2">
+            <div data-testid="investing-cash-heading" className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="font-semibold text-white text-base">Cash Balances</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setIsAddCashModalOpen(true)}
-                  className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                  className="flex w-full items-center justify-center gap-1 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 sm:w-auto"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Add Cash Balance
@@ -914,6 +950,7 @@ export const InvestingPage: React.FC = () => {
               >
                 <CompactFilterField label="Account">
                   <DropdownSelect
+                    testId="investing-cash-account-filter"
                     value={cashAccountFilter}
                     options={accountDropdownOptions}
                     onChange={setCashAccountFilter}
@@ -967,13 +1004,13 @@ export const InvestingPage: React.FC = () => {
 
         <TabsContent value="analytics">
           <div className="space-y-6">
-            <div className="flex items-center justify-between mb-2">
+            <div data-testid="investing-analytics-heading" className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="font-semibold text-white text-base">Look-through Analytics</h3>
-              <div className="flex items-center gap-2">
+              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setIsCreateInstrumentModalOpen(true)}
-                  className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition-colors"
+                  className="flex w-full items-center justify-center gap-1 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 sm:w-auto"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Create Instrument
@@ -981,7 +1018,7 @@ export const InvestingPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsSeedConstituentsModalOpen(true)}
-                  className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors"
+                  className="flex w-full items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 sm:w-auto"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Seed Constituents
@@ -1761,3 +1798,17 @@ const SummaryCard = ({ label, value, icon, testId }: { label: string; value: str
     <p data-testid={testId} className="mt-2 text-2xl font-bold text-white">{value}</p>
   </div>
 );
+
+const formatPerformanceMetric = (
+  amount: number | string,
+  percentage: number | string | null,
+  currency: string,
+  preference: 'symbol' | 'code',
+) => {
+  const numericAmount = toNumber(amount);
+  const sign = numericAmount > 0 ? '+' : '';
+  const percentageLabel = percentage == null
+    ? ''
+    : ` (${toNumber(percentage) > 0 ? '+' : ''}${toNumber(percentage).toFixed(2)}%)`;
+  return `${sign}${formatCurrency(numericAmount, currency, preference)}${percentageLabel}`;
+};
