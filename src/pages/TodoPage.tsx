@@ -57,15 +57,18 @@ const priorityTone = (priority: TodoPriority | undefined): string => {
   }
 };
 
+const isUtcMidnight = (value: string): boolean =>
+  /T00:00:00(?:\.\d+)?Z$/.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value);
+
 const toLocalDateInput = (value: string | null | undefined): string => {
   if (!value || Number.isNaN(Date.parse(value))) return '';
-  if (value.endsWith('T00:00:00Z')) return value.slice(0, 10);
+  if (isUtcMidnight(value)) return value.slice(0, 10);
   const date = new Date(value);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
 const toLocalTimeInput = (value: string | null | undefined): string => {
-  if (!value || Number.isNaN(Date.parse(value)) || value.endsWith('T00:00:00Z')) return '';
+  if (!value || Number.isNaN(Date.parse(value)) || isUtcMidnight(value)) return '';
   const date = new Date(value);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
@@ -80,7 +83,7 @@ const toIsoDueDate = (yyyyMmDd: string, hhMm: string): string | null => {
 
 const formatDueDateTime = (value: string | null | undefined): string | null => {
   if (!value || Number.isNaN(Date.parse(value))) return null;
-  if (value.endsWith('T00:00:00Z')) {
+  if (isUtcMidnight(value)) {
     return new Date(value).toLocaleDateString(undefined, {
       dateStyle: 'medium',
       timeZone: 'UTC',
@@ -405,7 +408,13 @@ export const TodoPage: React.FC = () => {
                   <DatePicker
                     testId="todo-new-due-date"
                     value={taskForm.due_date}
-                    onChange={(value) => setTaskForm((s) => ({ ...s, due_date: value }))}
+                    onChange={(value) =>
+                      setTaskForm((s) => ({
+                        ...s,
+                        due_date: value,
+                        due_time: value ? s.due_time : '',
+                      }))
+                    }
                     placeholder="Select due date"
                     disabled={createMutation.isPending || updateMutation.isPending}
                   />
