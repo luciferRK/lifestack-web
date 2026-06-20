@@ -5,6 +5,7 @@ import { CheckCircle2, Circle, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { DropdownSelect } from '../components/DropdownSelect';
 import { CompactFilterBar, CompactFilterField } from '../components/filters/CompactFilterBar';
 import { DatePicker } from '../components/DatePicker';
+import { TimePicker } from '../components/TimePicker';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { Pagination } from '../components/Pagination';
@@ -119,6 +120,7 @@ export const TodoPage: React.FC = () => {
   const [ruleDescription, setRuleDescription] = useState('');
   const [rulePriority, setRulePriority] = useState<TodoPriority>('low');
   const [ruleAnchorDate, setRuleAnchorDate] = useState('');
+  const [ruleDueTime, setRuleDueTime] = useState('');
   const [ruleEndDate, setRuleEndDate] = useState('');
   const [ruleFrequency, setRuleFrequency] = useState<TodoFrequency>('weekly');
   const [ruleInterval, setRuleInterval] = useState(1);
@@ -237,6 +239,7 @@ export const TodoPage: React.FC = () => {
     setRuleDescription('');
     setRulePriority('low');
     setRuleAnchorDate('');
+    setRuleDueTime('');
     setRuleEndDate('');
     setRuleFrequency('weekly');
     setRuleInterval(1);
@@ -249,6 +252,7 @@ export const TodoPage: React.FC = () => {
     setRuleDescription('');
     setRulePriority('low');
     setRuleAnchorDate('');
+    setRuleDueTime('');
     setRuleEndDate('');
     setRuleFrequency('weekly');
     setRuleInterval(1);
@@ -261,6 +265,7 @@ export const TodoPage: React.FC = () => {
     setRuleDescription(rule.description ?? '');
     setRulePriority(rule.priority ?? 'low');
     setRuleAnchorDate(rule.anchor_date);
+    setRuleDueTime(rule.due_time?.slice(0, 5) ?? '');
     setRuleEndDate(rule.end_date ?? '');
     setRuleFrequency(rule.frequency);
     setRuleInterval(rule.interval);
@@ -294,6 +299,8 @@ export const TodoPage: React.FC = () => {
       frequency: ruleFrequency,
       interval: Math.max(1, ruleInterval),
       anchor_date: ruleAnchorDate,
+      due_time: ruleDueTime || null,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
       end_date: ruleEndDate || null,
     });
   };
@@ -310,6 +317,8 @@ export const TodoPage: React.FC = () => {
           priority: rulePriority,
           frequency: ruleFrequency,
           interval: Math.max(1, ruleInterval),
+          due_time: ruleDueTime || null,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
           end_date: ruleEndDate || null,
         },
       });
@@ -421,13 +430,11 @@ export const TodoPage: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-300">Due time (optional)</label>
-                  <input
-                    data-testid="todo-new-due-time"
-                    type="time"
+                  <TimePicker
+                    testId="todo-new-due-time"
                     value={taskForm.due_time}
-                    onChange={(e) => setTaskForm((s) => ({ ...s, due_time: e.target.value }))}
+                    onChange={(value) => setTaskForm((s) => ({ ...s, due_time: value }))}
                     disabled={!taskForm.due_date || createMutation.isPending || updateMutation.isPending}
-                    className="h-10 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -609,6 +616,7 @@ export const TodoPage: React.FC = () => {
                         <p className="text-xs text-slate-400 mt-2">
                           Every {rule.interval} {rule.frequency} | Next:{' '}
                           {formatUtcDate(rule.next_due_date) ?? 'N/A'}
+                          {rule.due_time ? ` at ${rule.due_time.slice(0, 5)}` : ''}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
@@ -704,6 +712,12 @@ export const TodoPage: React.FC = () => {
                   className="h-10 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
               </div>
+              <TimePicker
+                testId="todo-recurring-due-time"
+                value={ruleDueTime}
+                onChange={setRuleDueTime}
+                placeholder="Recurring due time"
+              />
               <div className="grid grid-cols-2 gap-3">
                 <DatePicker
                   value={ruleAnchorDate}

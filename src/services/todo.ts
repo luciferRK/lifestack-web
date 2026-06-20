@@ -30,6 +30,8 @@ export interface RecurringTodoRule {
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval: number;
   anchor_date: string;
+  due_time: string | null;
+  timezone: string;
   next_due_date: string;
   end_date: string | null;
   is_active: boolean;
@@ -45,6 +47,8 @@ export interface RecurringTodoCreate {
   frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval?: number;
   anchor_date: string;
+  due_time?: string | null;
+  timezone?: string;
   end_date?: string | null;
 }
 

@@ -21,6 +21,7 @@ interface Message {
   timestamp: Date;
   status?: 'success' | 'error';
   toolName?: string;
+  toolCallId?: string;
 }
 
 type RealtimeAgentMessage = {
@@ -255,18 +256,31 @@ export const VoiceAgentWidget: React.FC = () => {
       // Barge-in: interrupt current voice playback
       clearAudioQueue();
 
+      const toolCallId = `tool-${Date.now()}-${Math.random()}`;
       setMessages(prev => [...prev, {
-        id: Math.random().toString(),
+        id: toolCallId,
         role: 'event',
         type: 'tool_call',
         content: `Voice agent is running ${msg.name}...`,
         timestamp: new Date(),
-        toolName: msg.name
+        toolName: msg.name,
+        toolCallId,
       }]);
     } 
     
     else if (msg.type === 'tool_response') {
-      setMessages(prev => [...prev, {
+      setMessages(prev => {
+        let matchedIndex = -1;
+        for (let index = prev.length - 1; index >= 0; index -= 1) {
+          if (prev[index].type === 'tool_call' && prev[index].toolName === msg.name) {
+            matchedIndex = index;
+            break;
+          }
+        }
+        const next = matchedIndex < 0
+          ? prev
+          : prev.filter((_, index) => index !== matchedIndex);
+        return [...next, {
         id: Math.random().toString(),
         role: 'event',
         type: 'tool_response',
@@ -276,7 +290,8 @@ export const VoiceAgentWidget: React.FC = () => {
         timestamp: new Date(),
         status: msg.status,
         toolName: msg.name
-      }]);
+        }];
+      });
 
       if (msg.status === 'success') {
         // Automatically refresh all relevant dashboards/lists
@@ -310,8 +325,10 @@ export const VoiceAgentWidget: React.FC = () => {
     setConnectionStatus('connecting');
     setConnectionError(null);
     try {
-      const wsUrl = getWebSocketUrl();
-      const ws = new WebSocket(wsUrl);
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const wsUrl = new URL(getWebSocketUrl());
+      wsUrl.searchParams.set('timezone', timezone);
+      const ws = new WebSocket(wsUrl.toString());
       wsRef.current = ws;
       ws.binaryType = 'arraybuffer';
 
