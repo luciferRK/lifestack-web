@@ -417,6 +417,7 @@ export const InvestingPage: React.FC = () => {
     currencyOptions.includes(holdingForm.currency) ? holdingForm.currency : preferredWorkspaceCurrency;
   const selectedCashCurrency =
     currencyOptions.includes(cashForm.currency) ? cashForm.currency : preferredWorkspaceCurrency;
+  const analyticsCurrency = exposureRes.data?.currency ?? overlapRes.data?.currency;
 
   const createAccountMutation = useMutation({
     mutationFn: () =>
@@ -1149,8 +1150,21 @@ export const InvestingPage: React.FC = () => {
                   <p className="text-sm text-slate-400">Loading exposure…</p>
                 ) : (
                   <div className="space-y-2 text-sm text-slate-300">
-                    <p data-testid="investing-total-direct">Total direct: {formatCurrency(exposure?.total_direct_exposure ?? '0', preferredWorkspaceCurrency, currencyDisplayPreference)}</p>
-                    <p data-testid="investing-total-lookthrough">Total look-through: {formatCurrency(exposure?.total_lookthrough_exposure ?? '0', preferredWorkspaceCurrency, currencyDisplayPreference)}</p>
+                    <p data-testid="investing-total-direct">
+                      Total direct:{' '}
+                      {exposure?.total_direct_exposure != null && analyticsCurrency
+                        ? formatCurrency(exposure.total_direct_exposure, analyticsCurrency, currencyDisplayPreference)
+                        : 'N/A'}
+                    </p>
+                    <p data-testid="investing-total-lookthrough">
+                      Total look-through:{' '}
+                      {exposure?.total_lookthrough_exposure != null && analyticsCurrency
+                        ? formatCurrency(exposure.total_lookthrough_exposure, analyticsCurrency, currencyDisplayPreference)
+                        : 'N/A'}
+                    </p>
+                    {(exposure?.warnings ?? []).map((warning) => (
+                      <p key={warning} className="text-xs text-amber-300">{warning}</p>
+                    ))}
                     <div className="max-h-96 overflow-auto rounded-lg border border-slate-700/40">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-slate-800/60 text-slate-400">
@@ -1164,8 +1178,8 @@ export const InvestingPage: React.FC = () => {
                           {(exposure?.exposure ?? []).map((row) => (
                             <tr key={row.company_id} className="border-t border-slate-700/40">
                               <td className="px-3 py-2">{row.company_ticker ?? row.company_name}</td>
-                              <td className="px-3 py-2">{formatCurrency(row.direct_exposure, preferredWorkspaceCurrency, currencyDisplayPreference)}</td>
-                              <td className="px-3 py-2">{formatCurrency(row.lookthrough_exposure, preferredWorkspaceCurrency, currencyDisplayPreference)}</td>
+                              <td className="px-3 py-2">{analyticsCurrency ? formatCurrency(row.direct_exposure, analyticsCurrency, currencyDisplayPreference) : 'N/A'}</td>
+                              <td className="px-3 py-2">{analyticsCurrency ? formatCurrency(row.lookthrough_exposure, analyticsCurrency, currencyDisplayPreference) : 'N/A'}</td>
                             </tr>
                           ))}
                         </tbody>
