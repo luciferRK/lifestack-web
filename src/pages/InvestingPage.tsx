@@ -1165,6 +1165,15 @@ export const InvestingPage: React.FC = () => {
                     {(exposure?.warnings ?? []).map((warning) => (
                       <p key={warning} className="text-xs text-amber-300">{warning}</p>
                     ))}
+                    {exposure && (
+                      <p className="text-xs text-slate-500">
+                        Showing constituents at or above {exposure.display_threshold_pct}% of the
+                        portfolio
+                        {exposure.hidden_exposure_count > 0
+                          ? ` (${exposure.hidden_exposure_count} smaller constituents hidden)`
+                          : ''}.
+                      </p>
+                    )}
                     <div className="max-h-96 overflow-auto rounded-lg border border-slate-700/40">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-slate-800/60 text-slate-400">
