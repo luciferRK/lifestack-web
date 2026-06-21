@@ -124,13 +124,18 @@ export interface ExposureCompanyRow {
 
 export interface ExposureAnalytics {
   as_of_date: string;
-  analysis_status: 'complete' | 'partial';
+  analysis_status: 'complete' | 'partial' | 'unavailable';
+  currency: string | null;
+  fx_as_of: string | null;
+  fx_rates_used: Record<string, number | string>;
   snapshot_coverage: string;
   staleness_days: number | null;
   warnings: string[];
+  display_threshold_pct: string;
+  hidden_exposure_count: number;
   exposure: ExposureCompanyRow[];
-  total_direct_exposure: string;
-  total_lookthrough_exposure: string;
+  total_direct_exposure: string | null;
+  total_lookthrough_exposure: string | null;
 }
 
 export interface OverlapRow {
@@ -143,9 +148,14 @@ export interface OverlapRow {
 
 export interface OverlapAnalytics {
   as_of_date: string;
-  analysis_status: 'complete' | 'partial';
+  analysis_status: 'complete' | 'partial' | 'unavailable';
+  currency: string | null;
+  fx_as_of: string | null;
+  fx_rates_used: Record<string, number | string>;
   snapshot_coverage: string;
   warnings: string[];
+  display_threshold_pct: string;
+  hidden_overlap_count: number;
   top_5_concentration_pct: string;
   top_10_concentration_pct: string;
   duplicate_exposure_index: string;

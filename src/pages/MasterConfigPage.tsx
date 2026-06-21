@@ -27,6 +27,7 @@ export const MasterConfigPage: React.FC = () => {
   const [newAccountType, setNewAccountType] = useState<'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'>('wallet');
   const [newAccountCurrency, setNewAccountCurrency] = useState('');
   const [reportingCurrency, setReportingCurrency] = useState('');
+  const [lookthroughMinWeightPct, setLookthroughMinWeightPct] = useState('0.5');
   const [currencyDisplayPreference, setCurrencyDisplayPreference] = useState<'symbol' | 'code'>('symbol');
   const [userReportingCurrencyOverride, setUserReportingCurrencyOverride] = useState('');
   const [userDisplayPreferenceOverride, setUserDisplayPreferenceOverride] = useState('');
@@ -103,7 +104,12 @@ export const MasterConfigPage: React.FC = () => {
   React.useEffect(() => {
     setReportingCurrency(settings?.reporting_currency_code ?? '');
     setCurrencyDisplayPreference(settings?.currency_display_preference ?? 'symbol');
-  }, [settings?.reporting_currency_code, settings?.currency_display_preference]);
+    setLookthroughMinWeightPct(String(settings?.lookthrough_min_weight_pct ?? '0.5'));
+  }, [
+    settings?.reporting_currency_code,
+    settings?.currency_display_preference,
+    settings?.lookthrough_min_weight_pct,
+  ]);
   React.useEffect(() => {
     setUserReportingCurrencyOverride(userSettings?.reporting_currency_override_code ?? '');
     setUserDisplayPreferenceOverride(userSettings?.currency_display_preference_override ?? '');
@@ -198,6 +204,7 @@ export const MasterConfigPage: React.FC = () => {
     mutationFn: () =>
       financeService.updateSettings({
         reporting_currency_code: reportingCurrency || null,
+        lookthrough_min_weight_pct: lookthroughMinWeightPct,
         currency_display_preference: currencyDisplayPreference,
       }),
     onSuccess: () => {
@@ -275,7 +282,7 @@ export const MasterConfigPage: React.FC = () => {
         <p className="mt-1 text-sm text-slate-400">
           This reporting currency drives default display in dashboard and spending. Investing still supports native multi-currency holdings.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
+        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,1fr,1fr,auto]">
           <DropdownSelect
             testId="master-workspace-currency"
             value={reportingCurrency}
@@ -291,6 +298,19 @@ export const MasterConfigPage: React.FC = () => {
             options={[...currencyDisplayPreferenceOptions]}
             placeholder="Display preference"
           />
+          <label className="space-y-1 text-sm text-slate-300">
+            <span>Minimum constituent weight (%)</span>
+            <input
+              data-testid="master-lookthrough-threshold"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={lookthroughMinWeightPct}
+              onChange={(event) => setLookthroughMinWeightPct(event.target.value)}
+              className="h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-slate-100"
+            />
+          </label>
           <Button
             data-testid="master-workspace-save"
             type="button"
@@ -300,6 +320,10 @@ export const MasterConfigPage: React.FC = () => {
             {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
           </Button>
         </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Constituents below this portfolio weight are hidden from detail lists only. Totals,
+          concentration, and overlap calculations still use every constituent.
+        </p>
       </section>
 
       <section data-testid="master-user-overrides" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">

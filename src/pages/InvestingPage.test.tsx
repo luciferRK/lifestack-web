@@ -327,6 +327,9 @@ describe('InvestingPage', () => {
         HttpResponse.json({
           as_of_date: '2026-05-24',
           analysis_status: 'complete',
+          currency: 'USD',
+          fx_as_of: '2026-05-24T00:00:00Z',
+          fx_rates_used: { GBP: '1.25' },
           snapshot_coverage: '1',
           staleness_days: 30,
           warnings: [],
@@ -347,6 +350,9 @@ describe('InvestingPage', () => {
         HttpResponse.json({
           as_of_date: '2026-05-24',
           analysis_status: 'complete',
+          currency: 'USD',
+          fx_as_of: '2026-05-24T00:00:00Z',
+          fx_rates_used: { GBP: '1.25' },
           snapshot_coverage: '1',
           warnings: [],
           top_5_concentration_pct: '0.90',
@@ -374,6 +380,8 @@ describe('InvestingPage', () => {
 
     expect(await screen.findByText('Exposure (Look-through)')).toBeInTheDocument();
     expect(await screen.findByText('Overlap')).toBeInTheDocument();
+    expect(screen.getByTestId('investing-total-direct')).toHaveTextContent('$300.00');
+    expect(screen.getByTestId('investing-total-lookthrough')).toHaveTextContent('$1,000.00');
     const aaplRows = await screen.findAllByText('AAPL');
     expect(aaplRows.length).toBeGreaterThanOrEqual(1);
     expect(await screen.findByText(/Top 5 concentration/)).toBeInTheDocument();
