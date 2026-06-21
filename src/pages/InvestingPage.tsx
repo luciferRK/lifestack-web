@@ -417,7 +417,7 @@ export const InvestingPage: React.FC = () => {
     currencyOptions.includes(holdingForm.currency) ? holdingForm.currency : preferredWorkspaceCurrency;
   const selectedCashCurrency =
     currencyOptions.includes(cashForm.currency) ? cashForm.currency : preferredWorkspaceCurrency;
-  const analyticsCurrency = exposureRes.data?.currency ?? overlapRes.data?.currency;
+  const analyticsCurrency = exposureRes.data?.currency;
 
   const createAccountMutation = useMutation({
     mutationFn: () =>
@@ -1162,8 +1162,8 @@ export const InvestingPage: React.FC = () => {
                         ? formatCurrency(exposure.total_lookthrough_exposure, analyticsCurrency, currencyDisplayPreference)
                         : 'N/A'}
                     </p>
-                    {(exposure?.warnings ?? []).map((warning) => (
-                      <p key={warning} className="text-xs text-amber-300">{warning}</p>
+                    {(exposure?.warnings ?? []).map((warning, index) => (
+                      <p key={`${warning}-${index}`} className="text-xs text-amber-300">{warning}</p>
                     ))}
                     {exposure && (
                       <p className="text-xs text-slate-500">
