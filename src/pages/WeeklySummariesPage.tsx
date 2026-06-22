@@ -137,7 +137,7 @@ const TodoCard = ({ summary }: { summary: WeeklySummary['todo_summary'] }) => (
 );
 
 const SpendingCard = ({ summary }: { summary: WeeklySummary['spending_summary'] }) => {
-  if (summary?.status !== 'complete' || !summary.currency) {
+  if (summary?.status !== 'complete' || !summary.currency || summary.has_multiple_currencies) {
     return (
       <SummaryCard title="Spending">
         <p className="text-sm text-amber-300">
@@ -180,7 +180,8 @@ const InvestingCard = ({ summary }: { summary: WeeklySummary['investing_summary'
 
   const change = toNumber(summary.week_change);
   const changePct = toNumber(summary.week_change_pct);
-  const sign = change > 0 ? '+' : '';
+  const changeSign = change > 0 ? '+' : '';
+  const pctSign = changePct > 0 ? '+' : '';
   const movementClass = change > 0 ? 'text-emerald-300' : change < 0 ? 'text-rose-300' : 'text-slate-200';
   return (
     <SummaryCard title="Investing">
@@ -188,7 +189,7 @@ const InvestingCard = ({ summary }: { summary: WeeklySummary['investing_summary'
       <Metric label="Investment cash" value={formatCurrency(summary.cash_end, summary.currency)} />
       <Metric
         label="Weekly movement"
-        value={`${sign}${formatCurrency(change, summary.currency)} (${sign}${changePct.toFixed(2)}%)`}
+        value={changeSign + formatCurrency(change, summary.currency) + " (" + pctSign + changePct.toFixed(2) + "%)"}
         valueClass={movementClass}
       />
       <Metric
