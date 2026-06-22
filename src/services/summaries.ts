@@ -6,10 +6,32 @@ export interface WeeklySummary {
   week_start: string;
   week_end: string;
   generated_at: string;
-  todo_summary: Record<string, unknown>;
-  spending_summary: Record<string, unknown>;
-  investing_summary: Record<string, unknown>;
-  highlights: Record<string, unknown>;
+  todo_summary: {
+    tasks_created: number;
+    tasks_completed: number;
+    tasks_overdue?: number;
+    completion_rate_pct?: number | null;
+  };
+  spending_summary: {
+    total_income: string;
+    total_expense: string;
+    net: string;
+  };
+  investing_summary: {
+    status: 'complete' | 'unavailable';
+    portfolio_value_start: string | null;
+    portfolio_value_end: string | null;
+    cash_start: string | null;
+    cash_end: string | null;
+    week_change: string | null;
+    week_change_pct: string | null;
+    currency: string | null;
+    start_snapshot_date: string | null;
+    end_snapshot_date: string | null;
+  };
+  highlights: {
+    flags: Array<{ type: string; message: string }>;
+  };
 }
 
 export const summariesService = {
