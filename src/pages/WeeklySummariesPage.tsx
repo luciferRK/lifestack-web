@@ -128,7 +128,10 @@ const TodoCard = ({ summary }: { summary: WeeklySummary['todo_summary'] }) => (
     <Metric label="Tasks completed" value={summary?.tasks_completed ?? 0} />
     {summary?.tasks_overdue != null && <Metric label="Tasks overdue" value={summary.tasks_overdue} />}
     {summary?.completion_rate_pct != null && (
-      <Metric label="Completion rate" value={`${summary.completion_rate_pct.toFixed(1)}%`} />
+      <Metric
+        label="Completion rate"
+        value={`${toNumber(summary.completion_rate_pct).toFixed(1)}%`}
+      />
     )}
   </SummaryCard>
 );

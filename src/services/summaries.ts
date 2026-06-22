@@ -10,7 +10,7 @@ export interface WeeklySummary {
     tasks_created: number;
     tasks_completed: number;
     tasks_overdue?: number;
-    completion_rate_pct?: number | null;
+    completion_rate_pct?: number | string | null;
   };
   spending_summary: {
     status: 'complete' | 'unavailable';
