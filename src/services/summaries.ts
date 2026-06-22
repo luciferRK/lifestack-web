@@ -13,9 +13,17 @@ export interface WeeklySummary {
     completion_rate_pct?: number | null;
   };
   spending_summary: {
-    total_income: string;
-    total_expense: string;
-    net: string;
+    status: 'complete' | 'unavailable';
+    total_income: string | null;
+    total_expense: string | null;
+    net: string | null;
+    currency: string | null;
+    has_multiple_currencies: boolean;
+    currency_breakdown?: Record<string, { income: string; expense: string }>;
+    top_categories?: Array<{ name: string; amount: string; pct_of_total: string }>;
+    budget_utilization_pct?: string | null;
+    budgets_breached?: number;
+    recurring_generated_count?: number;
   };
   investing_summary: {
     status: 'complete' | 'unavailable';

@@ -27,9 +27,15 @@ describe('WeeklySummariesPage', () => {
               generated_at: '2026-06-22T01:30:00Z',
               todo_summary: { tasks_created: 5, tasks_completed: 4 },
               spending_summary: {
+                status: 'complete',
                 total_income: '5000.00',
                 total_expense: '3200.00',
                 net: '1800.00',
+                currency: 'INR',
+                has_multiple_currencies: false,
+                top_categories: [],
+                budget_utilization_pct: null,
+                budgets_breached: 0,
               },
               investing_summary: {
                 status: 'complete',

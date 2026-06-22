@@ -63,13 +63,13 @@ export const WeeklySummariesPage: React.FC = () => {
                   <SpendingCard summary={item.spending_summary} />
                   <InvestingCard summary={item.investing_summary} />
                 </div>
-                {item.highlights.flags.length > 0 && (
+                {(item.highlights?.flags?.length ?? 0) > 0 && (
                   <div className="mt-3 rounded-xl border border-cyan-800/60 bg-cyan-950/20 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-cyan-300">
                       Highlights
                     </p>
                     <ul className="mt-2 space-y-1 text-sm text-slate-200">
-                      {item.highlights.flags.map((flag, index) => (
+                      {item.highlights?.flags?.map((flag, index) => (
                         <li key={`${flag.type}-${index}`}>{flag.message}</li>
                       ))}
                     </ul>
@@ -124,25 +124,48 @@ const Metric = ({ label, value, valueClass = 'text-white' }: {
 
 const TodoCard = ({ summary }: { summary: WeeklySummary['todo_summary'] }) => (
   <SummaryCard title="Todo">
-    <Metric label="Tasks created" value={summary.tasks_created} />
-    <Metric label="Tasks completed" value={summary.tasks_completed} />
-    {summary.tasks_overdue != null && <Metric label="Tasks overdue" value={summary.tasks_overdue} />}
-    {summary.completion_rate_pct != null && (
+    <Metric label="Tasks created" value={summary?.tasks_created ?? 0} />
+    <Metric label="Tasks completed" value={summary?.tasks_completed ?? 0} />
+    {summary?.tasks_overdue != null && <Metric label="Tasks overdue" value={summary.tasks_overdue} />}
+    {summary?.completion_rate_pct != null && (
       <Metric label="Completion rate" value={`${summary.completion_rate_pct.toFixed(1)}%`} />
     )}
   </SummaryCard>
 );
 
-const SpendingCard = ({ summary }: { summary: WeeklySummary['spending_summary'] }) => (
-  <SummaryCard title="Spending">
-    <Metric label="Recorded income" value={toNumber(summary.total_income).toLocaleString(undefined, { minimumFractionDigits: 2 })} />
-    <Metric label="Recorded expense" value={toNumber(summary.total_expense).toLocaleString(undefined, { minimumFractionDigits: 2 })} />
-    <Metric label="Net recorded amount" value={toNumber(summary.net).toLocaleString(undefined, { minimumFractionDigits: 2 })} />
-  </SummaryCard>
-);
+const SpendingCard = ({ summary }: { summary: WeeklySummary['spending_summary'] }) => {
+  if (summary?.status !== 'complete' || !summary.currency) {
+    return (
+      <SummaryCard title="Spending">
+        <p className="text-sm text-amber-300">
+          Combined spending totals are unavailable because this week contains multiple or
+          unknown currencies.
+        </p>
+      </SummaryCard>
+    );
+  }
+  return (
+    <SummaryCard title="Spending">
+      <Metric label="Recorded income" value={formatCurrency(summary.total_income, summary.currency)} />
+      <Metric label="Recorded expense" value={formatCurrency(summary.total_expense, summary.currency)} />
+      <Metric label="Net recorded amount" value={formatCurrency(summary.net, summary.currency)} />
+      {summary.budget_utilization_pct != null && (
+        <Metric label="Budget utilization" value={`${summary.budget_utilization_pct}%`} />
+      )}
+      <Metric label="Budgets breached" value={summary.budgets_breached ?? 0} />
+      {(summary.top_categories ?? []).slice(0, 3).map((category) => (
+        <Metric
+          key={category.name}
+          label={category.name}
+          value={formatCurrency(category.amount, summary.currency)}
+        />
+      ))}
+    </SummaryCard>
+  );
+};
 
 const InvestingCard = ({ summary }: { summary: WeeklySummary['investing_summary'] }) => {
-  if (summary.status !== 'complete' || !summary.currency) {
+  if (summary?.status !== 'complete' || !summary?.currency) {
     return (
       <SummaryCard title="Investing">
         <p className="text-sm text-amber-300">
