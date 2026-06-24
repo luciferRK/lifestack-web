@@ -2211,10 +2211,10 @@ const SpendingAnalyticsTab: React.FC<SpendingAnalyticsTabProps> = ({
   };
 
   // Period stats summary
-  const totalIncome = savingsRateData?.period_totals.total_income ?? 0;
-  const totalExpense = savingsRateData?.period_totals.total_expense ?? 0;
-  const totalSavings = savingsRateData?.period_totals.total_savings ?? 0;
-  const averageSavingsRate = savingsRateData?.period_totals.average_savings_rate_pct ?? 0;
+  const totalIncome = savingsRateData?.period_totals?.total_income ?? 0;
+  const totalExpense = savingsRateData?.period_totals?.total_expense ?? 0;
+  const totalSavings = savingsRateData?.period_totals?.total_savings ?? 0;
+  const averageSavingsRate = savingsRateData?.period_totals?.average_savings_rate_pct ?? 0;
 
   // --- 1. Trends Bar Chart Setup ---
   const trendsList = trendsData?.months ?? [];
@@ -2823,9 +2823,14 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
                     const isIncome = entry.type === 'income';
                     const amount = Number(entry.amount);
                     const balance = Number(entry.running_balance);
-                    const date = new Date(entry.occurred_at).toLocaleDateString(undefined, {
-                      year: 'numeric', month: 'short', day: 'numeric',
-                    });
+                    const dateObj = new Date(entry.occurred_at);
+                    const date = !isNaN(dateObj.getTime())
+                      ? dateObj.toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })
+                      : '—';
                     return (
                       <tr
                         key={entry.public_id}

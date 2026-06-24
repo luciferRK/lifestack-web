@@ -126,10 +126,11 @@ export const DashboardPage: React.FC = () => {
 
             {/* Dashboard Cues (Insights & Alerts) */}
             {(() => {
-              const overdueCount = data.todos.overdue_count ?? 0;
-              const overspentCategories = data.spending.top_overspent_categories ?? [];
-              const guardrailAlerts = data.todos.active_guardrail_todo_count ?? 0;
-              const isValuationStale = data.investing.valuation_status && data.investing.valuation_status.toLowerCase() !== 'converted' && data.investing.valuation_status.toLowerCase() !== 'success';
+              const overdueCount = data.todos?.overdue_count ?? 0;
+              const overspentCategories = data.spending?.top_overspent_categories ?? [];
+              const guardrailAlerts = data.todos?.active_guardrail_todo_count ?? 0;
+              const statusLower = data.investing?.valuation_status?.toLowerCase();
+              const isValuationStale = statusLower && statusLower !== 'converted' && statusLower !== 'success';
               
               const hasCues = overdueCount > 0 || overspentCategories.length > 0 || guardrailAlerts > 0 || isValuationStale;
               if (!hasCues) return null;

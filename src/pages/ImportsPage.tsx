@@ -57,7 +57,7 @@ export const ImportsPage: React.FC = () => {
     queryFn: () => importsService.getImportDetail(selectedImportId as string),
     enabled: Boolean(selectedImportId),
     refetchInterval: (query) => {
-      const status = query.state.data?.import_batch.status;
+      const status = query.state.data?.import_batch?.status;
       if (status === 'uploaded' || status === 'committing') {
         return 1500;
       }
@@ -399,7 +399,13 @@ export const ImportsPage: React.FC = () => {
                             <td className="px-3 py-2 font-medium text-slate-400">{row.row_number}</td>
                             {activeDetail.import_batch.module === 'spending-transactions' && (
                               <>
-                                <td className="px-3 py-2 whitespace-nowrap">{row.payload_json.occurred_at ? new Date(row.payload_json.occurred_at).toLocaleDateString() : '-'}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {(() => {
+                                    if (!row.payload_json.occurred_at) return '-';
+                                    const d = new Date(row.payload_json.occurred_at);
+                                    return !isNaN(d.getTime()) ? d.toLocaleDateString() : '-';
+                                  })()}
+                                </td>
                                 <td className="px-3 py-2 uppercase whitespace-nowrap">
                                   <span className={`px-1.5 py-0.5 rounded text-[10px] ${row.payload_json.type === 'income' ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}`}>
                                     {row.payload_json.type}
