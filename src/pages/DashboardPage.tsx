@@ -124,6 +124,66 @@ export const DashboardPage: React.FC = () => {
               />
             </div>
 
+            {/* Dashboard Cues (Insights & Alerts) */}
+            {(() => {
+              const overdueCount = data.todos.overdue_count ?? 0;
+              const overspentCategories = data.spending.top_overspent_categories ?? [];
+              const guardrailAlerts = data.todos.active_guardrail_todo_count ?? 0;
+              const isValuationStale = data.investing.valuation_status && data.investing.valuation_status.toLowerCase() !== 'converted' && data.investing.valuation_status.toLowerCase() !== 'success';
+              
+              const hasCues = overdueCount > 0 || overspentCategories.length > 0 || guardrailAlerts > 0 || isValuationStale;
+              if (!hasCues) return null;
+              
+              return (
+                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                  {overdueCount > 0 && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-950/20 p-4 text-rose-200">
+                      <AlertCircle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5 animate-pulse" />
+                      <div>
+                        <p className="font-semibold text-rose-100">Overdue Tasks</p>
+                        <p className="mt-1 text-sm text-rose-300/90">
+                          You have {overdueCount} task{overdueCount > 1 ? 's' : ''} overdue. Check your todo list to update or complete them.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {guardrailAlerts > 0 && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-950/20 p-4 text-amber-200">
+                      <CircleAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-amber-100">Budget Guardrails Triggered</p>
+                        <p className="mt-1 text-sm text-amber-300/90">
+                          {guardrailAlerts} active budget alert{guardrailAlerts > 1 ? 's' : ''} require attention. Spending in some categories exceeds guardrail thresholds.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {overspentCategories.length > 0 && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-950/20 p-4 text-rose-200">
+                      <AlertCircle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-rose-100">Overspent Budgets</p>
+                        <p className="mt-1 text-sm text-rose-300/90">
+                          You have exceeded monthly budget limits in: {overspentCategories.map(c => c.name || 'Unknown').join(', ')}.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {isValuationStale && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-blue-500/20 bg-blue-950/20 p-4 text-blue-200">
+                      <AlertCircle className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-blue-100">Valuation Alert</p>
+                        <p className="mt-1 text-sm text-blue-300/90">
+                          Portfolio valuation status is '{data.investing.valuation_status}'. Some asset holdings or exchange rates may not reflect real-time prices.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="mt-6">
               <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 shadow-2xl shadow-black/10">
                 <div className="flex items-center justify-between gap-4">
