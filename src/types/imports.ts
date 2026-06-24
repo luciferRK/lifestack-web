@@ -43,6 +43,7 @@ export interface ImportErrorSummary {
 
 export interface ImportPreviewRow {
   row_number: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload_json: Record<string, any>;
 }
 

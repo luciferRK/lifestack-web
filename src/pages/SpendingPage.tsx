@@ -2382,7 +2382,7 @@ const SpendingAnalyticsTab: React.FC<SpendingAnalyticsTabProps> = ({
   // Format month names (Jan, Feb, ...)
   const formatMonthShort = (monthStr: string) => {
     if (!/^\d{4}-\d{2}$/.test(monthStr)) return monthStr;
-    const [_, m] = monthStr.split('-');
+    const [, m] = monthStr.split('-');
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[Number(m) - 1];
   };
