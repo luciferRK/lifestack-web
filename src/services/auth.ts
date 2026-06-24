@@ -1,11 +1,14 @@
+import { z } from 'zod';
 import api from './api';
 
-export interface AuthUser {
-  public_id: string;
-  email: string;
-  username: string;
-  is_active: boolean;
-}
+export const AuthUserSchema = z.object({
+  public_id: z.string(),
+  email: z.string(),
+  username: z.string(),
+  is_active: z.boolean(),
+});
+
+export type AuthUser = z.infer<typeof AuthUserSchema>;
 
 export const authService = {
   login: async (email: string, password: string) => {
@@ -33,7 +36,7 @@ export const authService = {
 
   checkAuth: async (): Promise<AuthUser> => {
     const response = await api.get('/auth/me');
-    return response.data;
+    return AuthUserSchema.parse(response.data);
   },
   
   logout: async () => {
