@@ -2828,7 +2828,8 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
                       ? dateObj.toLocaleDateString(undefined, {
                           year: 'numeric',
                           month: 'short',
-                          day: 'numeric'
+                          day: 'numeric',
+                          timeZone: 'UTC',
                         })
                       : '—';
                     return (

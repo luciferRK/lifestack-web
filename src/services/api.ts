@@ -4,7 +4,7 @@ import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig }
 
 const baseURL = import.meta.env.VITE_API_URL;
 if (import.meta.env.PROD && !baseURL) {
-  throw new Error('VITE_API_URL must be configured in production/staging environments');
+  console.error('VITE_API_URL must be configured in production/staging environments');
 }
 
 const api = axios.create({
@@ -150,8 +150,8 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as RetryableRequestConfig | undefined;
 
-    // Retry network errors with exponential backoff (up to 2 retries)
-    if (original && isNetworkError(error)) {
+    // Retry network errors with exponential backoff (up to 2 retries) - GET requests only
+    if (original && isNetworkError(error) && original.method?.toLowerCase() === 'get') {
       const retryCount = original._retryCount || 0;
       if (retryCount < 2) {
         original._retryCount = retryCount + 1;

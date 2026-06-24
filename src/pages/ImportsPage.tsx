@@ -403,7 +403,7 @@ export const ImportsPage: React.FC = () => {
                                   {(() => {
                                     if (!row.payload_json.occurred_at) return '-';
                                     const d = new Date(row.payload_json.occurred_at);
-                                    return !isNaN(d.getTime()) ? d.toLocaleDateString() : '-';
+                                    return !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { timeZone: 'UTC' }) : '-';
                                   })()}
                                 </td>
                                 <td className="px-3 py-2 uppercase whitespace-nowrap">

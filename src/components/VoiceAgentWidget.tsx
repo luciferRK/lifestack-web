@@ -359,7 +359,7 @@ export const VoiceAgentWidget: React.FC = () => {
       };
 
       ws.onerror = (err) => {
-        console.error('WS Error:', err instanceof Error ? err.message : 'Unknown error');
+        console.error('WS Error:', err);
         setConnectionStatus('error');
         setConnectionError('Voice Copilot could not connect to the live session.');
       };
