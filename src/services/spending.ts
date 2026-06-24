@@ -18,6 +18,7 @@ import type {
   RecurringTransactionCreate,
   RecurringTransactionUpdate,
   UpcomingPreviewResponse,
+  LedgerResponse,
 } from '../types/spending';
 import type { PaginatedResponse } from '../types/common';
 
@@ -176,6 +177,14 @@ export const spendingService = {
 
   getUpcoming: async (days = 30): Promise<UpcomingPreviewResponse> => {
     const response = await api.get('/spending/recurring/upcoming', { params: { days } });
+    return response.data;
+  },
+
+  getAccountLedger: async (
+    accountId: string,
+    params?: { limit?: number; offset?: number; from_date?: string; to_date?: string }
+  ): Promise<LedgerResponse> => {
+    const response = await api.get(`/spending/accounts/${accountId}/ledger`, { params });
     return response.data;
   },
 };

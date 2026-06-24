@@ -2,6 +2,7 @@ import api from './api';
 import type { PaginatedResponse } from '../types/common';
 import type {
   Account,
+  AccountBalanceResponse,
   AccountCreate,
   AccountUpdate,
   CapitalTransfer,
@@ -65,6 +66,11 @@ export const financeService = {
 
   getTransfers: async (limit: number = 50, offset: number = 0): Promise<PaginatedResponse<CapitalTransfer>> => {
     const response = await api.get('/finance/transfers', { params: { limit, offset } });
+    return response.data;
+  },
+
+  getAccountBalance: async (publicId: string): Promise<AccountBalanceResponse> => {
+    const response = await api.get(`/finance/accounts/${publicId}/balance`);
     return response.data;
   },
 };

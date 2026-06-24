@@ -10,6 +10,7 @@ import type {
   Budget,
   BudgetCreate,
   BudgetUpdate,
+  LedgerEntry,
   RecurringTransaction,
   RecurringTransactionCreate,
   RecurringTransactionUpdate,
@@ -212,7 +213,12 @@ export const SpendingPage: React.FC = () => {
   const [selectedAccountFilter, setSelectedAccountFilter] = useState('');
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'recurring' | 'transfers' | 'analytics'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'recurring' | 'transfers' | 'analytics' | 'ledger'>('transactions');
+
+  // Ledger tab state
+  const [ledgerAccountId, setLedgerAccountId] = useState('');
+  const [ledgerOffset, setLedgerOffset] = useState(0);
+  const ledgerLimit = 50;
 
   // Budget Modal
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
@@ -976,6 +982,13 @@ export const SpendingPage: React.FC = () => {
         >
           Analytics
         </button>
+        <button
+          data-testid="spending-tab-ledger"
+          onClick={() => setActiveTab('ledger')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'ledger' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+        >
+          Ledger
+        </button>
       </div>
 
       {isRecurringLoading && activeTab === 'recurring' ? (
@@ -984,7 +997,7 @@ export const SpendingPage: React.FC = () => {
         </div>
       ) : isTransfersLoading && activeTab === 'transfers' ? (
         <SkeletonList rows={4} />
-      ) : isLoading && activeTab !== 'recurring' && activeTab !== 'analytics' ? (
+      ) : isLoading && activeTab !== 'recurring' && activeTab !== 'analytics' && activeTab !== 'ledger' ? (
         <SkeletonList rows={5} />
       ) : activeTab === 'transactions' ? (
         <div className="space-y-4 animate-in fade-in duration-300">
@@ -1463,6 +1476,16 @@ export const SpendingPage: React.FC = () => {
           displayCurrency={displayCurrency}
           currencyDisplayPreference={currencyDisplayPreference}
           getCategoryTheme={getCategoryTheme}
+        />
+      ) : activeTab === 'ledger' ? (
+        <SpendingLedgerTab
+          accounts={spendingAccounts}
+          selectedAccountId={ledgerAccountId}
+          onAccountChange={(id: string) => { setLedgerAccountId(id); setLedgerOffset(0); }}
+          offset={ledgerOffset}
+          limit={ledgerLimit}
+          onOffsetChange={setLedgerOffset}
+          currencyDisplayPreference={currencyDisplayPreference}
         />
       ) : null}
 
@@ -2837,3 +2860,195 @@ const SpendingAnalyticsTab: React.FC<SpendingAnalyticsTabProps> = ({
   );
 };
 
+
+// =============================================================================
+// SpendingLedgerTab – per-account transaction ledger with running balance
+// =============================================================================
+
+interface SpendingLedgerTabProps {
+  accounts: Array<{ public_id: string; name: string; account_type: string; default_currency_code: string }>;
+  selectedAccountId: string;
+  onAccountChange: (id: string) => void;
+  offset: number;
+  limit: number;
+  onOffsetChange: (offset: number) => void;
+  currencyDisplayPreference: 'symbol' | 'code';
+}
+
+const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
+  accounts,
+  selectedAccountId,
+  onAccountChange,
+  offset,
+  limit,
+  onOffsetChange,
+  currencyDisplayPreference,
+}) => {
+  const selectedAccount = accounts.find((a) => a.public_id === selectedAccountId) ?? null;
+
+  const { data: ledger, isLoading } = useQuery({
+    queryKey: ['spending', 'ledger', selectedAccountId, offset, limit],
+    queryFn: () => spendingService.getAccountLedger(selectedAccountId, { limit, offset }),
+    enabled: !!selectedAccountId,
+  });
+
+  const { data: balanceData } = useQuery({
+    queryKey: ['finance', 'account-balance', selectedAccountId],
+    queryFn: () => financeService.getAccountBalance(selectedAccountId),
+    enabled: !!selectedAccountId,
+  });
+
+  const currency = selectedAccount?.default_currency_code ?? 'USD';
+
+  const formatBal = (val: string | number | undefined) =>
+    val !== undefined
+      ? formatCurrency(Number(val), currency, currencyDisplayPreference)
+      : '—';
+
+  return (
+    <div className="animate-in fade-in duration-300 space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-xl font-semibold text-white">Account Ledger</h3>
+          <p className="text-sm text-slate-400 mt-0.5">Transaction-by-transaction running balance for a spending account</p>
+        </div>
+
+        {/* Account selector */}
+        <div className="flex min-w-[220px] flex-col gap-1">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Select Account</label>
+          <select
+            value={selectedAccountId}
+            onChange={(e) => onAccountChange(e.target.value)}
+            className="h-10 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          >
+            <option value="">— Pick an account —</option>
+            {accounts.map((a) => (
+              <option key={a.public_id} value={a.public_id}>
+                {a.name} ({a.account_type.replace('_', ' ')})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {!selectedAccountId ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-800/30 p-12 text-center">
+          <div className="mb-4 rounded-full bg-slate-800 p-4">
+            <Landmark className="h-8 w-8 text-slate-500" />
+          </div>
+          <h3 className="mb-2 text-lg font-medium text-white">Select an account</h3>
+          <p className="text-slate-400 text-sm">Choose a spending account above to view its transaction ledger and running balance.</p>
+        </div>
+      ) : isLoading ? (
+        <SkeletonList rows={5} />
+      ) : (
+        <>
+          {/* Balance summary cards */}
+          {balanceData && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Net Balance</p>
+                <p className={`text-xl font-bold ${
+                  Number(balanceData.spending_balance) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  {formatBal(balanceData.spending_balance)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Transactions</p>
+                <p className="text-xl font-bold text-white">{balanceData.transaction_count}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Page Opening</p>
+                <p className={`text-xl font-bold ${
+                  Number(ledger?.opening_balance ?? 0) >= 0 ? 'text-slate-200' : 'text-rose-400'
+                }`}>
+                  {formatBal(ledger?.opening_balance)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Page Closing</p>
+                <p className={`text-xl font-bold ${
+                  Number(ledger?.closing_balance ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  {formatBal(ledger?.closing_balance)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Ledger table */}
+          {ledger && ledger.items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-800/30 p-12 text-center">
+              <Wallet className="h-8 w-8 text-slate-500 mb-3" />
+              <p className="text-slate-400">No transactions for this account yet.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-slate-800">
+              <table className="w-full text-left text-sm text-slate-300 min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/60">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Date</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Description</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 text-right">Debit</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 text-right">Credit</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {(ledger?.items ?? []).map((entry: LedgerEntry) => {
+                    const isIncome = entry.type === 'income';
+                    const amount = Number(entry.amount);
+                    const balance = Number(entry.running_balance);
+                    const date = new Date(entry.occurred_at).toLocaleDateString(undefined, {
+                      year: 'numeric', month: 'short', day: 'numeric',
+                    });
+                    return (
+                      <tr
+                        key={entry.public_id}
+                        className="hover:bg-slate-800/30 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-slate-400 whitespace-nowrap text-xs">{date}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-slate-200">{entry.description ?? '—'}</span>
+                          {entry.wallet_name && (
+                            <span className="ml-2 text-xs text-slate-500">{entry.wallet_name}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          {!isIncome && (
+                            <span className="text-rose-400">{formatCurrency(amount, currency, currencyDisplayPreference)}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          {isIncome && (
+                            <span className="text-emerald-400">{formatCurrency(amount, currency, currencyDisplayPreference)}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          <span className={balance >= 0 ? 'text-slate-200' : 'text-rose-400'}>
+                            {formatCurrency(balance, currency, currencyDisplayPreference)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {ledger && ledger.total_transactions > limit && (
+            <Pagination
+              total={ledger.total_transactions}
+              limit={limit}
+              offset={offset}
+              onPageChange={onOffsetChange}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+};

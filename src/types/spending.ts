@@ -246,3 +246,32 @@ export interface UpcomingPreviewResponse {
   to_date: string;
   items: UpcomingTransactionItem[];
 }
+
+// ---------------------------------------------------------------------------
+// Ledger types
+// ---------------------------------------------------------------------------
+
+export interface LedgerEntry {
+  public_id: string;
+  category_id: string;
+  account_id: string | null;
+  amount: string;
+  type: TransactionType;
+  occurred_at: string;
+  description: string | null;
+  wallet_name: string | null;
+  labels: string | null;
+  source_type: string;
+  running_balance: string; // cumulative balance after this transaction
+  created_at: string;
+}
+
+export interface LedgerResponse {
+  account_public_id: string;
+  account_name: string;
+  account_currency: string;
+  opening_balance: string;
+  closing_balance: string;
+  total_transactions: number;
+  items: LedgerEntry[];
+}
