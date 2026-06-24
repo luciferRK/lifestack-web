@@ -42,6 +42,7 @@ import { notificationsService } from './services/notifications';
 import type { WorkspaceInfo } from './services/platform';
 import { VoiceAgentWidget } from './components/VoiceAgentWidget';
 import { useActiveWorkspace } from './hooks/useActiveWorkspace';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const ROLE_BADGE: Record<string, string> = {
   owner: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
@@ -553,8 +554,9 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
         <Route
           path="/login"
           element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
@@ -654,6 +656,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

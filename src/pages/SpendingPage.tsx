@@ -31,7 +31,6 @@ import {
   X,
   Target,
   Edit2,
-  Brush,
   RefreshCw,
   Clock,
   ToggleLeft,
@@ -223,11 +222,6 @@ export const SpendingPage: React.FC = () => {
   // Budget Modal
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [categoryName, setCategoryName] = useState('');
-  const [categoryColor, setCategoryColor] = useState('#60a5fa');
-  const [categoryIcon, setCategoryIcon] = useState('');
-
   const [txOffset, setTxOffset] = useState(0);
   const [budgetOffset, setBudgetOffset] = useState(0);
   const [recurringOffset, setRecurringOffset] = useState(0);
@@ -263,10 +257,6 @@ export const SpendingPage: React.FC = () => {
     queryFn: () => spendingService.getCategories(200, 0)
   });
   const categories = categoriesResponse?.items;
-  const customCategories = useMemo(
-    () => categories?.filter((category) => !category.is_system) ?? [],
-    [categories]
-  );
   const categoryOptions = useMemo(() => categories?.map((category) => ({
     value: category.public_id,
     label: category.name,
@@ -379,28 +369,7 @@ export const SpendingPage: React.FC = () => {
     }
   });
 
-  const createCategoryMutation = useMutation({
-    mutationFn: (data: { name: string; color?: string | null; icon?: string | null }) =>
-      spendingService.createCategory(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      setCategoryName('');
-      setCategoryColor('#60a5fa');
-      setCategoryIcon('');
-      setIsCategoryModalOpen(false);
-    },
-  });
 
-  const deleteCategoryMutation = useMutation({
-    mutationFn: (id: string) => spendingService.deleteCategory(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
-  });
 
   const createBudgetMutation = useMutation({
     mutationFn: (newBudget: BudgetCreate) => spendingService.createBudget(newBudget),
@@ -634,9 +603,6 @@ export const SpendingPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const openCategoryModal = () => {
-    setIsCategoryModalOpen(true);
-  };
 
   const openTransactionModalForEdit = (tx: Transaction) => {
     setEditingTransaction(tx);
@@ -660,12 +626,6 @@ export const SpendingPage: React.FC = () => {
     setDate(new Date().toISOString().split('T')[0]);
   };
 
-  const closeCategoryModal = () => {
-    setIsCategoryModalOpen(false);
-    setCategoryName('');
-    setCategoryColor('#60a5fa');
-    setCategoryIcon('');
-  };
 
   const openRecurringModalForNew = () => {
     setEditingRecurring(null);
@@ -813,14 +773,7 @@ export const SpendingPage: React.FC = () => {
             <Plus className="h-5 w-5" />
             <span className="whitespace-nowrap">New Transaction</span>
           </button>
-          <button
-            onClick={openCategoryModal}
-            data-testid="spending-open-manage-categories"
-            className="group relative flex h-12 min-w-[170px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900 px-5 font-semibold text-slate-200 shadow-lg transition-all hover:bg-slate-800 active:scale-95"
-          >
-            <Brush className="h-5 w-5" />
-            <span className="whitespace-nowrap">Manage Categories</span>
-          </button>
+
           <button
             onClick={openBudgetModalForNew}
             data-testid="spending-open-set-budget"
@@ -859,16 +812,16 @@ export const SpendingPage: React.FC = () => {
         }}
       >
         <CompactFilterField label="Month">
-          <DropdownSelect
+          <Input
             id="spending-month"
+            type="month"
+            className="w-44 border-slate-700 bg-slate-950/50 text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:ring-cyan-500"
             value={selectedMonth}
-            onChange={(value) => {
-              setSelectedMonth(value);
+            onChange={(e) => {
+              setSelectedMonth(e.target.value);
               setTxOffset(0);
               setBudgetOffset(0);
             }}
-            options={monthFilterOptions}
-            placeholder="Select month"
           />
         </CompactFilterField>
         <CompactFilterField label="Category">
@@ -1979,137 +1932,7 @@ export const SpendingPage: React.FC = () => {
         </div>
       )}
 
-      {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
-          <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
-            onClick={closeCategoryModal}
-          />
 
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">Manage Categories</h3>
-              <button
-                onClick={closeCategoryModal}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-6 p-6">
-              <form
-                data-testid="spending-category-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!categoryName.trim()) return;
-                  createCategoryMutation.mutate({
-                    name: categoryName.trim(),
-                    color: categoryColor || null,
-                    icon: categoryIcon || null,
-                  });
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <Label className="mb-2 block">Name</Label>
-                  <Input
-                    data-testid="spending-category-name"
-                    value={categoryName}
-                    onChange={(e) => setCategoryName(e.target.value)}
-                    placeholder="e.g. Groceries"
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label className="mb-2 block">Color</Label>
-                    <Input
-                      data-testid="spending-category-color"
-                      type="color"
-                      value={categoryColor}
-                      onChange={(e) => setCategoryColor(e.target.value)}
-                      className="h-11 p-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-2 block">Icon</Label>
-                    <Input
-                      data-testid="spending-category-icon"
-                      value={categoryIcon}
-                      onChange={(e) => setCategoryIcon(e.target.value)}
-                      placeholder="🧾"
-                      maxLength={4}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="flex-1"
-                    onClick={closeCategoryModal}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    data-testid="spending-category-create"
-                    type="submit"
-                    className="flex-1"
-                    disabled={createCategoryMutation.isPending || !categoryName.trim()}
-                  >
-                    {createCategoryMutation.isPending ? 'Creating...' : 'Create Category'}
-                  </Button>
-                </div>
-              </form>
-
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Custom categories
-                  </h4>
-                  <p className="text-xs text-slate-500">{customCategories.length} total</p>
-                </div>
-                <div className="space-y-2">
-                  {customCategories.length === 0 ? (
-                    <p className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">
-                      No custom categories yet.
-                    </p>
-                  ) : (
-                    customCategories.map((category) => (
-                      <div
-                        key={category.public_id}
-                        className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-sm"
-                            style={{ backgroundColor: `${category.color ?? '#64748b'}33`, color: category.color ?? '#94a3b8' }}
-                          >
-                            {category.icon || <Tag className="h-4 w-4" />}
-                          </span>
-                          <div>
-                            <p className="font-medium text-white">{category.name}</p>
-                            <p className="text-xs text-slate-500">{category.color ?? 'No color set'}</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => deleteCategoryMutation.mutate(category.public_id)}
-                          disabled={deleteCategoryMutation.isPending}
-                          className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-                          title="Delete category"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isQuickAccountModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-0">

@@ -2,9 +2,13 @@ import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig }
 
 // ─── Axios instance ───────────────────────────────────────────────────────────
 
+const baseURL = import.meta.env.VITE_API_URL;
+if (import.meta.env.PROD && !baseURL) {
+  throw new Error('VITE_API_URL must be configured in production/staging environments');
+}
+
 const api = axios.create({
-  // Fallback to local dev URL so Vitest runs without VITE_API_URL configured
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/v1',
+  baseURL: baseURL ?? 'http://localhost:8000/v1',
   withCredentials: true, // Send HttpOnly cookies on every request
 });
 
