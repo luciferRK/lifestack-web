@@ -17,6 +17,7 @@ const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retried?: boolean;
   _csrfTokenMirrored?: boolean;
+  _retryCount?: number;
 };
 
 const readCookie = (name: string): string | null => {
@@ -130,6 +131,17 @@ const attemptRefresh = (): Promise<void> => {
 
 // ─── Response interceptor ─────────────────────────────────────────────────────
 
+const isNetworkError = (error: AxiosError) => {
+  return (
+    error.code === 'ERR_NETWORK' ||
+    error.code === 'NETWORK_ERROR' ||
+    error.message === 'Network Error' ||
+    (!error.response && error.code !== 'ECONNABORTED')
+  );
+};
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 api.interceptors.response.use(
   (response) => {
     refreshFailed = false;
@@ -137,6 +149,17 @@ api.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const original = error.config as RetryableRequestConfig | undefined;
+
+    // Retry network errors with exponential backoff (up to 2 retries)
+    if (original && isNetworkError(error)) {
+      const retryCount = original._retryCount || 0;
+      if (retryCount < 2) {
+        original._retryCount = retryCount + 1;
+        const backoffDelay = retryCount === 0 ? 500 : 1000;
+        await delay(backoffDelay);
+        return api(original);
+      }
+    }
 
     // Only intercept 401s — and never retry the refresh call itself to avoid loops.
     if (
