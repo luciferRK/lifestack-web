@@ -122,6 +122,74 @@ export interface SpendingTrendResponse {
   months: SpendingTrendPoint[];
 }
 
+export interface CategoryBreakdownItem {
+  category_id: string;
+  category_name: string;
+  amount: number | string;
+  pct_of_total: number;
+  transaction_count: number;
+}
+
+export interface CategoryBreakdownOther {
+  amount: number | string;
+  pct_of_total: number;
+  category_count: number;
+}
+
+export interface CategoryBreakdownResponse {
+  from: string;
+  to: string;
+  type: TransactionType;
+  total: number | string;
+  categories: CategoryBreakdownItem[];
+  other: CategoryBreakdownOther | null;
+}
+
+export interface BudgetPerformanceItem {
+  category_id: string;
+  category_name: string;
+  budget_amount: number | string | null;
+  actual_amount: number | string;
+  utilization_pct: number | null;
+  remaining: number | string | null;
+  status: 'on_track' | 'warning' | 'exceeded';
+}
+
+export interface BudgetPerformanceTotals {
+  total_budgeted: number | string;
+  total_actual: number | string;
+  overall_utilization_pct: number | null;
+}
+
+export interface BudgetPerformanceResponse {
+  from: string;
+  to: string;
+  categories: BudgetPerformanceItem[];
+  totals: BudgetPerformanceTotals;
+}
+
+export interface SavingsRatePoint {
+  month: string;
+  income: number | string;
+  expense: number | string;
+  savings: number | string;
+  savings_rate_pct: number | null;
+}
+
+export interface SavingsRateTotals {
+  total_income: number | string;
+  total_expense: number | string;
+  total_savings: number | string;
+  average_savings_rate_pct: number | null;
+}
+
+export interface SavingsRateResponse {
+  from: string;
+  to: string;
+  months: SavingsRatePoint[];
+  period_totals: SavingsRateTotals;
+}
+
 export interface RecurringTransaction {
   public_id: string;
   category_id: string;

@@ -11,6 +11,9 @@ import type {
   BudgetUpdate,
   TransactionSummary,
   SpendingTrendResponse,
+  CategoryBreakdownResponse,
+  BudgetPerformanceResponse,
+  SavingsRateResponse,
   RecurringTransaction,
   RecurringTransactionCreate,
   RecurringTransactionUpdate,
@@ -115,6 +118,38 @@ export const spendingService = {
 
   getTrends: async (fromMonth: string, toMonth: string): Promise<SpendingTrendResponse> => {
     const response = await api.get('/spending/analytics/trends', {
+      params: { from: `${fromMonth}-01`, to: `${toMonth}-01` },
+    });
+    return response.data;
+  },
+
+  getCategoryBreakdown: async (
+    from: string,
+    to: string,
+    type: 'income' | 'expense' = 'expense',
+    limit: number = 10
+  ): Promise<CategoryBreakdownResponse> => {
+    const response = await api.get('/spending/analytics/breakdown', {
+      params: { from, to, type, limit },
+    });
+    return response.data;
+  },
+
+  getBudgetPerformance: async (
+    fromMonth: string,
+    toMonth: string
+  ): Promise<BudgetPerformanceResponse> => {
+    const response = await api.get('/spending/analytics/budget-performance', {
+      params: { from: `${fromMonth}-01`, to: `${toMonth}-01` },
+    });
+    return response.data;
+  },
+
+  getSavingsRate: async (
+    fromMonth: string,
+    toMonth: string
+  ): Promise<SavingsRateResponse> => {
+    const response = await api.get('/spending/analytics/savings-rate', {
       params: { from: `${fromMonth}-01`, to: `${toMonth}-01` },
     });
     return response.data;
