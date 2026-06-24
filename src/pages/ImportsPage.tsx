@@ -45,12 +45,24 @@ export const ImportsPage: React.FC = () => {
   const { data: importsResponse, isLoading: isLoadingImports } = useQuery({
     queryKey: ['imports', 'list'],
     queryFn: () => importsService.listImports(20, 0),
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      const hasPending = items.some(item => item.status === 'uploaded' || item.status === 'committing');
+      return hasPending ? 1500 : false;
+    },
   });
 
   const detailQuery = useQuery({
     queryKey: ['imports', 'detail', selectedImportId],
     queryFn: () => importsService.getImportDetail(selectedImportId as string),
     enabled: Boolean(selectedImportId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.import_batch.status;
+      if (status === 'uploaded' || status === 'committing') {
+        return 1500;
+      }
+      return false;
+    },
   });
 
   const activeDetail = useMemo(() => {
@@ -82,8 +94,9 @@ export const ImportsPage: React.FC = () => {
       setUploadError('File size exceeds the maximum limit of 10MB.');
       return;
     }
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setUploadError('Invalid file format. Please upload a CSV file.');
+    const fileExt = file.name.toLowerCase();
+    if (!fileExt.endsWith('.csv') && !fileExt.endsWith('.xlsx')) {
+      setUploadError('Invalid file format. Please upload a CSV or XLSX file.');
       return;
     }
     setUploadError(null);
@@ -195,12 +208,12 @@ export const ImportsPage: React.FC = () => {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-300">Choose CSV File</label>
+                <label className="text-sm font-semibold text-slate-300">Choose CSV/Excel File</label>
                 <input
                   data-testid="imports-file-input"
                   key={file ? `selected-${file.name}-${file.lastModified}` : 'no-file-selected'}
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   onChange={(e) => {
                     setFile(e.target.files?.[0] ?? null);
                     setUploadError(null);
@@ -333,6 +346,101 @@ export const ImportsPage: React.FC = () => {
                 <p className="mb-4 text-sm text-rose-300">
                   Commit failed. Refresh import details and retry.
                 </p>
+              ) : null}
+
+              {/* Preview Rows Section */}
+              {activeDetail.import_batch.status === 'validated' && activeDetail.preview_rows && activeDetail.preview_rows.length > 0 ? (
+                <div className="mb-6">
+                  <h3 className="mb-2 text-sm font-semibold text-white">Preview rows (first 100)</h3>
+                  <div className="max-h-72 overflow-auto rounded-lg border border-slate-800 bg-slate-900/50">
+                    <table className="min-w-full text-xs text-slate-300">
+                      <thead className="border-b border-slate-800 text-slate-400 bg-slate-950/40">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Row</th>
+                          {activeDetail.import_batch.module === 'spending-transactions' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Date</th>
+                              <th className="px-3 py-2 text-left">Type</th>
+                              <th className="px-3 py-2 text-left">Amount</th>
+                              <th className="px-3 py-2 text-left">Category</th>
+                              <th className="px-3 py-2 text-left">Description</th>
+                            </>
+                          )}
+                          {activeDetail.import_batch.module === 'spending-budgets' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Month</th>
+                              <th className="px-3 py-2 text-left">Category</th>
+                              <th className="px-3 py-2 text-left">Amount</th>
+                            </>
+                          )}
+                          {activeDetail.import_batch.module === 'investing-holdings' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Symbol</th>
+                              <th className="px-3 py-2 text-left">Account</th>
+                              <th className="px-3 py-2 text-left">Quantity</th>
+                              <th className="px-3 py-2 text-left">Avg Cost</th>
+                              <th className="px-3 py-2 text-left">Currency</th>
+                            </>
+                          )}
+                          {activeDetail.import_batch.module === 'investing-constituents' && (
+                            <>
+                              <th className="px-3 py-2 text-left">ETF Symbol</th>
+                              <th className="px-3 py-2 text-left">Company</th>
+                              <th className="px-3 py-2 text-left">Ticker</th>
+                              <th className="px-3 py-2 text-left">Weight</th>
+                              <th className="px-3 py-2 text-left">Date</th>
+                            </>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeDetail.preview_rows.map((row) => (
+                          <tr key={row.row_number} className="border-b border-slate-800 hover:bg-slate-800/40">
+                            <td className="px-3 py-2 font-medium text-slate-400">{row.row_number}</td>
+                            {activeDetail.import_batch.module === 'spending-transactions' && (
+                              <>
+                                <td className="px-3 py-2 whitespace-nowrap">{row.payload_json.occurred_at ? new Date(row.payload_json.occurred_at).toLocaleDateString() : '-'}</td>
+                                <td className="px-3 py-2 uppercase whitespace-nowrap">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${row.payload_json.type === 'income' ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}`}>
+                                    {row.payload_json.type}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2">{row.payload_json.amount}</td>
+                                <td className="px-3 py-2">{row.payload_json.category_name ?? '-'}</td>
+                                <td className="px-3 py-2 truncate max-w-xs">{row.payload_json.description ?? '-'}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'spending-budgets' && (
+                              <>
+                                <td className="px-3 py-2">{row.payload_json.month_start}</td>
+                                <td className="px-3 py-2">{row.payload_json.category_name ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.amount}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'investing-holdings' && (
+                              <>
+                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.symbol}</td>
+                                <td className="px-3 py-2">{row.payload_json.account_name ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.quantity}</td>
+                                <td className="px-3 py-2">{row.payload_json.avg_cost}</td>
+                                <td className="px-3 py-2">{row.payload_json.currency}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'investing-constituents' && (
+                              <>
+                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.instrument_symbol}</td>
+                                <td className="px-3 py-2">{row.payload_json.company_name}</td>
+                                <td className="px-3 py-2">{row.payload_json.company_ticker ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.weight ? `${(parseFloat(row.payload_json.weight) * 100).toFixed(2)}%` : '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.as_of_date}</td>
+                              </>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               ) : null}
 
               {errors.length > 0 ? (

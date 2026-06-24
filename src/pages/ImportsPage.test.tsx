@@ -83,7 +83,7 @@ describe('ImportsPage', () => {
     fireEvent.click(uploadBtn);
 
     expect(await screen.findByTestId('imports-upload-error')).toHaveTextContent(
-      'Invalid file format. Please upload a CSV file.',
+      'Invalid file format. Please upload a CSV or XLSX file.',
     );
   });
 

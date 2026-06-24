@@ -41,10 +41,16 @@ export interface ImportErrorSummary {
   by_field: Record<string, number>;
 }
 
+export interface ImportPreviewRow {
+  row_number: number;
+  payload_json: Record<string, any>;
+}
+
 export interface ImportValidateResponse {
   import_batch: ImportBatch;
   errors: ImportErrorItem[];
   error_summary?: ImportErrorSummary;
+  preview_rows?: ImportPreviewRow[];
 }
 
 export interface ImportCommitResponse {
