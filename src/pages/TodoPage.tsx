@@ -528,7 +528,7 @@ export const TodoPage: React.FC = () => {
                             </span>
                             {formatDueDateTime(todo.due_date) ? (
                               (() => {
-                                const isOverdue = !todo.completed && new Date(todo.due_date!).getTime() < Date.now();
+                                const isOverdue = !todo.completed && todo.due_date && new Date(todo.due_date).getTime() < Date.now();
                                 return (
                                   <span className={`text-xs ${isOverdue ? 'text-rose-400 font-semibold flex items-center gap-1 bg-rose-950/40 border border-rose-900/50 rounded px-1.5 py-0.5' : 'text-slate-400'}`}>
                                     {isOverdue && <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />}

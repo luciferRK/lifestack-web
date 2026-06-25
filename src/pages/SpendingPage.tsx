@@ -818,9 +818,12 @@ export const SpendingPage: React.FC = () => {
             className="w-44 border-slate-700 bg-slate-950/50 text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:ring-cyan-500"
             value={selectedMonth}
             onChange={(e) => {
-              setSelectedMonth(e.target.value);
-              setTxOffset(0);
-              setBudgetOffset(0);
+              const val = e.target.value;
+              setSelectedMonth(val);
+              if (val) {
+                setTxOffset(0);
+                setBudgetOffset(0);
+              }
             }}
           />
         </CompactFilterField>
@@ -2662,7 +2665,7 @@ const SpendingAnalyticsTab: React.FC<SpendingAnalyticsTabProps> = ({
                     </div>
 
                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-950/40">
-                      <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.min(100, uPct)}%` }} />
+                      <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.max(0, Math.min(100, uPct))}%` }} />
                     </div>
 
                     {item.remaining !== null && (

@@ -437,7 +437,7 @@ export const ImportsPage: React.FC = () => {
                                 <td className="px-3 py-2 font-semibold text-white">{row.payload_json.instrument_symbol}</td>
                                 <td className="px-3 py-2">{row.payload_json.company_name}</td>
                                 <td className="px-3 py-2">{row.payload_json.company_ticker ?? '-'}</td>
-                                <td className="px-3 py-2">{row.payload_json.weight ? `${(parseFloat(row.payload_json.weight) * 100).toFixed(2)}%` : '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.weight && !isNaN(parseFloat(row.payload_json.weight)) ? (parseFloat(row.payload_json.weight) * 100).toFixed(2) + '%' : '-'}</td>
                                 <td className="px-3 py-2">{row.payload_json.as_of_date}</td>
                               </>
                             )}

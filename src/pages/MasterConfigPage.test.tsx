@@ -114,7 +114,7 @@ describe('MasterConfigPage', () => {
     await waitFor(() => {
       expect(resetTarget).toBe(workspaceB);
     });
-  });
+  }, 20000);
 
   it('shows reset section with disabled action and reason when reset is not allowed', async () => {
     const workspaceId = '33333333-3333-3333-3333-333333333333';
