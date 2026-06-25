@@ -2214,7 +2214,7 @@ const SpendingAnalyticsTab: React.FC<SpendingAnalyticsTabProps> = ({
   const totalIncome = savingsRateData?.period_totals?.total_income ?? 0;
   const totalExpense = savingsRateData?.period_totals?.total_expense ?? 0;
   const totalSavings = savingsRateData?.period_totals?.total_savings ?? 0;
-  const averageSavingsRate = savingsRateData?.period_totals?.average_savings_rate_pct ?? 0;
+  const averageSavingsRate = savingsRateData?.period_totals?.average_savings_rate_pct ?? null;
 
   // --- 1. Trends Bar Chart Setup ---
   const trendsList = trendsData?.months ?? [];

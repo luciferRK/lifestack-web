@@ -126,10 +126,10 @@ export const DashboardPage: React.FC = () => {
 
             {/* Dashboard Cues (Insights & Alerts) */}
             {(() => {
-              const overdueCount = data.todos?.overdue_count ?? 0;
-              const overspentCategories = data.spending?.top_overspent_categories ?? [];
-              const guardrailAlerts = data.todos?.active_guardrail_todo_count ?? 0;
-              const statusLower = data.investing?.valuation_status?.toLowerCase();
+              const overdueCount = data?.todos?.overdue_count ?? 0;
+              const overspentCategories = data?.spending?.top_overspent_categories ?? [];
+              const guardrailAlerts = data?.todos?.active_guardrail_todo_count ?? 0;
+              const statusLower = data?.investing?.valuation_status?.toLowerCase();
               const isValuationStale = statusLower && statusLower !== 'converted' && statusLower !== 'success';
               
               const hasCues = overdueCount > 0 || overspentCategories.length > 0 || guardrailAlerts > 0 || isValuationStale;
@@ -150,7 +150,7 @@ export const DashboardPage: React.FC = () => {
                   )}
                   {guardrailAlerts > 0 && (
                     <div className="flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-950/20 p-4 text-amber-200">
-                      <CircleAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                      <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="font-semibold text-amber-100">Budget Guardrails Triggered</p>
                         <p className="mt-1 text-sm text-amber-300/90">
