@@ -3,14 +3,14 @@
 Checklist for `lifestack-web` release hardening.
 
 ## Auth and Session UX
-- [ ] Protected routes redirect unauthenticated users.
-- [ ] Login/logout transitions clear stale UI state.
-- [ ] Frontend does not persist auth tokens in localStorage/sessionStorage.
+- [x] Protected routes redirect unauthenticated users.
+- [x] Login/logout transitions clear stale UI state.
+- [x] Frontend does not persist auth tokens in localStorage/sessionStorage.
 
 ## API Interaction Safety
-- [ ] Client handles `401/403/404/409/422` consistently with user-safe messaging.
-- [ ] No sensitive backend error internals shown directly in UI.
-- [ ] Mutation flows invalidate dependent queries after success.
+- [x] Client handles `401/403/404/409/422` consistently with user-safe messaging.
+- [x] No sensitive backend error internals shown directly in UI.
+- [x] Mutation flows invalidate dependent queries after success.
 - [x] Cookie-authenticated mutations mirror the readable `csrf_token` cookie into `X-CSRF-Token`.
 
 ## Verification Log (2026-06-04)
@@ -20,14 +20,14 @@ Checklist for `lifestack-web` release hardening.
   - `npm run build`
 
 ## Input and Form Safety
-- [ ] Date, amount, and enum inputs are validated client-side before submit.
-- [ ] Recurring/todo/capture forms reject obviously invalid values.
-- [ ] UI defaults avoid ambiguous module routing where explicit intent is available.
+- [x] Date, amount, and enum inputs are validated client-side before submit.
+- [x] Recurring/todo/capture forms reject obviously invalid values.
+- [x] UI defaults avoid ambiguous module routing where explicit intent is available.
 
 ## Dependency and Build Hygiene
-- [ ] `npm audit --audit-level=high` is available as `npm run security:audit` and runs in CI.
-- [ ] Build warnings tracked (notably large chunks) and code-splitting backlog maintained.
-- [ ] Environment-specific variables are read from env files, not hardcoded.
+- [x] `npm audit --audit-level=high` is available as `npm run security:audit` and runs in CI.
+- [x] Build warnings tracked (notably large chunks) and code-splitting backlog maintained.
+- [x] Environment-specific variables are read from env files, not hardcoded.
 
 ## Verification Log (2026-06-04)
 - Gate 0 dependency audit checks passed:

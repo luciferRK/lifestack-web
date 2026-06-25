@@ -352,7 +352,7 @@ export const VoiceAgentWidget: React.FC = () => {
             const msg = JSON.parse(event.data);
             handleServerMessage(msg);
           } catch (err) {
-            console.error('Failed parsing server message:', err);
+            console.error('Failed parsing server message:', err instanceof Error ? err.message : 'Unknown error');
             setConnectionError('Voice Copilot received an unreadable response. Retry the session.');
           }
         }
@@ -379,7 +379,7 @@ export const VoiceAgentWidget: React.FC = () => {
         stopRecording();
       };
     } catch (err) {
-      console.error('Failed to establish WebSocket connection:', err);
+      console.error('Failed to establish WebSocket connection:', err instanceof Error ? err.message : 'Unknown error');
       setConnectionStatus('error');
       setConnectionError('Voice Copilot could not start a live session.');
       setMessages(prev => [...prev, {
@@ -424,7 +424,7 @@ export const VoiceAgentWidget: React.FC = () => {
               wsRef.current.send(buffer);
             }
           } catch (e) {
-            console.error('Failed to send audio chunk:', e);
+            console.error('Failed to send audio chunk:', e instanceof Error ? e.message : 'Unknown error');
           }
         }
       };
@@ -433,7 +433,7 @@ export const VoiceAgentWidget: React.FC = () => {
       setIsRecording(true);
 
     } catch (err) {
-      console.error('Mic access failed:', err);
+      console.error('Mic access failed:', err instanceof Error ? err.message : 'Unknown error');
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }

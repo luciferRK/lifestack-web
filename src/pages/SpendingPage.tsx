@@ -10,6 +10,7 @@ import type {
   Budget,
   BudgetCreate,
   BudgetUpdate,
+  LedgerEntry,
   RecurringTransaction,
   RecurringTransactionCreate,
   RecurringTransactionUpdate,
@@ -30,12 +31,17 @@ import {
   X,
   Target,
   Edit2,
-  Brush,
   RefreshCw,
   Clock,
   ToggleLeft,
   ArrowRightLeft,
   Landmark,
+  TrendingUp,
+  BarChart2,
+  PieChart,
+  Percent,
+  PiggyBank,
+  CheckCircle2,
 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { DropdownSelect } from '../components/DropdownSelect';
@@ -206,16 +212,16 @@ export const SpendingPage: React.FC = () => {
   const [selectedAccountFilter, setSelectedAccountFilter] = useState('');
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'recurring' | 'transfers'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'recurring' | 'transfers' | 'analytics' | 'ledger'>('transactions');
+
+  // Ledger tab state
+  const [ledgerAccountId, setLedgerAccountId] = useState('');
+  const [ledgerOffset, setLedgerOffset] = useState(0);
+  const ledgerLimit = 50;
 
   // Budget Modal
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [categoryName, setCategoryName] = useState('');
-  const [categoryColor, setCategoryColor] = useState('#60a5fa');
-  const [categoryIcon, setCategoryIcon] = useState('');
-
   const [txOffset, setTxOffset] = useState(0);
   const [budgetOffset, setBudgetOffset] = useState(0);
   const [recurringOffset, setRecurringOffset] = useState(0);
@@ -251,10 +257,6 @@ export const SpendingPage: React.FC = () => {
     queryFn: () => spendingService.getCategories(200, 0)
   });
   const categories = categoriesResponse?.items;
-  const customCategories = useMemo(
-    () => categories?.filter((category) => !category.is_system) ?? [],
-    [categories]
-  );
   const categoryOptions = useMemo(() => categories?.map((category) => ({
     value: category.public_id,
     label: category.name,
@@ -367,28 +369,7 @@ export const SpendingPage: React.FC = () => {
     }
   });
 
-  const createCategoryMutation = useMutation({
-    mutationFn: (data: { name: string; color?: string | null; icon?: string | null }) =>
-      spendingService.createCategory(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      setCategoryName('');
-      setCategoryColor('#60a5fa');
-      setCategoryIcon('');
-      setIsCategoryModalOpen(false);
-    },
-  });
 
-  const deleteCategoryMutation = useMutation({
-    mutationFn: (id: string) => spendingService.deleteCategory(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
-  });
 
   const createBudgetMutation = useMutation({
     mutationFn: (newBudget: BudgetCreate) => spendingService.createBudget(newBudget),
@@ -622,9 +603,6 @@ export const SpendingPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const openCategoryModal = () => {
-    setIsCategoryModalOpen(true);
-  };
 
   const openTransactionModalForEdit = (tx: Transaction) => {
     setEditingTransaction(tx);
@@ -648,12 +626,6 @@ export const SpendingPage: React.FC = () => {
     setDate(new Date().toISOString().split('T')[0]);
   };
 
-  const closeCategoryModal = () => {
-    setIsCategoryModalOpen(false);
-    setCategoryName('');
-    setCategoryColor('#60a5fa');
-    setCategoryIcon('');
-  };
 
   const openRecurringModalForNew = () => {
     setEditingRecurring(null);
@@ -801,14 +773,7 @@ export const SpendingPage: React.FC = () => {
             <Plus className="h-5 w-5" />
             <span className="whitespace-nowrap">New Transaction</span>
           </button>
-          <button
-            onClick={openCategoryModal}
-            data-testid="spending-open-manage-categories"
-            className="group relative flex h-12 min-w-[170px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-900 px-5 font-semibold text-slate-200 shadow-lg transition-all hover:bg-slate-800 active:scale-95"
-          >
-            <Brush className="h-5 w-5" />
-            <span className="whitespace-nowrap">Manage Categories</span>
-          </button>
+
           <button
             onClick={openBudgetModalForNew}
             data-testid="spending-open-set-budget"
@@ -847,16 +812,19 @@ export const SpendingPage: React.FC = () => {
         }}
       >
         <CompactFilterField label="Month">
-          <DropdownSelect
+          <Input
             id="spending-month"
+            type="month"
+            className="w-44 border-slate-700 bg-slate-950/50 text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:ring-cyan-500"
             value={selectedMonth}
-            onChange={(value) => {
-              setSelectedMonth(value);
-              setTxOffset(0);
-              setBudgetOffset(0);
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedMonth(val);
+              if (val) {
+                setTxOffset(0);
+                setBudgetOffset(0);
+              }
             }}
-            options={monthFilterOptions}
-            placeholder="Select month"
           />
         </CompactFilterField>
         <CompactFilterField label="Category">
@@ -963,6 +931,20 @@ export const SpendingPage: React.FC = () => {
         >
           Transfers
         </button>
+        <button
+          data-testid="spending-tab-analytics"
+          onClick={() => setActiveTab('analytics')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'analytics' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+        >
+          Analytics
+        </button>
+        <button
+          data-testid="spending-tab-ledger"
+          onClick={() => setActiveTab('ledger')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'ledger' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+        >
+          Ledger
+        </button>
       </div>
 
       {isRecurringLoading && activeTab === 'recurring' ? (
@@ -971,7 +953,7 @@ export const SpendingPage: React.FC = () => {
         </div>
       ) : isTransfersLoading && activeTab === 'transfers' ? (
         <SkeletonList rows={4} />
-      ) : isLoading && activeTab !== 'recurring' ? (
+      ) : isLoading && activeTab !== 'recurring' && activeTab !== 'analytics' && activeTab !== 'ledger' ? (
         <SkeletonList rows={5} />
       ) : activeTab === 'transactions' ? (
         <div className="space-y-4 animate-in fade-in duration-300">
@@ -1444,6 +1426,23 @@ export const SpendingPage: React.FC = () => {
             />
           )}
         </div>
+      ) : activeTab === 'analytics' ? (
+        <SpendingAnalyticsTab
+          selectedMonth={selectedMonth}
+          displayCurrency={displayCurrency}
+          currencyDisplayPreference={currencyDisplayPreference}
+          getCategoryTheme={getCategoryTheme}
+        />
+      ) : activeTab === 'ledger' ? (
+        <SpendingLedgerTab
+          accounts={spendingAccounts}
+          selectedAccountId={ledgerAccountId}
+          onAccountChange={(id: string) => { setLedgerAccountId(id); setLedgerOffset(0); }}
+          offset={ledgerOffset}
+          limit={ledgerLimit}
+          onOffsetChange={setLedgerOffset}
+          currencyDisplayPreference={currencyDisplayPreference}
+        />
       ) : null}
 
       {/* Recurring Modal */}
@@ -1936,137 +1935,7 @@ export const SpendingPage: React.FC = () => {
         </div>
       )}
 
-      {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
-          <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
-            onClick={closeCategoryModal}
-          />
 
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">Manage Categories</h3>
-              <button
-                onClick={closeCategoryModal}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-6 p-6">
-              <form
-                data-testid="spending-category-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!categoryName.trim()) return;
-                  createCategoryMutation.mutate({
-                    name: categoryName.trim(),
-                    color: categoryColor || null,
-                    icon: categoryIcon || null,
-                  });
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <Label className="mb-2 block">Name</Label>
-                  <Input
-                    data-testid="spending-category-name"
-                    value={categoryName}
-                    onChange={(e) => setCategoryName(e.target.value)}
-                    placeholder="e.g. Groceries"
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label className="mb-2 block">Color</Label>
-                    <Input
-                      data-testid="spending-category-color"
-                      type="color"
-                      value={categoryColor}
-                      onChange={(e) => setCategoryColor(e.target.value)}
-                      className="h-11 p-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-2 block">Icon</Label>
-                    <Input
-                      data-testid="spending-category-icon"
-                      value={categoryIcon}
-                      onChange={(e) => setCategoryIcon(e.target.value)}
-                      placeholder="🧾"
-                      maxLength={4}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="flex-1"
-                    onClick={closeCategoryModal}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    data-testid="spending-category-create"
-                    type="submit"
-                    className="flex-1"
-                    disabled={createCategoryMutation.isPending || !categoryName.trim()}
-                  >
-                    {createCategoryMutation.isPending ? 'Creating...' : 'Create Category'}
-                  </Button>
-                </div>
-              </form>
-
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Custom categories
-                  </h4>
-                  <p className="text-xs text-slate-500">{customCategories.length} total</p>
-                </div>
-                <div className="space-y-2">
-                  {customCategories.length === 0 ? (
-                    <p className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">
-                      No custom categories yet.
-                    </p>
-                  ) : (
-                    customCategories.map((category) => (
-                      <div
-                        key={category.public_id}
-                        className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-sm"
-                            style={{ backgroundColor: `${category.color ?? '#64748b'}33`, color: category.color ?? '#94a3b8' }}
-                          >
-                            {category.icon || <Tag className="h-4 w-4" />}
-                          </span>
-                          <div>
-                            <p className="font-medium text-white">{category.name}</p>
-                            <p className="text-xs text-slate-500">{category.color ?? 'No color set'}</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => deleteCategoryMutation.mutate(category.public_id)}
-                          disabled={deleteCategoryMutation.isPending}
-                          className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-                          title="Delete category"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isQuickAccountModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-0">
@@ -2245,5 +2114,773 @@ export const SpendingPage: React.FC = () => {
         </div>
       )}
     </PageShell>
+  );
+};
+
+interface SpendingAnalyticsTabProps {
+  selectedMonth: string;
+  displayCurrency: string;
+  currencyDisplayPreference: 'symbol' | 'code';
+  getCategoryTheme: (catId: string) => { name: string; color: string; icon: string | null };
+}
+
+const SpendingAnalyticsTab: React.FC<SpendingAnalyticsTabProps> = ({
+  selectedMonth,
+  displayCurrency,
+  currencyDisplayPreference,
+  getCategoryTheme,
+}) => {
+  const [rangeMonths, setRangeMonths] = useState(6);
+  const [breakdownType, setBreakdownType] = useState<'income' | 'expense'>('expense');
+
+  // Calculate the dates range for queries
+  const analyticsRange = useMemo(() => {
+    if (!/^\d{4}-\d{2}$/.test(selectedMonth)) {
+      return { fromMonth: selectedMonth, toMonth: selectedMonth, fromDate: '', toDate: '' };
+    }
+    const [yearStr, monthStr] = selectedMonth.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    
+    // Calculate starting month of range
+    const startMonthDate = new Date(Date.UTC(year, month - 1 - (rangeMonths - 1), 1));
+    const fromMonthVal = `${startMonthDate.getUTCFullYear()}-${String(startMonthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    
+    const endMonthDate = new Date(Date.UTC(year, month - 1, 1));
+    const toMonthVal = `${endMonthDate.getUTCFullYear()}-${String(endMonthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    
+    const fromDate = `${fromMonthVal}-01`;
+    // Last day of the selected month
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const toDate = `${toMonthVal}-${String(lastDay).padStart(2, '0')}`;
+    
+    return {
+      fromMonth: fromMonthVal,
+      toMonth: toMonthVal,
+      fromDate,
+      toDate
+    };
+  }, [selectedMonth, rangeMonths]);
+
+  // Queries
+  const { data: trendsData, isLoading: isTrendsLoading } = useQuery({
+    queryKey: ['spending-trends', analyticsRange.fromMonth, analyticsRange.toMonth],
+    queryFn: () => spendingService.getTrends(analyticsRange.fromMonth, analyticsRange.toMonth),
+    enabled: !!analyticsRange.fromMonth,
+  });
+
+  const { data: breakdownData, isLoading: isBreakdownLoading } = useQuery({
+    queryKey: ['spending-breakdown', analyticsRange.fromDate, analyticsRange.toDate, breakdownType],
+    queryFn: () => spendingService.getCategoryBreakdown(analyticsRange.fromDate, analyticsRange.toDate, breakdownType),
+    enabled: !!analyticsRange.fromDate,
+  });
+
+  const { data: budgetPerfData, isLoading: isBudgetPerfLoading } = useQuery({
+    queryKey: ['spending-budget-perf', analyticsRange.fromMonth, analyticsRange.toMonth],
+    queryFn: () => spendingService.getBudgetPerformance(analyticsRange.fromMonth, analyticsRange.toMonth),
+    enabled: !!analyticsRange.fromMonth,
+  });
+
+  const { data: savingsRateData, isLoading: isSavingsRateLoading } = useQuery({
+    queryKey: ['spending-savings-rate', analyticsRange.fromMonth, analyticsRange.toMonth],
+    queryFn: () => spendingService.getSavingsRate(analyticsRange.fromMonth, analyticsRange.toMonth),
+    enabled: !!analyticsRange.fromMonth,
+  });
+
+  const isAnalyticsLoading = isTrendsLoading || isBreakdownLoading || isBudgetPerfLoading || isSavingsRateLoading;
+
+  if (isAnalyticsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl border border-slate-800 bg-slate-800/30" />
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="h-80 animate-pulse rounded-2xl border border-slate-800 bg-slate-800/30" />
+          <div className="h-80 animate-pulse rounded-2xl border border-slate-800 bg-slate-800/30" />
+        </div>
+      </div>
+    );
+  }
+
+  // Format month names (Jan, Feb, ...)
+  const formatMonthShort = (monthStr: string) => {
+    if (!/^\d{4}-\d{2}$/.test(monthStr)) return monthStr;
+    const [, m] = monthStr.split('-');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[Number(m) - 1];
+  };
+
+  // Period stats summary
+  const totalIncome = savingsRateData?.period_totals?.total_income ?? 0;
+  const totalExpense = savingsRateData?.period_totals?.total_expense ?? 0;
+  const totalSavings = savingsRateData?.period_totals?.total_savings ?? 0;
+  const averageSavingsRate = savingsRateData?.period_totals?.average_savings_rate_pct ?? null;
+
+  // --- 1. Trends Bar Chart Setup ---
+  const trendsList = trendsData?.months ?? [];
+  const maxTrendVal = Math.max(
+    ...trendsList.flatMap((m) => [Number(m.total_income), Number(m.total_expense)]),
+    100
+  );
+
+  // --- 2. Savings Rate Area Chart Setup ---
+  const savingsRateList = savingsRateData?.months ?? [];
+  const rates = savingsRateList.map((m) => m.savings_rate_pct ?? 0);
+  const minRate = Math.min(...rates, 0);
+  const maxRate = Math.max(...rates, 100);
+  const rateRange = maxRate - minRate || 100;
+
+  // --- 3. Category Breakdown donut calculation ---
+  const breakdownCategories = breakdownData?.categories ?? [];
+  const otherItem = breakdownData?.other;
+  const donutItems = [...breakdownCategories];
+  if (otherItem) {
+    donutItems.push({
+      category_id: 'other',
+      category_name: 'Other Categories',
+      amount: otherItem.amount,
+      pct_of_total: otherItem.pct_of_total,
+      transaction_count: 0
+    });
+  }
+
+  // --- 4. Budget Performance sorting ---
+  const sortedBudgetItems = [...(budgetPerfData?.categories ?? [])].sort(
+    (a, b) => (b.utilization_pct ?? 0) - (a.utilization_pct ?? 0)
+  );
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Analytics Header Controls */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-700/50 bg-slate-800/20 p-4">
+        <div>
+          <h4 className="text-base font-semibold text-white">Analysis Window</h4>
+          <p className="text-xs text-slate-400">Comparing trends ending in {formatMonthLabel(selectedMonth)}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-slate-400">Duration:</span>
+          {[3, 6, 12].map((m) => (
+            <button
+              key={m}
+              onClick={() => setRangeMonths(m)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                rangeMonths === m
+                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                  : 'bg-slate-800/40 text-slate-400 border border-transparent hover:bg-slate-800/80 hover:text-slate-200'
+              }`}
+            >
+              {m} Months
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Period Stats Summary Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card: Total Income */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/20 p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-400">Period Income</p>
+              <h3 className="mt-2 text-xl font-bold text-white">
+                {formatCurrency(Number(totalIncome), displayCurrency, currencyDisplayPreference)}
+              </h3>
+            </div>
+            <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-400">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+
+        {/* Card: Total Expenses */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/20 p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-400">Period Expenses</p>
+              <h3 className="mt-2 text-xl font-bold text-white">
+                {formatCurrency(Number(totalExpense), displayCurrency, currencyDisplayPreference)}
+              </h3>
+            </div>
+            <div className="rounded-lg bg-rose-500/10 p-2 text-rose-400">
+              <TrendingUp className="h-5 w-5 rotate-180" />
+            </div>
+          </div>
+        </div>
+
+        {/* Card: Period Savings */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/20 p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-400">Net Savings</p>
+              <h3 className="mt-2 text-xl font-bold text-white">
+                {formatCurrency(Number(totalSavings), displayCurrency, currencyDisplayPreference)}
+              </h3>
+            </div>
+            <div className="rounded-lg bg-cyan-500/10 p-2 text-cyan-400">
+              <PiggyBank className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+
+        {/* Card: Savings Rate */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/20 p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-slate-400">Avg Savings Rate</p>
+              <h3 className="mt-2 text-xl font-bold text-white">
+                {averageSavingsRate !== null ? `${Number(averageSavingsRate).toFixed(1)}%` : 'N/A'}
+              </h3>
+            </div>
+            <div className="rounded-lg bg-violet-500/10 p-2 text-violet-400">
+              <Percent className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Charts Row */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Trends Chart */}
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/20 p-5 backdrop-blur-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
+              <BarChart2 className="h-4 w-4 text-cyan-400" />
+              Income vs Expenses Trend
+            </h4>
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
+                Income
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+                Expenses
+              </div>
+            </div>
+          </div>
+
+          {trendsList.length === 0 ? (
+            <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+              No trend data available for the period
+            </div>
+          ) : (
+            <div className="h-64 w-full">
+              <svg className="h-full w-full" viewBox="0 0 500 300" preserveAspectRatio="none">
+                {/* Horizontal Grid lines & Y Axis Labels */}
+                {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => {
+                  const y = 20 + (1 - p) * 235;
+                  const labelVal = maxTrendVal * p;
+                  return (
+                    <g key={idx}>
+                      <line x1="50" y1={y} x2="480" y2={y} stroke="#334155" strokeWidth="1" strokeDasharray="3 3" />
+                      <text x="42" y={y + 4} textAnchor="end" className="text-[10px] font-medium fill-slate-400">
+                        {labelVal >= 1000 ? `${(labelVal / 1000).toFixed(0)}k` : labelVal.toFixed(0)}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Bars per Month */}
+                {(() => {
+                  const step = 430 / trendsList.length;
+                  const barW = Math.max(4, step * 0.25);
+                  return trendsList.map((m, idx) => {
+                    const xCenter = 50 + idx * step + step * 0.5;
+                    const incomeH = (Number(m.total_income) / maxTrendVal) * 235;
+                    const expenseH = (Number(m.total_expense) / maxTrendVal) * 235;
+
+                    return (
+                      <g key={m.month}>
+                        {/* Income Bar */}
+                        <rect
+                          x={xCenter - barW - 2}
+                          y={20 + 235 - incomeH}
+                          width={barW}
+                          height={incomeH}
+                          rx="2"
+                          className="fill-cyan-500 hover:fill-cyan-400 transition-colors"
+                        >
+                          <title>{`Income: ${formatCurrency(Number(m.total_income), displayCurrency, currencyDisplayPreference)}`}</title>
+                        </rect>
+                        {/* Expense Bar */}
+                        <rect
+                          x={xCenter + 2}
+                          y={20 + 235 - expenseH}
+                          width={barW}
+                          height={expenseH}
+                          rx="2"
+                          className="fill-rose-500 hover:fill-rose-400 transition-colors"
+                        >
+                          <title>{`Expense: ${formatCurrency(Number(m.total_expense), displayCurrency, currencyDisplayPreference)}`}</title>
+                        </rect>
+                        {/* X Axis Label */}
+                        <text x={xCenter} y="275" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400">
+                          {formatMonthShort(m.month)}
+                        </text>
+                      </g>
+                    );
+                  });
+                })()}
+                <line x1="50" y1="255" x2="480" y2="255" stroke="#475569" strokeWidth="1" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        {/* Savings Rate Chart */}
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/20 p-5 backdrop-blur-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Percent className="h-4 w-4 text-emerald-400" />
+              Savings Rate Trend (%)
+            </h4>
+          </div>
+
+          {savingsRateList.length === 0 ? (
+            <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+              No savings rate data available
+            </div>
+          ) : (
+            <div className="h-64 w-full">
+              <svg className="h-full w-full" viewBox="0 0 500 300" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="savingsAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Horizontal Grid lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => {
+                  const y = 20 + (1 - p) * 235;
+                  const labelVal = minRate + rateRange * p;
+                  return (
+                    <g key={idx}>
+                      <line x1="50" y1={y} x2="480" y2={y} stroke="#334155" strokeWidth="1" strokeDasharray="3 3" />
+                      <text x="42" y={y + 4} textAnchor="end" className="text-[10px] font-medium fill-slate-400">
+                        {labelVal.toFixed(0)}%
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Area and Line Graph */}
+                {(() => {
+                  const step = 430 / Math.max(savingsRateList.length - 1, 1);
+                  const points = savingsRateList.map((m, idx) => {
+                    const rate = m.savings_rate_pct ?? 0;
+                    const x = 50 + idx * step;
+                    const y = 20 + 235 - ((rate - minRate) / rateRange) * 235;
+                    return { x, y, rate, month: m.month };
+                  });
+
+                  const lineD = points.map((p, idx) => (idx === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
+                  const zeroY = 20 + 235 - ((0 - minRate) / rateRange) * 235;
+                  const areaD = `${lineD} L ${points[points.length - 1].x} ${zeroY} L ${points[0].x} ${zeroY} Z`;
+
+                  return (
+                    <g>
+                      {/* Gradient Area */}
+                      <path d={areaD} fill="url(#savingsAreaGrad)" />
+                      {/* Stroke Line */}
+                      <path d={lineD} fill="none" stroke="#10b981" strokeWidth="2.5" />
+                      {/* Zero line */}
+                      {minRate < 0 && (
+                        <line x1="50" y1={zeroY} x2="480" y2={zeroY} stroke="#f43f5e" strokeWidth="1" strokeDasharray="2 2" />
+                      )}
+                      {/* Data Point Circles + X Labels */}
+                      {points.map((p, idx) => (
+                        <g key={idx}>
+                          <circle
+                            cx={p.x}
+                            cy={p.y}
+                            r="4.5"
+                            className="fill-emerald-400 stroke-slate-900 stroke-2 hover:r-6 cursor-pointer transition-all"
+                          >
+                            <title>{`${p.month}: ${p.rate.toFixed(1)}%`}</title>
+                          </circle>
+                          {/* Value label directly above dot */}
+                          <text x={p.x} y={p.y - 8} textAnchor="middle" className="text-[9px] font-bold fill-emerald-300 bg-slate-900/80 px-1 rounded">
+                            {p.rate.toFixed(0)}%
+                          </text>
+                          <text x={p.x} y="275" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400">
+                            {formatMonthShort(p.month)}
+                          </text>
+                        </g>
+                      ))}
+                    </g>
+                  );
+                })()}
+                <line x1="50" y1="255" x2="480" y2="255" stroke="#475569" strokeWidth="1" />
+              </svg>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Categories Breakdown & Budget Performance */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Category Breakdown Card */}
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/20 p-5 backdrop-blur-sm">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
+              <PieChart className="h-4 w-4 text-cyan-400" />
+              Category Breakdown
+            </h4>
+            <div className="flex rounded-lg bg-slate-950/40 p-1">
+              <button
+                onClick={() => setBreakdownType('expense')}
+                className={`rounded px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                  breakdownType === 'expense'
+                    ? 'bg-cyan-500/25 text-cyan-400'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Expenses
+              </button>
+              <button
+                onClick={() => setBreakdownType('income')}
+                className={`rounded px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                  breakdownType === 'income'
+                    ? 'bg-cyan-500/25 text-cyan-400'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Income
+              </button>
+            </div>
+          </div>
+
+          {donutItems.length === 0 ? (
+            <div className="flex h-56 items-center justify-center text-sm text-slate-500">
+              No transactions for breakdown during this period
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
+              {/* SVG Donut */}
+              <div className="relative h-40 w-40 flex-shrink-0">
+                <svg className="h-full w-full" viewBox="0 0 200 200">
+                  {(() => {
+                    let currentOffset = 0;
+                    return donutItems.map((cat) => {
+                      const theme = cat.category_id === 'other' ? { color: '#94a3b8' } : getCategoryTheme(cat.category_id as string);
+                      const strokeDash = `${(Number(cat.pct_of_total) / 100) * 376.99} 376.99`;
+                      const offset = -currentOffset;
+                      currentOffset += (Number(cat.pct_of_total) / 100) * 376.99;
+                      return (
+                        <circle
+                          key={cat.category_id}
+                          cx={100}
+                          cy={100}
+                          r={60}
+                          fill="transparent"
+                          stroke={theme.color}
+                          strokeWidth="14"
+                          strokeDasharray={strokeDash}
+                          strokeDashoffset={offset}
+                          transform="rotate(-90 100 100)"
+                          className="transition-all duration-300 hover:stroke-[18px]"
+                        >
+                          <title>{`${cat.category_name}: ${Number(cat.pct_of_total).toFixed(1)}%`}</title>
+                        </circle>
+                      );
+                    });
+                  })()}
+                </svg>
+                {/* Center text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total</span>
+                  <span className="text-sm font-extrabold text-white">
+                    {formatCurrency(Number(breakdownData?.total ?? 0), displayCurrency, currencyDisplayPreference)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Items List */}
+              <div className="flex-1 w-full max-h-52 overflow-y-auto space-y-2.5 pr-2">
+                {donutItems.map((cat) => {
+                  const theme = cat.category_id === 'other' ? { color: '#94a3b8' } : getCategoryTheme(cat.category_id as string);
+                  return (
+                    <div key={cat.category_id} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="h-2.5 w-2.5 flex-shrink-0 rounded" style={{ backgroundColor: theme.color }} />
+                        <span className="font-medium text-slate-300 truncate">{cat.category_name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-400 font-semibold">{Number(cat.pct_of_total).toFixed(1)}%</span>
+                        <span className="text-slate-100 font-bold">
+                          {formatCurrency(Number(cat.amount), displayCurrency, currencyDisplayPreference)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Budget Performance Card */}
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/20 p-5 backdrop-blur-sm">
+          <div className="mb-4">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-white">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              Budget Guardrails &amp; Performance
+            </h4>
+          </div>
+
+          {sortedBudgetItems.length === 0 ? (
+            <div className="flex h-56 items-center justify-center text-sm text-slate-500">
+              No active budgets found for this month window
+            </div>
+          ) : (
+            <div className="max-h-56 overflow-y-auto space-y-4 pr-2">
+              {sortedBudgetItems.map((item) => {
+                const isWarning = item.status === 'warning';
+                const isExceeded = item.status === 'exceeded';
+                const statusColor = isExceeded ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-emerald-400';
+                const progressColor = isExceeded ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500';
+                const uPct = item.utilization_pct !== null ? Math.round(item.utilization_pct) : 0;
+                
+                return (
+                  <div key={item.category_id} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-200">{item.category_name}</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                        {item.status.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span>
+                        Spent {formatCurrency(Number(item.actual_amount), displayCurrency, currencyDisplayPreference)} of{' '}
+                        {item.budget_amount !== null
+                          ? formatCurrency(Number(item.budget_amount), displayCurrency, currencyDisplayPreference)
+                          : 'N/A'}
+                      </span>
+                      <span className="font-semibold">{uPct}%</span>
+                    </div>
+
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-950/40">
+                      <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.max(0, Math.min(100, uPct))}%` }} />
+                    </div>
+
+                    {item.remaining !== null && (
+                      <p className="text-[10px] text-right font-medium text-slate-500">
+                        {isExceeded
+                          ? `${formatCurrency(Math.abs(Number(item.remaining)), displayCurrency, currencyDisplayPreference)} over limit`
+                          : `${formatCurrency(Number(item.remaining), displayCurrency, currencyDisplayPreference)} remaining`}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// =============================================================================
+// SpendingLedgerTab – per-account transaction ledger with running balance
+// =============================================================================
+
+interface SpendingLedgerTabProps {
+  accounts: Array<{ public_id: string; name: string; account_type: string; default_currency_code: string }>;
+  selectedAccountId: string;
+  onAccountChange: (id: string) => void;
+  offset: number;
+  limit: number;
+  onOffsetChange: (offset: number) => void;
+  currencyDisplayPreference: 'symbol' | 'code';
+}
+
+const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
+  accounts,
+  selectedAccountId,
+  onAccountChange,
+  offset,
+  limit,
+  onOffsetChange,
+  currencyDisplayPreference,
+}) => {
+  const selectedAccount = accounts.find((a) => a.public_id === selectedAccountId) ?? null;
+
+  const { data: ledger, isLoading } = useQuery({
+    queryKey: ['spending', 'ledger', selectedAccountId, offset, limit],
+    queryFn: () => spendingService.getAccountLedger(selectedAccountId, { limit, offset }),
+    enabled: !!selectedAccountId,
+  });
+
+  const { data: balanceData } = useQuery({
+    queryKey: ['finance', 'account-balance', selectedAccountId],
+    queryFn: () => financeService.getAccountBalance(selectedAccountId),
+    enabled: !!selectedAccountId,
+  });
+
+  const currency = selectedAccount?.default_currency_code ?? 'USD';
+
+  const formatBal = (val: string | number | undefined) =>
+    val !== undefined
+      ? formatCurrency(Number(val), currency, currencyDisplayPreference)
+      : '—';
+
+  return (
+    <div className="animate-in fade-in duration-300 space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-xl font-semibold text-white">Account Ledger</h3>
+          <p className="text-sm text-slate-400 mt-0.5">Transaction-by-transaction running balance for a spending account</p>
+        </div>
+
+        {/* Account selector */}
+        <div className="flex min-w-[220px] flex-col gap-1">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Select Account</label>
+          <select
+            value={selectedAccountId}
+            onChange={(e) => onAccountChange(e.target.value)}
+            className="h-10 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          >
+            <option value="">— Pick an account —</option>
+            {accounts.map((a) => (
+              <option key={a.public_id} value={a.public_id}>
+                {a.name} ({a.account_type.replace('_', ' ')})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {!selectedAccountId ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-800/30 p-12 text-center">
+          <div className="mb-4 rounded-full bg-slate-800 p-4">
+            <Landmark className="h-8 w-8 text-slate-500" />
+          </div>
+          <h3 className="mb-2 text-lg font-medium text-white">Select an account</h3>
+          <p className="text-slate-400 text-sm">Choose a spending account above to view its transaction ledger and running balance.</p>
+        </div>
+      ) : isLoading ? (
+        <SkeletonList rows={5} />
+      ) : (
+        <>
+          {/* Balance summary cards */}
+          {balanceData && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Net Balance</p>
+                <p className={`text-xl font-bold ${
+                  Number(balanceData.spending_balance) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  {formatBal(balanceData.spending_balance)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Transactions</p>
+                <p className="text-xl font-bold text-white">{balanceData.transaction_count}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Page Opening</p>
+                <p className={`text-xl font-bold ${
+                  Number(ledger?.opening_balance ?? 0) >= 0 ? 'text-slate-200' : 'text-rose-400'
+                }`}>
+                  {formatBal(ledger?.opening_balance)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Page Closing</p>
+                <p className={`text-xl font-bold ${
+                  Number(ledger?.closing_balance ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  {formatBal(ledger?.closing_balance)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Ledger table */}
+          {ledger && ledger.items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-800/30 p-12 text-center">
+              <Wallet className="h-8 w-8 text-slate-500 mb-3" />
+              <p className="text-slate-400">No transactions for this account yet.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-slate-800">
+              <table className="w-full text-left text-sm text-slate-300 min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/60">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Date</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Description</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 text-right">Debit</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 text-right">Credit</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {(ledger?.items ?? []).map((entry: LedgerEntry) => {
+                    const isIncome = entry.type === 'income';
+                    const amount = Number(entry.amount);
+                    const balance = Number(entry.running_balance);
+                    const dateObj = new Date(entry.occurred_at);
+                    const date = !isNaN(dateObj.getTime())
+                      ? dateObj.toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          timeZone: 'UTC',
+                        })
+                      : '—';
+                    return (
+                      <tr
+                        key={entry.public_id}
+                        className="hover:bg-slate-800/30 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-slate-400 whitespace-nowrap text-xs">{date}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-slate-200">{entry.description ?? '—'}</span>
+                          {entry.wallet_name && (
+                            <span className="ml-2 text-xs text-slate-500">{entry.wallet_name}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          {!isIncome && (
+                            <span className="text-rose-400">{formatCurrency(amount, currency, currencyDisplayPreference)}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          {isIncome && (
+                            <span className="text-emerald-400">{formatCurrency(amount, currency, currencyDisplayPreference)}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          <span className={balance >= 0 ? 'text-slate-200' : 'text-rose-400'}>
+                            {formatCurrency(balance, currency, currencyDisplayPreference)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {ledger && ledger.total_transactions > limit && (
+            <Pagination
+              total={ledger.total_transactions}
+              limit={limit}
+              offset={offset}
+              onPageChange={onOffsetChange}
+            />
+          )}
+        </>
+      )}
+    </div>
   );
 };

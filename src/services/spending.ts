@@ -11,10 +11,14 @@ import type {
   BudgetUpdate,
   TransactionSummary,
   SpendingTrendResponse,
+  CategoryBreakdownResponse,
+  BudgetPerformanceResponse,
+  SavingsRateResponse,
   RecurringTransaction,
   RecurringTransactionCreate,
   RecurringTransactionUpdate,
   UpcomingPreviewResponse,
+  LedgerResponse,
 } from '../types/spending';
 import type { PaginatedResponse } from '../types/common';
 
@@ -120,6 +124,38 @@ export const spendingService = {
     return response.data;
   },
 
+  getCategoryBreakdown: async (
+    from: string,
+    to: string,
+    type: 'income' | 'expense' = 'expense',
+    limit: number = 10
+  ): Promise<CategoryBreakdownResponse> => {
+    const response = await api.get('/spending/analytics/breakdown', {
+      params: { from, to, type, limit },
+    });
+    return response.data;
+  },
+
+  getBudgetPerformance: async (
+    fromMonth: string,
+    toMonth: string
+  ): Promise<BudgetPerformanceResponse> => {
+    const response = await api.get('/spending/analytics/budget-performance', {
+      params: { from: `${fromMonth}-01`, to: `${toMonth}-01` },
+    });
+    return response.data;
+  },
+
+  getSavingsRate: async (
+    fromMonth: string,
+    toMonth: string
+  ): Promise<SavingsRateResponse> => {
+    const response = await api.get('/spending/analytics/savings-rate', {
+      params: { from: `${fromMonth}-01`, to: `${toMonth}-01` },
+    });
+    return response.data;
+  },
+
   getRecurring: async (limit = 50, offset = 0, isActive = true): Promise<PaginatedResponse<RecurringTransaction>> => {
     const response = await api.get('/spending/recurring', { params: { limit, offset, is_active: isActive } });
     return response.data;
@@ -141,6 +177,14 @@ export const spendingService = {
 
   getUpcoming: async (days = 30): Promise<UpcomingPreviewResponse> => {
     const response = await api.get('/spending/recurring/upcoming', { params: { days } });
+    return response.data;
+  },
+
+  getAccountLedger: async (
+    accountId: string,
+    params?: { limit?: number; offset?: number; from_date?: string; to_date?: string }
+  ): Promise<LedgerResponse> => {
+    const response = await api.get(`/spending/accounts/${accountId}/ledger`, { params });
     return response.data;
   },
 };

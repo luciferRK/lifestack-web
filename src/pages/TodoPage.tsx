@@ -527,9 +527,15 @@ export const TodoPage: React.FC = () => {
                               {priorityLabel(todo.priority)}
                             </span>
                             {formatDueDateTime(todo.due_date) ? (
-                              <span className="text-xs text-slate-400">
-                                Due: {formatDueDateTime(todo.due_date)}
-                              </span>
+                              (() => {
+                                const isOverdue = !todo.completed && todo.due_date && new Date(todo.due_date).getTime() < Date.now();
+                                return (
+                                  <span className={`text-xs ${isOverdue ? 'text-rose-400 font-semibold flex items-center gap-1 bg-rose-950/40 border border-rose-900/50 rounded px-1.5 py-0.5' : 'text-slate-400'}`}>
+                                    {isOverdue && <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />}
+                                    {isOverdue ? 'Overdue: ' : 'Due: '}{formatDueDateTime(todo.due_date)}
+                                  </span>
+                                );
+                              })()
                             ) : null}
                           </div>
                           {todo.description ? (
@@ -609,8 +615,9 @@ export const TodoPage: React.FC = () => {
                           <span className={`inline-flex rounded border px-2 py-0.5 text-xs ${priorityTone(rule.priority)}`}>
                             {priorityLabel(rule.priority)}
                           </span>
-                          <span className="text-xs text-slate-400">
-                            Active: {rule.is_active ? 'Yes' : 'No'}
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium border ${rule.is_active ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-800 text-slate-400'}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${rule.is_active ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                            {rule.is_active ? 'Active' : 'Paused'}
                           </span>
                         </div>
                         <p className="text-xs text-slate-400 mt-2">
