@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { authService } from '../services/auth';
 
 const getPasswordStrength = (value: string) => {
@@ -45,10 +46,13 @@ export const RegisterPage: React.FC = () => {
     try {
       await authService.register(email, password, username);
       navigate('/login', { state: { message: 'Registration successful. Please log in.' } });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      const status = err.response?.status;
-      const detail = err.response?.data?.detail;
+    } catch (err: unknown) {
+      let status: number | undefined;
+      let detail: any;
+      if (axios.isAxiosError(err)) {
+        status = err.response?.status;
+        detail = err.response?.data?.detail;
+      }
       // Normalize 409 / 422 errors to prevent username/email enumeration
       if (status === 409 || (typeof detail === 'string' && /already (exists|in use|registered)/i.test(detail))) {
         setError('Registration failed. Please check your details and try again.');

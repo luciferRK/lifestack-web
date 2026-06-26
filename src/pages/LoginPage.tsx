@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/auth';
 
@@ -23,10 +24,12 @@ export const LoginPage: React.FC = () => {
       const user = await authService.checkAuth();
       setSession(user);
       navigate('/', { replace: true });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Always show a generic message to prevent username/email enumeration
-      const status = err.response?.status;
+      let status: number | undefined;
+      if (axios.isAxiosError(err)) {
+        status = err.response?.status;
+      }
       if (status === 401 || status === 403 || status === 422) {
         setError('Invalid credentials. Please check your email and password.');
       } else {
