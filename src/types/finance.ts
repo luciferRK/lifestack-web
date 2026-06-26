@@ -105,8 +105,22 @@ export interface AccountBalanceResponse {
   account_name: string;
   account_type: 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card';
   currency_code: string;
-  spending_balance: string; // decimal as string
+  spending_balance: string; // (income - expenses) + (transfer_in - transfer_out)
   transaction_count: number;
+  transfer_count: number;
   first_transaction_at: string | null;
   last_transaction_at: string | null;
 }
+
+export interface ReconciliationSummary {
+  account_public_id: string;
+  account_name: string;
+  currency_code: string;
+  projected_balance: string; // decimal as string
+  snapshot_balance: string | null; // null when no cash snapshot exists
+  snapshot_as_of: string | null;
+  discrepancy: string | null; // projected - snapshot; null when no snapshot
+  transaction_count: number;
+  transfer_count: number;
+}
+
