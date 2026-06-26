@@ -57,7 +57,7 @@ export const TransactionSchema = z.object({
   description: z.string().nullable().default(null),
   wallet_name: z.string().nullable().default(null),
   labels: z.string().nullable().default(null),
-  source_type: z.string().optional(),
+  source_type: z.enum(['manual', 'imported', 'synced', 'assistant', 'extracted']).optional(),
   source_ref: z.string().nullable().optional(),
   source_metadata: SourceMetadataSchema.optional(),
   created_at: z.string().default(''),
@@ -184,7 +184,11 @@ export const BudgetPerformanceResponseSchema = z.object({
   from: z.string().default(''),
   to: z.string().default(''),
   categories: z.array(BudgetPerformanceItemSchema).default([]),
-  totals: BudgetPerformanceTotalsSchema.default({}),
+  totals: BudgetPerformanceTotalsSchema.default({
+    total_budgeted: 0,
+    total_actual: 0,
+    overall_utilization_pct: null,
+  }),
 });
 
 export type BudgetPerformanceResponse = z.infer<typeof BudgetPerformanceResponseSchema>;
@@ -208,7 +212,12 @@ export const SavingsRateResponseSchema = z.object({
   from: z.string().default(''),
   to: z.string().default(''),
   months: z.array(SavingsRatePointSchema).default([]),
-  period_totals: SavingsRateTotalsSchema.default({}),
+  period_totals: SavingsRateTotalsSchema.default({
+    total_income: 0,
+    total_expense: 0,
+    total_savings: 0,
+    average_savings_rate_pct: null,
+  }),
 });
 
 export type SavingsRateResponse = z.infer<typeof SavingsRateResponseSchema>;
@@ -498,8 +507,11 @@ export const spendingService = {
     return UpcomingPreviewResponseSchema.parse(response.data);
   },
 
-  getLedger: async (accountPublicId: string): Promise<LedgerResponse> => {
-    const response = await api.get(`/spending/ledger/${accountPublicId}`);
+  getAccountLedger: async (
+    accountId: string,
+    params?: { limit?: number; offset?: number; from_date?: string; to_date?: string }
+  ): Promise<LedgerResponse> => {
+    const response = await api.get(`/spending/accounts/${accountId}/ledger`, { params });
     return LedgerResponseSchema.parse(response.data);
   },
 };
