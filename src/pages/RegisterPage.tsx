@@ -48,7 +48,7 @@ export const RegisterPage: React.FC = () => {
       navigate('/login', { state: { message: 'Registration successful. Please log in.' } });
     } catch (err: unknown) {
       let status: number | undefined;
-      let detail: any;
+      let detail: unknown;
       if (axios.isAxiosError(err)) {
         status = err.response?.status;
         detail = err.response?.data?.detail;
@@ -58,7 +58,8 @@ export const RegisterPage: React.FC = () => {
         setError('Registration failed. Please check your details and try again.');
       } else if (Array.isArray(detail)) {
         // Expose validation field errors (e.g. pattern mismatch) — safe, not enumeration
-        setError(detail[0]?.msg || 'Registration failed. Please check your details.');
+        const firstError = detail[0] as { msg?: string } | undefined;
+        setError(firstError?.msg || 'Registration failed. Please check your details.');
       } else {
         setError('Registration failed. Please check your details.');
       }
