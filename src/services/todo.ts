@@ -1,16 +1,18 @@
+import { z } from 'zod';
 import api from './api';
-import type { PaginatedResponse } from '../types/common';
 
-export interface Todo {
-  public_id: string;
-  title: string;
-  description: string;
-  due_date: string | null;
-  priority: 'low' | 'medium' | 'high';
-  completed: boolean;
-  created_at: string;
-  updated_at: string;
-}
+export const TodoSchema = z.object({
+  public_id: z.string().default(''),
+  title: z.string().default(''),
+  description: z.string().catch(''),
+  due_date: z.string().nullable().default(null),
+  priority: z.enum(['low', 'medium', 'high']).default('low'),
+  completed: z.boolean().default(false),
+  created_at: z.string().default(''),
+  updated_at: z.string().default(''),
+});
+
+export type Todo = z.infer<typeof TodoSchema>;
 
 export interface TodoCreate {
   title: string;
@@ -22,23 +24,25 @@ export interface TodoCreate {
 
 export type TodoUpdate = Partial<TodoCreate>;
 
-export interface RecurringTodoRule {
-  public_id: string;
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high';
-  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  interval: number;
-  anchor_date: string;
-  due_time: string | null;
-  timezone: string;
-  next_due_date: string;
-  end_date: string | null;
-  is_active: boolean;
-  last_generated_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export const RecurringTodoRuleSchema = z.object({
+  public_id: z.string().default(''),
+  title: z.string().default(''),
+  description: z.string().catch(''),
+  priority: z.enum(['low', 'medium', 'high']).default('low'),
+  frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']).default('daily'),
+  interval: z.number().default(1),
+  anchor_date: z.string().default(''),
+  due_time: z.string().nullable().default(null),
+  timezone: z.string().default('UTC'),
+  next_due_date: z.string().default(''),
+  end_date: z.string().nullable().default(null),
+  is_active: z.boolean().default(true),
+  last_generated_at: z.string().nullable().default(null),
+  created_at: z.string().default(''),
+  updated_at: z.string().default(''),
+});
+
+export type RecurringTodoRule = z.infer<typeof RecurringTodoRuleSchema>;
 
 export interface RecurringTodoCreate {
   title: string;
@@ -56,43 +60,57 @@ export type RecurringTodoUpdate = Partial<Omit<RecurringTodoCreate, 'anchor_date
   is_active?: boolean;
 };
 
+const PaginatedTodosSchema = z.object({
+  items: z.array(TodoSchema).default([]),
+  total: z.number().default(0),
+  limit: z.number().optional().default(50),
+  offset: z.number().optional().default(0),
+});
+
+const PaginatedRecurringRulesSchema = z.object({
+  items: z.array(RecurringTodoRuleSchema).default([]),
+  total: z.number().default(0),
+  limit: z.number().optional().default(50),
+  offset: z.number().optional().default(0),
+});
+
 export const todoService = {
-  getTodos: async (completed?: boolean, limit: number = 50, offset: number = 0): Promise<PaginatedResponse<Todo>> => {
+  getTodos: async (completed?: boolean, limit: number = 50, offset: number = 0): Promise<z.infer<typeof PaginatedTodosSchema>> => {
     const params: Record<string, string | number | boolean> = { limit, offset };
     if (completed !== undefined) {
       params.completed = completed;
     }
     const response = await api.get('/todo/', { params });
-    return response.data;
+    return PaginatedTodosSchema.parse(response.data);
   },
   
   createTodo: async (todo: TodoCreate): Promise<Todo> => {
     const response = await api.post('/todo/', todo);
-    return response.data;
+    return TodoSchema.parse(response.data);
   },
   
   updateTodo: async (publicId: string, todo: TodoUpdate): Promise<Todo> => {
     const response = await api.patch(`/todo/${publicId}`, todo);
-    return response.data;
+    return TodoSchema.parse(response.data);
   },
   
   deleteTodo: async (publicId: string): Promise<void> => {
     await api.delete(`/todo/${publicId}`);
   },
 
-  getRecurringRules: async (isActive: boolean = true, limit: number = 50, offset: number = 0): Promise<PaginatedResponse<RecurringTodoRule>> => {
+  getRecurringRules: async (isActive: boolean = true, limit: number = 50, offset: number = 0): Promise<z.infer<typeof PaginatedRecurringRulesSchema>> => {
     const response = await api.get('/todo/recurring/', { params: { is_active: isActive, limit, offset } });
-    return response.data;
+    return PaginatedRecurringRulesSchema.parse(response.data);
   },
 
   createRecurringRule: async (rule: RecurringTodoCreate): Promise<RecurringTodoRule> => {
     const response = await api.post('/todo/recurring/', rule);
-    return response.data;
+    return RecurringTodoRuleSchema.parse(response.data);
   },
 
   updateRecurringRule: async (publicId: string, rule: RecurringTodoUpdate): Promise<RecurringTodoRule> => {
     const response = await api.patch(`/todo/recurring/${publicId}`, rule);
-    return response.data;
+    return RecurringTodoRuleSchema.parse(response.data);
   },
 
   deleteRecurringRule: async (publicId: string): Promise<void> => {
