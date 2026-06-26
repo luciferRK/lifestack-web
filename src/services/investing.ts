@@ -121,11 +121,11 @@ export const InvestingSummarySchema = z.object({
   portfolio_value: z.union([z.number(), z.string()]).nullable().default(null),
   holdings_count: z.number().default(0),
   cash_total: z.union([z.number(), z.string()]).nullable().default(null),
-  currency_breakdown: z.record(z.union([z.number(), z.string()])).default({}),
+  currency_breakdown: z.record(z.string(), z.union([z.number(), z.string()])).default({}),
   daily_change: z.union([z.number(), z.string()]).nullable().default(null),
   reporting_currency: z.string().nullable().default(null),
   valuation_status: z.string().default(''),
-  fx_rates_used: z.record(z.union([z.number(), z.string()])).optional(),
+  fx_rates_used: z.record(z.string(), z.union([z.number(), z.string()])).optional(),
 });
 
 export type InvestingSummary = z.infer<typeof InvestingSummarySchema>;
@@ -143,7 +143,7 @@ export const ExposureAnalyticsSchema = z.object({
   analysis_status: z.enum(['complete', 'partial', 'unavailable']).default('complete'),
   currency: z.string().nullable().default(null),
   fx_as_of: z.string().nullable().default(null),
-  fx_rates_used: z.record(z.union([z.number(), z.string()])).default({}),
+  fx_rates_used: z.record(z.string(), z.union([z.number(), z.string()])).default({}),
   snapshot_coverage: z.string().default('0'),
   staleness_days: z.number().nullable().default(null),
   warnings: z.array(z.string()).default([]),
@@ -169,7 +169,7 @@ export const OverlapAnalyticsSchema = z.object({
   analysis_status: z.enum(['complete', 'partial', 'unavailable']).default('complete'),
   currency: z.string().nullable().default(null),
   fx_as_of: z.string().nullable().default(null),
-  fx_rates_used: z.record(z.union([z.number(), z.string()])).default({}),
+  fx_rates_used: z.record(z.string(), z.union([z.number(), z.string()])).default({}),
   snapshot_coverage: z.string().default('0'),
   warnings: z.array(z.string()).default([]),
   display_threshold_pct: z.string().default('0'),
@@ -185,19 +185,19 @@ export type OverlapAnalytics = z.infer<typeof OverlapAnalyticsSchema>;
 export const PerformanceSummarySchema = z.object({
   total_value: z.union([z.number(), z.string()]).default(0),
   total_cost: z.union([z.number(), z.string()]).default(0),
-  portfolio_value: z.union([z.number(), z.string()]).default(0),
-  invested_value: z.union([z.number(), z.string()]).default(0),
+  portfolio_value: z.union([z.number(), z.string()]).nullable().catch(null).default(null),
+  invested_value: z.union([z.number(), z.string()]).nullable().catch(null).default(null),
   cash_total: z.union([z.number(), z.string()]).default(0),
   total_gain_loss: z.union([z.number(), z.string()]).default(0),
-  total_gain_loss_pct: z.union([z.number(), z.string()]).nullable().default(null),
-  daily_change: z.union([z.number(), z.string()]).nullable().default(null),
-  daily_change_pct: z.union([z.number(), z.string()]).nullable().default(null),
+  total_gain_loss_pct: z.union([z.number(), z.string()]).nullable().catch(null).default(null),
+  daily_change: z.union([z.number(), z.string()]).nullable().catch(null).default(null),
+  daily_change_pct: z.union([z.number(), z.string()]).nullable().catch(null).default(null),
   snapshot_date: z.string().default(''),
-  previous_snapshot_date: z.string().nullable().default(null),
+  previous_snapshot_date: z.string().nullable().catch(null).default(null),
   currency: z.string().default(''),
   valuation_status: z.enum(['current', 'estimated', 'empty']).default('empty'),
   holdings_count: z.number().default(0),
-  fx_rates_used: z.record(z.union([z.number(), z.string()])).optional(),
+  fx_rates_used: z.record(z.string(), z.union([z.number(), z.string()])).optional(),
 });
 
 export type PerformanceSummary = z.infer<typeof PerformanceSummarySchema>;
