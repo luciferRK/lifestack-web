@@ -20,6 +20,8 @@ import type {
   TransactionType,
   TransactionUpdate,
 } from '../types/spending';
+import type { ReconciliationSummary } from '../types/finance';
+
 import { 
   Wallet, 
   ArrowUpCircle, 
@@ -2701,6 +2703,73 @@ interface SpendingLedgerTabProps {
   currencyDisplayPreference: 'symbol' | 'code';
 }
 
+// Reconciliation card: compares projected ledger balance to cash snapshot
+const ReconciliationCard: React.FC<{
+  reconciliation: ReconciliationSummary;
+  formatBal: (v: string | number | undefined) => string;
+}> = ({ reconciliation, formatBal }) => {
+  const disc = reconciliation.discrepancy !== null ? Number(reconciliation.discrepancy) : null;
+  const discAbs = disc !== null ? Math.abs(disc) : null;
+  const projected = Number(reconciliation.projected_balance);
+  const threshold = projected !== 0 ? Math.abs(projected) * 0.05 : 100;
+  const discColor =
+    disc === null
+      ? 'text-slate-400'
+      : disc === 0
+      ? 'text-emerald-400'
+      : discAbs! >= threshold
+      ? 'text-rose-400'
+      : 'text-amber-400';
+
+  return (
+    <div className="rounded-2xl border border-slate-700/60 bg-slate-900/70 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Reconciliation</span>
+        {disc === 0 && (
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">Balanced</span>
+        )}
+        {disc !== null && disc !== 0 && (
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            discAbs! >= threshold ? 'bg-rose-500/15 text-rose-400' : 'bg-amber-500/15 text-amber-400'
+          }`}>Discrepancy</span>
+        )}
+        {disc === null && (
+          <span className="rounded-full bg-slate-700/50 px-2 py-0.5 text-[10px] font-semibold text-slate-400">No Snapshot</span>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Projected</p>
+          <p className={`text-base font-bold ${Number(reconciliation.projected_balance) >= 0 ? 'text-slate-200' : 'text-rose-400'}`}>
+            {formatBal(reconciliation.projected_balance)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Snapshot</p>
+          {reconciliation.snapshot_balance !== null ? (
+            <p className={`text-base font-bold ${Number(reconciliation.snapshot_balance) >= 0 ? 'text-slate-200' : 'text-rose-400'}`}>
+              {formatBal(reconciliation.snapshot_balance)}
+            </p>
+          ) : (
+            <p className="text-base font-bold text-slate-500">—</p>
+          )}
+          {reconciliation.snapshot_as_of && !isNaN(new Date(reconciliation.snapshot_as_of).getTime()) && (
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              as of {new Date(reconciliation.snapshot_as_of).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })}
+            </p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Gap</p>
+          <p className={`text-base font-bold ${discColor}`}>
+            {disc !== null ? (disc > 0 ? '+' : '') + formatBal(reconciliation.discrepancy!) : '—'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
   accounts,
   selectedAccountId,
@@ -2724,12 +2793,19 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
     enabled: !!selectedAccountId,
   });
 
+  const { data: reconciliation } = useQuery({
+    queryKey: ['finance', 'reconciliation', selectedAccountId],
+    queryFn: () => financeService.getAccountReconciliation(selectedAccountId),
+    enabled: !!selectedAccountId,
+  });
+
   const currency = selectedAccount?.default_currency_code ?? 'USD';
 
   const formatBal = (val: string | number | undefined) =>
     val !== undefined
       ? formatCurrency(Number(val), currency, currencyDisplayPreference)
       : '—';
+
 
   return (
     <div className="animate-in fade-in duration-300 space-y-5">
@@ -2773,7 +2849,7 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
           {balanceData && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Net Balance</p>
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Projected Balance</p>
                 <p className={`text-xl font-bold ${
                   Number(balanceData.spending_balance) >= 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}>
@@ -2783,6 +2859,9 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
                 <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Transactions</p>
                 <p className="text-xl font-bold text-white">{balanceData.transaction_count}</p>
+                {balanceData.transfer_count > 0 && (
+                  <p className="text-xs text-slate-500 mt-0.5">{balanceData.transfer_count} transfer{balanceData.transfer_count > 1 ? 's' : ''}</p>
+                )}
               </div>
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
                 <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Page Opening</p>
@@ -2802,6 +2881,12 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
               </div>
             </div>
           )}
+
+          {/* Reconciliation card */}
+          {reconciliation && (
+            <ReconciliationCard reconciliation={reconciliation} formatBal={formatBal} />
+          )}
+
 
           {/* Ledger table */}
           {ledger && ledger.items.length === 0 ? (
@@ -2823,7 +2908,8 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {(ledger?.items ?? []).map((entry: LedgerEntry) => {
-                    const isIncome = entry.type === 'income';
+                    const isTransfer = entry.entry_kind === 'transfer_out' || entry.entry_kind === 'transfer_in';
+                    const isCredit = entry.entry_kind === 'transfer_in' || entry.type === 'income';
                     const amount = Number(entry.amount);
                     const balance = Number(entry.running_balance);
                     const dateObj = new Date(entry.occurred_at);
@@ -2835,26 +2921,54 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
                           timeZone: 'UTC',
                         })
                       : '—';
+
+                    // Derive description label for transfer rows
+                    const descLabel = isTransfer
+                      ? (entry.description
+                          ? (entry.entry_kind === 'transfer_out' ? `Transfer → ${entry.description}` : `Transfer ← ${entry.description}`)
+                          : (entry.entry_kind === 'transfer_out' ? 'Transfer out' : 'Transfer in'))
+                      : entry.description ?? '—';
+
+                    // Row background tint for transfers
+                    const rowClass = isTransfer
+                      ? 'hover:bg-slate-800/50 transition-colors bg-slate-800/20'
+                      : 'hover:bg-slate-800/30 transition-colors';
+
                     return (
                       <tr
                         key={entry.public_id}
-                        className="hover:bg-slate-800/30 transition-colors"
+                        className={rowClass}
                       >
                         <td className="px-4 py-3 text-slate-400 whitespace-nowrap text-xs">{date}</td>
                         <td className="px-4 py-3">
-                          <span className="text-slate-200">{entry.description ?? '—'}</span>
-                          {entry.wallet_name && (
+                          <span className={isTransfer ? 'text-slate-300 text-xs font-medium' : 'text-slate-200'}>
+                            {descLabel}
+                          </span>
+                          {!isTransfer && entry.wallet_name && (
                             <span className="ml-2 text-xs text-slate-500">{entry.wallet_name}</span>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono">
-                          {!isIncome && (
-                            <span className="text-rose-400">{formatCurrency(amount, currency, currencyDisplayPreference)}</span>
+                          {isTransfer && (
+                            <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                              entry.entry_kind === 'transfer_out'
+                                ? 'bg-indigo-500/15 text-indigo-400'
+                                : 'bg-cyan-500/15 text-cyan-400'
+                            }`}>
+                              {entry.entry_kind === 'transfer_out' ? 'Out' : 'In'}
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right font-mono">
-                          {isIncome && (
-                            <span className="text-emerald-400">{formatCurrency(amount, currency, currencyDisplayPreference)}</span>
+                          {!isCredit && (
+                            <span className={isTransfer ? 'text-indigo-400' : 'text-rose-400'}>
+                              {formatCurrency(amount, currency, currencyDisplayPreference)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          {isCredit && (
+                            <span className={isTransfer ? 'text-cyan-400' : 'text-emerald-400'}>
+                              {formatCurrency(amount, currency, currencyDisplayPreference)}
+                            </span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right font-mono">
@@ -2865,20 +2979,22 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
                       </tr>
                     );
                   })}
+
                 </tbody>
               </table>
             </div>
           )}
 
           {/* Pagination */}
-          {ledger && ledger.total_transactions > limit && (
+          {ledger && ledger.total_entries > limit && (
             <Pagination
-              total={ledger.total_transactions}
+              total={ledger.total_entries}
               limit={limit}
               offset={offset}
               onPageChange={onOffsetChange}
             />
           )}
+
         </>
       )}
     </div>

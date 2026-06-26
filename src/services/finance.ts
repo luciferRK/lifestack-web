@@ -8,6 +8,7 @@ import type {
   CapitalTransfer,
   CapitalTransferCreate,
   Currency,
+  ReconciliationSummary,
   UserFinanceSetting,
   UserFinanceSettingUpdate,
   WorkspaceFinanceSetting,
@@ -71,6 +72,11 @@ export const financeService = {
 
   getAccountBalance: async (publicId: string): Promise<AccountBalanceResponse> => {
     const response = await api.get(`/finance/accounts/${publicId}/balance`);
+    return response.data;
+  },
+
+  getAccountReconciliation: async (publicId: string): Promise<ReconciliationSummary> => {
+    const response = await api.get(`/finance/accounts/${publicId}/reconciliation`);
     return response.data;
   },
 };

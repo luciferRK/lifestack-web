@@ -251,18 +251,21 @@ export interface UpcomingPreviewResponse {
 // Ledger types
 // ---------------------------------------------------------------------------
 
+export type LedgerEntryKind = 'transaction' | 'transfer_out' | 'transfer_in';
+
 export interface LedgerEntry {
   public_id: string;
-  category_id: string;
+  entry_kind: LedgerEntryKind;
+  category_id: string | null; // null for transfer entries
   account_id: string | null;
   amount: string;
-  type: TransactionType;
+  type: TransactionType | null; // null for transfer entries
   occurred_at: string;
   description: string | null;
   wallet_name: string | null;
   labels: string | null;
   source_type: string;
-  running_balance: string; // cumulative balance after this transaction
+  running_balance: string; // cumulative balance after this entry
   created_at: string;
 }
 
@@ -272,6 +275,7 @@ export interface LedgerResponse {
   account_currency: string;
   opening_balance: string;
   closing_balance: string;
-  total_transactions: number;
+  total_entries: number; // total count of transactions + transfers
   items: LedgerEntry[];
 }
+

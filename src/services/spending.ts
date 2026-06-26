@@ -285,10 +285,11 @@ export type UpcomingPreviewResponse = z.infer<typeof UpcomingPreviewResponseSche
 
 export const LedgerEntrySchema = z.object({
   public_id: z.string().default(''),
-  category_id: z.string().default(''),
+  entry_kind: z.enum(['transaction', 'transfer_out', 'transfer_in']).default('transaction'),
+  category_id: z.string().nullable().default(null),
   account_id: z.string().nullable().default(null),
   amount: z.string().default(''),
-  type: TransactionTypeSchema,
+  type: TransactionTypeSchema.nullable().default(null),
   occurred_at: z.string().default(''),
   description: z.string().nullable().default(null),
   wallet_name: z.string().nullable().default(null),
@@ -304,11 +305,12 @@ export const LedgerResponseSchema = z.object({
   account_currency: z.string().default(''),
   opening_balance: z.string().default(''),
   closing_balance: z.string().default(''),
-  total_transactions: z.number().default(0),
+  total_entries: z.number().default(0),
   items: z.array(LedgerEntrySchema).default([]),
 });
 
 export type LedgerResponse = z.infer<typeof LedgerResponseSchema>;
+
 
 const PaginatedCategoriesSchema = z.object({
   items: z.array(CategorySchema).default([]),
