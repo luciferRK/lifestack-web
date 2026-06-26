@@ -2753,9 +2753,9 @@ const ReconciliationCard: React.FC<{
           ) : (
             <p className="text-base font-bold text-slate-500">—</p>
           )}
-          {reconciliation.snapshot_as_of && (
+          {reconciliation.snapshot_as_of && !isNaN(new Date(reconciliation.snapshot_as_of).getTime()) && (
             <p className="text-[10px] text-slate-500 mt-0.5">
-              as of {new Date(reconciliation.snapshot_as_of).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              as of {new Date(reconciliation.snapshot_as_of).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })}
             </p>
           )}
         </div>
