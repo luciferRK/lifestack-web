@@ -47,7 +47,15 @@ export const ImportsPage: React.FC = () => {
     queryFn: () => importsService.listImports(20, 0),
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? [];
-      const hasPending = items.some(item => item.status === 'uploaded' || item.status === 'committing');
+      const hasPending = items.some((item) => {
+        if (item.status !== 'uploaded' && item.status !== 'committing') {
+          return false;
+        }
+        // Avoid polling indefinitely for stale/abandoned imports (older than 2 minutes)
+        const startedAtMs = new Date(item.started_at).getTime();
+        const ageMs = Date.now() - startedAtMs;
+        return !isNaN(ageMs) && ageMs < 120000; // 2 minutes
+      });
       return hasPending ? 1500 : false;
     },
   });
