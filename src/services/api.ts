@@ -4,7 +4,7 @@ import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig }
 
 const baseURL = import.meta.env.VITE_API_URL;
 if (import.meta.env.PROD && !baseURL) {
-  console.error('VITE_API_URL must be configured in production/staging environments');
+  throw new Error('VITE_API_URL must be configured in production/staging environments');
 }
 
 const api = axios.create({
