@@ -1993,7 +1993,7 @@ export const SpendingPage: React.FC = () => {
               className="space-y-4 p-6"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (!newAccountName.trim()) return;
+                if (createAccountMutation.isPending || !newAccountName.trim()) return;
                 createAccountMutation.mutate();
               }}
             >
@@ -2018,7 +2018,7 @@ export const SpendingPage: React.FC = () => {
                 <Label className="mb-2 block">Default Currency</Label>
                 <Input
                   value={newAccountCurrency}
-                  onChange={(e) => setNewAccountCurrency(e.target.value.toUpperCase())}
+                  onChange={(e) => setNewAccountCurrency(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase())}
                   placeholder="USD"
                   maxLength={3}
                 />
