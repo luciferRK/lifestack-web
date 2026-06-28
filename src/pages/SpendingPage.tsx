@@ -247,6 +247,9 @@ export const SpendingPage: React.FC = () => {
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isQuickAccountModalOpen, setIsQuickAccountModalOpen] = useState(false);
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryIcon, setNewCategoryIcon] = useState('');
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState<'bank' | 'wallet' | 'card' | 'gift_card'>('wallet');
   const [newAccountCurrency, setNewAccountCurrency] = useState('USD');
@@ -559,6 +562,17 @@ export const SpendingPage: React.FC = () => {
     },
   });
 
+  const createCategoryMutation = useMutation({
+    mutationFn: (data: { name: string; icon?: string }) =>
+      spendingService.createCategory({ name: data.name, icon: data.icon || null }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['spending', 'categories'] });
+      setNewCategoryName('');
+      setNewCategoryIcon('');
+      setIsManageCategoriesOpen(false);
+    },
+  });
+
   const handleSaveTransaction = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !categoryId || !type || !date) return;
@@ -806,6 +820,14 @@ export const SpendingPage: React.FC = () => {
           >
             <ArrowRightLeft className="h-5 w-5" />
             <span className="whitespace-nowrap">Transfer</span>
+          </button>
+          <button
+            onClick={() => setIsManageCategoriesOpen(true)}
+            data-testid="spending-open-manage-categories"
+            className="group relative flex h-12 min-w-[160px] flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 px-5 font-semibold text-white shadow-lg transition-all hover:bg-slate-700 active:scale-95"
+          >
+            <Tag className="h-5 w-5" />
+            <span className="whitespace-nowrap">Categories</span>
           </button>
           </>
         )}
@@ -3039,6 +3061,64 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
           )}
 
         </>
+      )}
+
+      {isManageCategoriesOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsManageCategoriesOpen(false)}
+          />
+          <div className="relative w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">Manage Categories</h3>
+              <button
+                onClick={() => setIsManageCategoriesOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form
+              className="space-y-4 p-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (createCategoryMutation.isPending || !newCategoryName.trim()) return;
+                createCategoryMutation.mutate({ name: newCategoryName.trim(), icon: newCategoryIcon.trim() || undefined });
+              }}
+            >
+              <div>
+                <Label className="mb-2 block">Category Name</Label>
+                <Input
+                  data-testid="spending-category-name"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="e.g. Dining Out"
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block">Icon (emoji)</Label>
+                <Input
+                  data-testid="spending-category-icon"
+                  value={newCategoryIcon}
+                  onChange={(e) => setNewCategoryIcon(e.target.value)}
+                  placeholder="🍔"
+                />
+              </div>
+              {createCategoryMutation.isError ? (
+                <p className="text-sm text-rose-400">Failed to create category. Please try again.</p>
+              ) : null}
+              <button
+                data-testid="spending-category-create"
+                type="submit"
+                disabled={createCategoryMutation.isPending || !newCategoryName.trim()}
+                className="w-full rounded-xl bg-cyan-600 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {createCategoryMutation.isPending ? 'Creating...' : 'Create Category'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
