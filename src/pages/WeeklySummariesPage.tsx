@@ -53,7 +53,7 @@ export const WeeklySummariesPage: React.FC = () => {
                     <p className="mt-1 text-xs text-slate-500">
                       Generated{' '}
                       {!Number.isNaN(new Date(item.generated_at).getTime())
-                        ? new Date(item.generated_at).toLocaleString()
+                        ? new Date(item.generated_at).toLocaleString(undefined, { timeZone: 'UTC' })
                         : 'N/A'}
                     </p>
                   </div>

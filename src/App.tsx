@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { TodoPage } from './pages/TodoPage';
 import { SpendingPage } from './pages/SpendingPage';
 import { InvestingPage } from './pages/InvestingPage';
+import { CapturePage } from './pages/CapturePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { WeeklySummariesPage } from './pages/WeeklySummariesPage';
 import { ImportsPage } from './pages/ImportsPage';
@@ -121,6 +122,14 @@ function App() {
             element={
               <Layout>
                 <InvestingPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/capture"
+            element={
+              <Layout>
+                <CapturePage />
               </Layout>
             }
           />
