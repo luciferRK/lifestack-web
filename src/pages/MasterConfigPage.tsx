@@ -458,6 +458,9 @@ export const MasterConfigPage: React.FC = () => {
               >
                 {updateAccountMutation.isPending ? 'Saving...' : 'Save Account'}
               </Button>
+              {updateAccountMutation.isError ? (
+                <p className="text-sm text-rose-400">Failed to save account. Please try again.</p>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -598,6 +601,9 @@ export const MasterConfigPage: React.FC = () => {
               >
                 {updateCategoryMutation.isPending ? 'Saving...' : 'Save Category'}
               </Button>
+              {updateCategoryMutation.isError ? (
+                <p className="text-sm text-rose-400">Failed to save category. Please try again.</p>
+              ) : null}
             </div>
           </div>
         ) : null}
