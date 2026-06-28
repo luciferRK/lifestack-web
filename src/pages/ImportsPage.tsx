@@ -11,6 +11,7 @@ const MODULE_OPTIONS: Array<{ value: ImportModule; label: string; testId?: strin
   { value: 'spending-budgets', label: 'Spending Budgets' },
   { value: 'investing-constituents', label: 'Investing Constituents' },
   { value: 'investing-orders', label: 'Investing Orders', testId: 'import-type-investing-orders' },
+  { value: 'finance-transfers', label: 'Account Transfers', testId: 'import-type-finance-transfers' },
 ];
 
 const lifecycleCopy = (status: string) => {
