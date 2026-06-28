@@ -11,6 +11,7 @@ const MODULE_OPTIONS: Array<{ value: ImportModule; label: string; testId?: strin
   { value: 'spending-budgets', label: 'Spending Budgets' },
   { value: 'investing-constituents', label: 'Investing Constituents' },
   { value: 'investing-orders', label: 'Investing Orders', testId: 'import-type-investing-orders' },
+  { value: 'finance-transfers', label: 'Account Transfers', testId: 'import-type-finance-transfers' },
 ];
 
 const lifecycleCopy = (status: string) => {
@@ -390,6 +391,27 @@ export const ImportsPage: React.FC = () => {
                               <th className="px-3 py-2 text-left">Date</th>
                             </>
                           )}
+                          {activeDetail.import_batch.module === 'investing-orders' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Date</th>
+                              <th className="px-3 py-2 text-left">Type</th>
+                              <th className="px-3 py-2 text-left">Symbol</th>
+                              <th className="px-3 py-2 text-left">Account</th>
+                              <th className="px-3 py-2 text-left">Qty</th>
+                              <th className="px-3 py-2 text-left">Price</th>
+                              <th className="px-3 py-2 text-left">Currency</th>
+                            </>
+                          )}
+                          {activeDetail.import_batch.module === 'finance-transfers' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Date</th>
+                              <th className="px-3 py-2 text-left">From Account</th>
+                              <th className="px-3 py-2 text-left">To Account</th>
+                              <th className="px-3 py-2 text-left">Gross Amount</th>
+                              <th className="px-3 py-2 text-left">Net Received</th>
+                              <th className="px-3 py-2 text-left">Currency</th>
+                            </>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -429,6 +451,47 @@ export const ImportsPage: React.FC = () => {
                                 <td className="px-3 py-2">{row.payload_json.company_ticker ?? '-'}</td>
                                 <td className="px-3 py-2">{row.payload_json.weight && !isNaN(parseFloat(row.payload_json.weight)) ? (parseFloat(row.payload_json.weight) * 100).toFixed(2) + '%' : '-'}</td>
                                 <td className="px-3 py-2">{row.payload_json.as_of_date}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'investing-orders' && (
+                              <>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {(() => {
+                                    if (!row.payload_json.occurred_at) return '-';
+                                    const d = new Date(row.payload_json.occurred_at);
+                                    return !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { timeZone: 'UTC' }) : '-';
+                                  })()}
+                                </td>
+                                <td className="px-3 py-2 uppercase whitespace-nowrap">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${row.payload_json.order_type === 'buy' ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}`}>
+                                    {row.payload_json.order_type}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.symbol}</td>
+                                <td className="px-3 py-2">{row.payload_json.account_name ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.quantity}</td>
+                                <td className="px-3 py-2">{row.payload_json.price_per_unit}</td>
+                                <td className="px-3 py-2 uppercase">{row.payload_json.currency}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'finance-transfers' && (
+                              <>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {(() => {
+                                    if (!row.payload_json.occurred_at) return '-';
+                                    const d = new Date(row.payload_json.occurred_at);
+                                    return !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { timeZone: 'UTC' }) : '-';
+                                  })()}
+                                </td>
+                                <td className="px-3 py-2">{row.payload_json.from_account ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.to_account ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.gross_amount}</td>
+                                <td className="px-3 py-2">{row.payload_json.net_amount_received}</td>
+                                <td className="px-3 py-2 uppercase">
+                                  {row.payload_json.from_currency === row.payload_json.to_currency 
+                                    ? row.payload_json.from_currency 
+                                    : `${row.payload_json.from_currency} → ${row.payload_json.to_currency}`}
+                                </td>
                               </>
                             )}
                           </tr>
