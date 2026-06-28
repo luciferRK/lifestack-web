@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDownUp, BarChart3, Check, ChevronDown, ChevronUp, Edit2, Info, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
+import { ArrowDownUp, BarChart3, Check, Edit2, Info, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { investingService } from '../services/investing';
 import type { InvestingOrderCreate, OrderType } from '../services/investing';
@@ -550,7 +550,20 @@ export const InvestingPage: React.FC = () => {
 
   const onPlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderForm.account_id || !orderForm.symbol || !orderQty || !orderPrice) return;
+    const brokerageFee = orderForm.brokerage_fee ? Number(orderForm.brokerage_fee) : 0;
+    const taxAmount = orderForm.tax_amount ? Number(orderForm.tax_amount) : 0;
+    const otherFees = orderForm.other_fees ? Number(orderForm.other_fees) : 0;
+    const occurredAtDate = new Date(orderForm.occurred_at);
+    if (
+      !orderForm.account_id ||
+      !orderForm.symbol ||
+      !Number.isFinite(orderQty) || orderQty <= 0 ||
+      !Number.isFinite(orderPrice) || orderPrice <= 0 ||
+      (orderForm.brokerage_fee && !Number.isFinite(brokerageFee)) || brokerageFee < 0 ||
+      (orderForm.tax_amount && !Number.isFinite(taxAmount)) || taxAmount < 0 ||
+      (orderForm.other_fees && !Number.isFinite(otherFees)) || otherFees < 0 ||
+      Number.isNaN(occurredAtDate.getTime())
+    ) return;
     placeOrderMutation.mutate({
       account_id: orderForm.account_id,
       order_type: orderForm.order_type,
@@ -558,11 +571,11 @@ export const InvestingPage: React.FC = () => {
       quantity: orderQty,
       price_per_unit: orderPrice,
       currency: orderForm.currency,
-      brokerage_fee: Number(orderForm.brokerage_fee || 0),
-      tax_amount: Number(orderForm.tax_amount || 0),
-      other_fees: Number(orderForm.other_fees || 0),
+      brokerage_fee: brokerageFee,
+      tax_amount: taxAmount,
+      other_fees: otherFees,
       exchange_name: orderForm.exchange_name || undefined,
-      occurred_at: new Date(orderForm.occurred_at).toISOString(),
+      occurred_at: occurredAtDate.toISOString(),
       notes: orderForm.notes || undefined,
     });
   };
@@ -1056,7 +1069,12 @@ export const InvestingPage: React.FC = () => {
               <button
                 type="button"
                 data-testid="investing-place-order-btn"
-                onClick={() => setIsPlaceOrderModalOpen(true)}
+                onClick={() => {
+                  setIsPlaceOrderModalOpen(true);
+                  if (!orderForm.account_id && brokerageAccounts.length > 0) {
+                    setOrderForm((prev) => ({ ...prev, account_id: brokerageAccounts[0].public_id }));
+                  }
+                }}
                 className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
               >
                 <Plus className="h-4 w-4" />
@@ -1119,7 +1137,9 @@ export const InvestingPage: React.FC = () => {
                           className="bg-slate-900/20 hover:bg-slate-800/40 transition-colors"
                         >
                           <td className="px-4 py-3 text-slate-300 whitespace-nowrap">
-                            {new Date(o.occurred_at).toLocaleDateString()}
+                            {Number.isNaN(new Date(o.occurred_at).getTime())
+                              ? 'N/A'
+                              : new Date(o.occurred_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}
                           </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isBuy ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
