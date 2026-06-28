@@ -1233,7 +1233,7 @@ export const InvestingPage: React.FC = () => {
                     <div className="col-span-2">
                       <label className="mb-1 block text-xs text-slate-400">Brokerage Account</label>
                       <DropdownSelect
-                        data-testid="order-account-select"
+                        testId="order-account-select"
                         options={brokerageAccountOptions}
                         value={orderForm.account_id}
                         onChange={(v) => setOrderForm((prev) => ({ ...prev, account_id: v }))}
