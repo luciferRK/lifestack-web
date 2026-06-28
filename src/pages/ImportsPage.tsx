@@ -333,7 +333,7 @@ export const ImportsPage: React.FC = () => {
 
               <div className="mb-4 rounded-lg border border-slate-700 bg-slate-800/40 p-3 text-sm text-slate-200">
                 <p>Module: <span className="font-semibold">{activeDetail.import_batch.module}</span></p>
-                <p>Status: <span className="font-semibold uppercase">{activeDetail.import_batch.status.replace('_', ' ')}</span></p>
+                <p>Status: <span className="font-semibold uppercase">{activeDetail.import_batch.status.replace(/_/g, ' ')}</span></p>
                 <p>Rows: {activeDetail.import_batch.valid_rows}/{activeDetail.import_batch.total_rows} valid</p>
                 {activeDetail.error_summary ? (
                   <p>
@@ -341,6 +341,13 @@ export const ImportsPage: React.FC = () => {
                   </p>
                 ) : null}
               </div>
+
+              {activeDetail.import_batch.status === 'failed_commit' && activeDetail.import_batch.commit_error ? (
+                <div className="mb-4 rounded-lg border border-rose-700/50 bg-rose-950/40 p-3 text-sm">
+                  <p className="mb-1 font-semibold text-rose-300">Commit failed</p>
+                  <p className="text-rose-200">{activeDetail.import_batch.commit_error}</p>
+                </div>
+              ) : null}
 
               <button
                 data-testid="imports-commit"

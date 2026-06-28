@@ -22,6 +22,7 @@ export interface ImportBatch {
   total_rows: number;
   valid_rows: number;
   error_rows: number;
+  commit_error: string | null;
   started_at: string;
   validated_at: string | null;
   committed_at: string | null;
