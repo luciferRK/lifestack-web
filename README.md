@@ -236,3 +236,14 @@ The frontend expects the backend API to be available separately.
 ## Relationship to the API
 
 This repo is the frontend companion to [`lifestack-api`](https://github.com/sajankp/lifestack-api), which owns the core domain services, workflows, and data model.
+
+---
+
+## Deeper Domain Reference
+
+Detailed documentation on domain behaviors, API contracts, testing strategies, and module-specific design decisions that were previously in this README have been moved to dedicated agent memory files and spec documents:
+
+- **Architecture & design decisions** — `.agent/context.md` in this repo
+- **Backend domain behaviors** (investing, spending analytics, ledger reconciliation) — `lifestack-api/docs/specs/`
+- **Test patterns & key file paths** — `.agent/memory/MEMORY-FRONTEND.md` and `.agent/memory/MEMORY-E2E.md` at the workspace root
+- **Roadmap and planning context** — `.agent/memory/MEMORY-OVERVIEW.md` at the workspace root
