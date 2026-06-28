@@ -1,3 +1,4 @@
+// 'investing-holdings' is kept for backward-compat rendering of historic import_batches rows.
 export type ImportModule = 'spending-transactions' | 'spending-budgets' | 'investing-holdings' | 'investing-constituents' | 'investing-orders';
 
 export type ImportStatus =
