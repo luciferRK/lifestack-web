@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDownUp, BarChart3, Check, ChevronDown, ChevronUp, ChevronsUpDown, Edit2, Info, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { investingService } from '../services/investing';
-import type { InvestingOrderCreate, OrderType } from '../services/investing';
+import type { InvestingOrder, InvestingOrderCreate, InvestingOrderUpdate, OrderType } from '../services/investing';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
 import { DatePicker } from '../components/DatePicker';
 import { DateTimePicker } from '../components/DateTimePicker';
@@ -326,6 +326,82 @@ export const InvestingPage: React.FC = () => {
     mutationFn: (publicId: string) => investingService.deleteOrder(publicId),
     onSuccess: refresh,
   });
+
+  const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<InvestingOrder | null>(null);
+  const [editOrderForm, setEditOrderForm] = useState<{
+    order_type: OrderType;
+    quantity: string;
+    price_per_unit: string;
+    brokerage_fee: string;
+    tax_amount: string;
+    other_fees: string;
+    exchange_name: string;
+    occurred_at: string;
+    notes: string;
+  }>({
+    order_type: 'buy',
+    quantity: '',
+    price_per_unit: '',
+    brokerage_fee: '0',
+    tax_amount: '0',
+    other_fees: '0',
+    exchange_name: '',
+    occurred_at: '',
+    notes: '',
+  });
+
+  const updateOrderMutation = useMutation({
+    mutationFn: ({ publicId, payload }: { publicId: string; payload: InvestingOrderUpdate }) =>
+      investingService.updateOrder(publicId, payload),
+    onSuccess: () => {
+      setIsEditOrderModalOpen(false);
+      setSelectedOrder(null);
+      refresh();
+    },
+  });
+
+  const handleStartEditOrder = (order: InvestingOrder) => {
+    setSelectedOrder(order);
+    setEditOrderForm({
+      order_type: order.order_type as OrderType,
+      quantity: toNumber(order.quantity).toString(),
+      price_per_unit: toNumber(order.price_per_unit).toString(),
+      brokerage_fee: toNumber(order.brokerage_fee).toString(),
+      tax_amount: toNumber(order.tax_amount).toString(),
+      other_fees: toNumber(order.other_fees).toString(),
+      exchange_name: order.exchange_name ?? '',
+      occurred_at: formatDateTimeLocalInput(new Date(order.occurred_at)),
+      notes: order.notes ?? '',
+    });
+    setIsEditOrderModalOpen(true);
+  };
+
+  const onUpdateOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrder) return;
+    const qty = Number(editOrderForm.quantity);
+    const price = Number(editOrderForm.price_per_unit);
+    const brokerageFee = editOrderForm.brokerage_fee ? Number(editOrderForm.brokerage_fee) : 0;
+    const taxAmount = editOrderForm.tax_amount ? Number(editOrderForm.tax_amount) : 0;
+    const otherFees = editOrderForm.other_fees ? Number(editOrderForm.other_fees) : 0;
+    const occurredAt = new Date(editOrderForm.occurred_at);
+    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price <= 0 || Number.isNaN(occurredAt.getTime())) return;
+    updateOrderMutation.mutate({
+      publicId: selectedOrder.public_id,
+      payload: {
+        order_type: editOrderForm.order_type,
+        quantity: qty,
+        price_per_unit: price,
+        brokerage_fee: brokerageFee,
+        tax_amount: taxAmount,
+        other_fees: otherFees,
+        exchange_name: editOrderForm.exchange_name || undefined,
+        occurred_at: occurredAt.toISOString(),
+        notes: editOrderForm.notes || undefined,
+      },
+    });
+  };
 
   const [editingPriceHoldingId, setEditingPriceHoldingId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState<string>('');
@@ -1038,15 +1114,17 @@ export const InvestingPage: React.FC = () => {
                             </td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex justify-end gap-2">
-                                <button
-                                  type="button"
-                                  data-testid={`investing-edit-holding-${h.public_id}`}
-                                  onClick={() => handleStartEditHolding(h)}
-                                  className="rounded-lg border border-slate-600/70 p-2 text-slate-200 hover:bg-slate-700/60"
-                                  title="Edit holding"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </button>
+                                {h.source_type !== 'order' && (
+                                  <button
+                                    type="button"
+                                    data-testid={`investing-edit-holding-${h.public_id}`}
+                                    onClick={() => handleStartEditHolding(h)}
+                                    className="rounded-lg border border-slate-600/70 p-2 text-slate-200 hover:bg-slate-700/60"
+                                    title="Edit holding"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   data-testid={`investing-holding-trade-history-${h.public_id}`}
@@ -1216,15 +1294,25 @@ export const InvestingPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <button
-                              type="button"
-                              disabled={deleteOrderMutation.isPending}
-                              onClick={() => deleteOrderMutation.mutate(o.public_id)}
-                              className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-                              title="Delete order"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditOrder(o)}
+                                className="rounded-lg border border-slate-600/70 p-2 text-slate-200 hover:bg-slate-700/60"
+                                title="Edit order"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={deleteOrderMutation.isPending}
+                                onClick={() => deleteOrderMutation.mutate(o.public_id)}
+                                className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                title="Delete order"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1441,6 +1529,154 @@ export const InvestingPage: React.FC = () => {
                   {placeOrderMutation.isError && (
                     <p className="text-sm text-rose-400">
                       {(placeOrderMutation.error as Error)?.message ?? 'Failed to place order'}
+                    </p>
+                  )}
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Order Modal */}
+          {isEditOrderModalOpen && selectedOrder && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+              <div className="w-full max-w-lg rounded-2xl border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">Edit Order — {selectedOrder.symbol}</h2>
+                  <button
+                    type="button"
+                    onClick={() => { setIsEditOrderModalOpen(false); setSelectedOrder(null); }}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <form onSubmit={onUpdateOrder} className="space-y-4">
+                  {/* Buy / Sell toggle */}
+                  <div className="flex rounded-lg border border-slate-700/60 overflow-hidden">
+                    {(['buy', 'sell'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setEditOrderForm((prev) => ({ ...prev, order_type: t }))}
+                        className={`flex-1 py-2 text-sm font-semibold transition-colors ${
+                          editOrderForm.order_type === t
+                            ? t === 'buy' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {t.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-400">Quantity</label>
+                      <input
+                        type="number"
+                        required
+                        min="0.00000001"
+                        step="any"
+                        value={editOrderForm.quantity}
+                        onChange={(e) => setEditOrderForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-400">Price per unit</label>
+                      <input
+                        type="number"
+                        required
+                        min="0.000001"
+                        step="any"
+                        value={editOrderForm.price_per_unit}
+                        onChange={(e) => setEditOrderForm((prev) => ({ ...prev, price_per_unit: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-400">Brokerage fee</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editOrderForm.brokerage_fee}
+                        onChange={(e) => setEditOrderForm((prev) => ({ ...prev, brokerage_fee: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-400">Tax / STT</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editOrderForm.tax_amount}
+                        onChange={(e) => setEditOrderForm((prev) => ({ ...prev, tax_amount: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-400">Other fees</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editOrderForm.other_fees}
+                        onChange={(e) => setEditOrderForm((prev) => ({ ...prev, other_fees: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-400">Exchange (optional)</label>
+                      <input
+                        type="text"
+                        value={editOrderForm.exchange_name}
+                        onChange={(e) => setEditOrderForm((prev) => ({ ...prev, exchange_name: e.target.value }))}
+                        placeholder="NSE / NASDAQ"
+                        className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="mb-1 block text-xs text-slate-400">Trade date & time</label>
+                      <input
+                        type="datetime-local"
+                        value={editOrderForm.occurred_at}
+                        onChange={(e) => setEditOrderForm((prev) => ({ ...prev, occurred_at: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="mb-1 block text-xs text-slate-400">Notes (optional)</label>
+                      <input
+                        type="text"
+                        value={editOrderForm.notes}
+                        onChange={(e) => setEditOrderForm((prev) => ({ ...prev, notes: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => { setIsEditOrderModalOpen(false); setSelectedOrder(null); }}
+                      className="flex-1 rounded-lg border border-slate-600/70 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={updateOrderMutation.isPending}
+                      className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {updateOrderMutation.isPending ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  </div>
+
+                  {updateOrderMutation.isError && (
+                    <p className="text-sm text-rose-400">
+                      {(updateOrderMutation.error as Error)?.message ?? 'Failed to update order'}
                     </p>
                   )}
                 </form>
