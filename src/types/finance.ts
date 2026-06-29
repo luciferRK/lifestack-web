@@ -124,3 +124,23 @@ export interface ReconciliationSummary {
   transfer_count: number;
 }
 
+export interface SpendingAccountBalance {
+  account_public_id: string;
+  account_name: string;
+  account_type: string;
+  currency_code: string;
+  balance: string; // decimal as string, native currency
+  balance_in_reporting_currency: string | null; // null if FX rate unavailable
+}
+
+export interface NetWorthData {
+  reporting_currency: string | null;
+  spending_accounts: SpendingAccountBalance[];
+  spending_total: string | null;
+  investing_cash_total: string | null;
+  holdings_value: string | null;
+  investing_total: string | null;
+  total_net_worth: string | null;
+  valuation_status: 'ok' | 'partial' | 'no_reporting_currency' | 'empty' | string;
+  fx_as_of: string | null;
+}

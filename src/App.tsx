@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { TodoPage } from './pages/TodoPage';
 import { SpendingPage } from './pages/SpendingPage';
 import { InvestingPage } from './pages/InvestingPage';
+import { NetWorthPage } from './pages/NetWorthPage';
 import { CapturePage } from './pages/CapturePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { WeeklySummariesPage } from './pages/WeeklySummariesPage';
@@ -122,6 +123,14 @@ function App() {
             element={
               <Layout>
                 <InvestingPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/net-worth"
+            element={
+              <Layout>
+                <NetWorthPage />
               </Layout>
             }
           />

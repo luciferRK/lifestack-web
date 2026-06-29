@@ -8,6 +8,7 @@ import type {
   CapitalTransfer,
   CapitalTransferCreate,
   Currency,
+  NetWorthData,
   ReconciliationSummary,
   UserFinanceSetting,
   UserFinanceSettingUpdate,
@@ -21,7 +22,10 @@ export const financeService = {
     return response.data;
   },
 
-  getAccounts: async (limit: number = 200, offset: number = 0): Promise<PaginatedResponse<Account>> => {
+  getAccounts: async (
+    limit: number = 200,
+    offset: number = 0,
+  ): Promise<PaginatedResponse<Account>> => {
     const response = await api.get('/finance/accounts', { params: { limit, offset } });
     return response.data;
   },
@@ -65,7 +69,10 @@ export const financeService = {
     return response.data;
   },
 
-  getTransfers: async (limit: number = 50, offset: number = 0): Promise<PaginatedResponse<CapitalTransfer>> => {
+  getTransfers: async (
+    limit: number = 50,
+    offset: number = 0,
+  ): Promise<PaginatedResponse<CapitalTransfer>> => {
     const response = await api.get('/finance/transfers', { params: { limit, offset } });
     return response.data;
   },
@@ -77,6 +84,11 @@ export const financeService = {
 
   getAccountReconciliation: async (publicId: string): Promise<ReconciliationSummary> => {
     const response = await api.get(`/finance/accounts/${publicId}/reconciliation`);
+    return response.data;
+  },
+
+  getNetWorth: async (): Promise<NetWorthData> => {
+    const response = await api.get('/finance/net-worth');
     return response.data;
   },
 };
