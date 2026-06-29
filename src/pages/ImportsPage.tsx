@@ -342,10 +342,12 @@ export const ImportsPage: React.FC = () => {
                 ) : null}
               </div>
 
-              {activeDetail.import_batch.status === 'failed_commit' && activeDetail.import_batch.commit_error ? (
+              {activeDetail.import_batch.status === 'failed_commit' ? (
                 <div className="mb-4 rounded-lg border border-rose-700/50 bg-rose-950/40 p-3 text-sm">
                   <p className="mb-1 font-semibold text-rose-300">Commit failed</p>
-                  <p className="text-rose-200">{activeDetail.import_batch.commit_error}</p>
+                  <p className="text-rose-200">
+                    {activeDetail.import_batch.commit_error || 'An unexpected error occurred during commit.'}
+                  </p>
                 </div>
               ) : null}
 
