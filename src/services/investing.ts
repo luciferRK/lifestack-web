@@ -15,6 +15,7 @@ export const HoldingSchema = z.object({
   quantity: z.union([z.number(), z.string()]).default(0),
   avg_cost: z.union([z.number(), z.string()]).default(0),
   currency: z.string().default(''),
+  source_type: z.string().optional(),
   current_price: z.union([z.number(), z.string()]).optional(),
   current_value: z.union([z.number(), z.string()]).optional(),
   gain_loss: z.union([z.number(), z.string()]).optional(),
@@ -151,6 +152,18 @@ export interface InvestingOrderCreate {
   other_fees?: number;
   exchange_name?: string;
   occurred_at: string;
+  notes?: string;
+}
+
+export interface InvestingOrderUpdate {
+  order_type?: OrderType;
+  quantity?: number;
+  price_per_unit?: number;
+  brokerage_fee?: number;
+  tax_amount?: number;
+  other_fees?: number;
+  exchange_name?: string;
+  occurred_at?: string;
   notes?: string;
 }
 
@@ -392,6 +405,11 @@ export const investingService = {
 
   deleteOrder: async (publicId: string): Promise<void> => {
     await api.delete(`/investing/orders/${publicId}`);
+  },
+
+  updateOrder: async (publicId: string, data: InvestingOrderUpdate): Promise<InvestingOrder> => {
+    const response = await api.patch(`/investing/orders/${publicId}`, data);
+    return InvestingOrderSchema.parse(response.data);
   },
 
   getOrdersForHolding: async (symbol: string, accountId: string): Promise<InvestingOrder[]> => {
