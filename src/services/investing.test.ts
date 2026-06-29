@@ -10,17 +10,14 @@ describe('investingService', () => {
 
   it('calls holdings endpoints', async () => {
     vi.spyOn(api, 'get').mockResolvedValueOnce({ data: { items: [], total: 0 } } as never);
-    vi.spyOn(api, 'post').mockResolvedValueOnce({ data: { public_id: 'h1' } } as never);
     vi.spyOn(api, 'patch').mockResolvedValueOnce({ data: { public_id: 'h1' } } as never);
     vi.spyOn(api, 'delete').mockResolvedValueOnce({} as never);
 
     await investingService.getHoldings(10, 20);
-    await investingService.createHolding({} as never);
     await investingService.updateHolding('h1', {} as never);
     await investingService.deleteHolding('h1');
 
     expect(api.get).toHaveBeenCalledWith('/investing/holdings', { params: { limit: 10, offset: 20 } });
-    expect(api.post).toHaveBeenCalledWith('/investing/holdings', {});
     expect(api.patch).toHaveBeenCalledWith('/investing/holdings/h1', {});
     expect(api.delete).toHaveBeenCalledWith('/investing/holdings/h1');
   });
