@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDownUp, BarChart3, Check, Edit2, Info, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
+import { ArrowDownUp, BarChart3, Check, ChevronDown, ChevronUp, ChevronsUpDown, Edit2, Info, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { investingService } from '../services/investing';
 import type { InvestingOrderCreate, OrderType } from '../services/investing';
@@ -98,6 +98,7 @@ export const InvestingPage: React.FC = () => {
   });
   const [holdingsAccountFilter, setHoldingsAccountFilter] = useState('');
   const [holdingsCurrencyFilter, setHoldingsCurrencyFilter] = useState('');
+  const [holdingsTypeFilter, setHoldingsTypeFilter] = useState('');
   const [cashAccountFilter, setCashAccountFilter] = useState('');
   const [cashCurrencyFilter, setCashCurrencyFilter] = useState('');
   const [selectedInstrumentId, setSelectedInstrumentId] = useState('');
@@ -286,6 +287,14 @@ export const InvestingPage: React.FC = () => {
   const [orderSymbolFilter, setOrderSymbolFilter] = useState('');
   const [orderTypeFilter, setOrderTypeFilter] = useState<'' | 'buy' | 'sell'>('');
   const [tradeHistoryHoldingId, setTradeHistoryHoldingId] = useState<string | null>(null);
+
+  // Sort state
+  const [holdingsSortCol, setHoldingsSortCol] = useState('symbol');
+  const [holdingsSortDir, setHoldingsSortDir] = useState<'asc' | 'desc'>('asc');
+  const [ordersSortCol, setOrdersSortCol] = useState('occurred_at');
+  const [ordersSortDir, setOrdersSortDir] = useState<'asc' | 'desc'>('desc');
+  const [cashSortCol, setCashSortCol] = useState('account_name');
+  const [cashSortDir, setCashSortDir] = useState<'asc' | 'desc'>('asc');
 
   const ordersRes = useQuery({
     queryKey: ['investing', 'orders'],
@@ -482,9 +491,10 @@ export const InvestingPage: React.FC = () => {
         const accountMatch = !holdingsAccountFilter || holding.account_id === holdingsAccountFilter;
         const currencyMatch =
           !holdingsCurrencyFilter || (holding.currency ?? 'USD').toUpperCase() === holdingsCurrencyFilter.toUpperCase();
-        return accountMatch && currencyMatch;
+        const typeMatch = !holdingsTypeFilter || (holding.instrument_type ?? 'stock') === holdingsTypeFilter;
+        return accountMatch && currencyMatch && typeMatch;
       }),
-    [holdings, holdingsAccountFilter, holdingsCurrencyFilter]
+    [holdings, holdingsAccountFilter, holdingsCurrencyFilter, holdingsTypeFilter]
   );
   const filteredCashBalances = useMemo(
     () =>
@@ -497,6 +507,42 @@ export const InvestingPage: React.FC = () => {
     [cashBalances, cashAccountFilter, cashCurrencyFilter]
   );
 
+  const sortedCashBalances = useMemo(() => {
+    const dir = cashSortDir === 'asc' ? 1 : -1;
+    return [...filteredCashBalances].sort((a, b) => {
+      switch (cashSortCol) {
+        case 'account_name': return dir * a.account_name.localeCompare(b.account_name);
+        case 'balance': return dir * (toNumber(a.balance) - toNumber(b.balance));
+        case 'as_of': return dir * (new Date(a.as_of).getTime() - new Date(b.as_of).getTime());
+        default: return 0;
+      }
+    });
+  }, [filteredCashBalances, cashSortCol, cashSortDir]);
+
+  const instrumentBySymbol = useMemo(
+    () => new Map(instruments.map((i) => [i.symbol, i])),
+    [instruments]
+  );
+
+  const sortedHoldings = useMemo(() => {
+    const dir = holdingsSortDir === 'asc' ? 1 : -1;
+    return [...filteredHoldings].sort((a, b) => {
+      switch (holdingsSortCol) {
+        case 'symbol': return dir * a.symbol.localeCompare(b.symbol);
+        case 'instrument_type': return dir * (a.instrument_type ?? 'stock').localeCompare(b.instrument_type ?? 'stock');
+        case 'account_name': return dir * a.account_name.localeCompare(b.account_name);
+        case 'currency': return dir * (a.currency ?? 'USD').localeCompare(b.currency ?? 'USD');
+        case 'quantity': return dir * (toNumber(a.quantity) - toNumber(b.quantity));
+        case 'avg_cost': return dir * (toNumber(a.avg_cost) - toNumber(b.avg_cost));
+        case 'book_value': return dir * (toNumber(a.quantity) * toNumber(a.avg_cost) - toNumber(b.quantity) * toNumber(b.avg_cost));
+        case 'current_price': return dir * (toNumber(a.current_price ?? a.avg_cost) - toNumber(b.current_price ?? b.avg_cost));
+        case 'current_value': return dir * (toNumber(a.current_value ?? 0) - toNumber(b.current_value ?? 0));
+        case 'gain_loss': return dir * (toNumber(a.gain_loss ?? 0) - toNumber(b.gain_loss ?? 0));
+        default: return 0;
+      }
+    });
+  }, [filteredHoldings, holdingsSortCol, holdingsSortDir]);
+
   const orders = useMemo(() => ordersRes.data?.items ?? [], [ordersRes.data]);
   const filteredOrders = useMemo(
     () =>
@@ -507,6 +553,24 @@ export const InvestingPage: React.FC = () => {
       }),
     [orders, orderSymbolFilter, orderTypeFilter]
   );
+
+  const sortedOrders = useMemo(() => {
+    const dir = ordersSortDir === 'asc' ? 1 : -1;
+    return [...filteredOrders].sort((a, b) => {
+      switch (ordersSortCol) {
+        case 'occurred_at': return dir * (new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime());
+        case 'order_type': return dir * a.order_type.localeCompare(b.order_type);
+        case 'symbol': return dir * a.symbol.localeCompare(b.symbol);
+        case 'quantity': return dir * (toNumber(a.quantity) - toNumber(b.quantity));
+        case 'price_per_unit': return dir * (toNumber(a.price_per_unit) - toNumber(b.price_per_unit));
+        case 'gross_amount': return dir * (toNumber(a.gross_amount) - toNumber(b.gross_amount));
+        case 'fees': return dir * ((toNumber(a.brokerage_fee) + toNumber(a.tax_amount) + toNumber(a.other_fees)) - (toNumber(b.brokerage_fee) + toNumber(b.tax_amount) + toNumber(b.other_fees)));
+        case 'net_amount': return dir * (toNumber(a.net_amount) - toNumber(b.net_amount));
+        case 'realized_gain_loss': return dir * (toNumber(a.realized_gain_loss ?? 0) - toNumber(b.realized_gain_loss ?? 0));
+        default: return 0;
+      }
+    });
+  }, [filteredOrders, ordersSortCol, ordersSortDir]);
 
   const orderQty = Number(orderForm.quantity);
   const orderPrice = Number(orderForm.price_per_unit);
@@ -833,6 +897,7 @@ export const InvestingPage: React.FC = () => {
                 onReset={() => {
                   setHoldingsAccountFilter('');
                   setHoldingsCurrencyFilter('');
+                  setHoldingsTypeFilter('');
                 }}
               >
                 <CompactFilterField label="Account">
@@ -854,39 +919,64 @@ export const InvestingPage: React.FC = () => {
                     clearLabel="All currencies"
                   />
                 </CompactFilterField>
+                <CompactFilterField label="Asset Type">
+                  <DropdownSelect
+                    testId="investing-holdings-type-filter"
+                    value={holdingsTypeFilter}
+                    options={[...instrumentTypeOptions]}
+                    onChange={setHoldingsTypeFilter}
+                    placeholder="All types"
+                    clearLabel="All types"
+                  />
+                </CompactFilterField>
               </CompactFilterBar>
 
               <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-800/30">
                 <table className="w-full text-left text-sm text-slate-300 min-w-[1000px]">
                   <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                     <tr>
-                      <th className="px-4 py-3">Symbol</th>
-                      <th className="px-4 py-3">Asset Type</th>
-                      <th className="px-4 py-3">Account</th>
-                      <th className="px-4 py-3">Currency</th>
-                      <th className="px-4 py-3">Qty</th>
-                      <th className="px-4 py-3">Avg Cost</th>
-                      <th className="px-4 py-3">Book Value</th>
-                      <th className="px-4 py-3">Unit Price</th>
-                      <th className="px-4 py-3">Current Value</th>
-                      <th className="px-4 py-3">Gain / Loss</th>
+                      <SortableHeader col="symbol" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Symbol</SortableHeader>
+                      <SortableHeader col="instrument_type" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Asset Type</SortableHeader>
+                      <SortableHeader col="account_name" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Account</SortableHeader>
+                      <SortableHeader col="currency" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Currency</SortableHeader>
+                      <SortableHeader col="quantity" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Qty</SortableHeader>
+                      <SortableHeader col="avg_cost" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Avg Cost</SortableHeader>
+                      <SortableHeader col="book_value" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Book Value</SortableHeader>
+                      <SortableHeader col="current_price" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Unit Price</SortableHeader>
+                      <SortableHeader col="current_value" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Current Value</SortableHeader>
+                      <SortableHeader col="gain_loss" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Gain / Loss</SortableHeader>
                       <th className="px-4 py-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
-                    {filteredHoldings.length === 0 ? (
+                    {sortedHoldings.length === 0 ? (
                       <tr><td className="px-4 py-6 text-slate-400" colSpan={11}>No holdings yet.</td></tr>
                     ) : (
-                      filteredHoldings.map((h) => {
+                      sortedHoldings.map((h) => {
                         const gainLoss = toNumber(h.gain_loss ?? 0);
                         const gainLossPct = toNumber(h.gain_loss_pct ?? 0);
                         const isPositive = gainLoss > 0;
                         const isNegative = gainLoss < 0;
                         const colorClass = isPositive ? 'text-green-400' : isNegative ? 'text-red-400' : 'text-slate-400';
                         const sign = isPositive ? '+' : '';
+                        const isMF = h.instrument_type === 'mutual_fund';
+                        const matchedInstrument = isMF ? instrumentBySymbol.get(h.symbol) : undefined;
+                        const displayName = matchedInstrument?.name ?? h.symbol;
                         return (
                           <tr key={h.public_id} data-testid={`investing-holding-row-${h.public_id}`}>
-                            <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">{h.symbol}</td>
+                            <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">
+                              {isMF ? (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span>{displayName}</span>
+                                  <span className="group relative inline-flex">
+                                    <Info className="h-3.5 w-3.5 text-slate-500 hover:text-slate-300 cursor-default" />
+                                    <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-[200px] -translate-x-1/2 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs font-normal text-slate-300 shadow-xl group-hover:block">
+                                      {h.symbol}
+                                    </span>
+                                  </span>
+                                </span>
+                              ) : h.symbol}
+                            </td>
                             <td className="px-4 py-3">
                               <span className="inline-flex rounded border border-slate-600/70 px-2 py-0.5 text-xs text-slate-200">
                                 {instrumentTypeLabel(h.instrument_type)}
@@ -988,7 +1078,7 @@ export const InvestingPage: React.FC = () => {
                       })
                     )}
                   </tbody>
-                  {filteredHoldings.length > 0 ? (
+                  {sortedHoldings.length > 0 ? (
                     <tfoot>
                       <tr className="border-t border-slate-700/50 bg-slate-900/40">
                         <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={6}>Total Cost & Value</td>
@@ -1060,25 +1150,25 @@ export const InvestingPage: React.FC = () => {
               <table data-testid="investing-orders-table" className="w-full text-sm">
                 <thead className="border-b border-slate-700/50 bg-slate-800/40">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Symbol</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Qty</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Price</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Gross</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Fees</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Net</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Realized G/L</th>
+                    <SortableHeader col="occurred_at" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Date</SortableHeader>
+                    <SortableHeader col="order_type" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Type</SortableHeader>
+                    <SortableHeader col="symbol" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Symbol</SortableHeader>
+                    <SortableHeader col="quantity" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Qty</SortableHeader>
+                    <SortableHeader col="price_per_unit" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Price</SortableHeader>
+                    <SortableHeader col="gross_amount" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Gross</SortableHeader>
+                    <SortableHeader col="fees" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Fees</SortableHeader>
+                    <SortableHeader col="net_amount" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Net</SortableHeader>
+                    <SortableHeader col="realized_gain_loss" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Realized G/L</SortableHeader>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/30">
                   {ordersRes.isLoading ? (
                     <tr><td colSpan={10} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
-                  ) : filteredOrders.length === 0 ? (
+                  ) : sortedOrders.length === 0 ? (
                     <tr><td colSpan={10} className="px-4 py-8 text-center text-slate-400">No orders yet. Place your first order to get started.</td></tr>
                   ) : (
-                    filteredOrders.map((o) => {
+                    sortedOrders.map((o) => {
                       const fees = toNumber(o.brokerage_fee) + toNumber(o.tax_amount) + toNumber(o.other_fees);
                       const isBuy = o.order_type === 'buy';
                       return (
@@ -1407,17 +1497,17 @@ export const InvestingPage: React.FC = () => {
                 <table className="w-full text-left text-sm text-slate-300 min-w-[600px]">
                   <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                     <tr>
-                      <th className="px-4 py-3">Account</th>
-                      <th className="px-4 py-3">Balance</th>
-                      <th className="px-4 py-3">As Of</th>
+                      <SortableHeader col="account_name" activeCol={cashSortCol} dir={cashSortDir} onSort={(c, d) => { setCashSortCol(c); setCashSortDir(d); }}>Account</SortableHeader>
+                      <SortableHeader col="balance" activeCol={cashSortCol} dir={cashSortDir} onSort={(c, d) => { setCashSortCol(c); setCashSortDir(d); }}>Balance</SortableHeader>
+                      <SortableHeader col="as_of" activeCol={cashSortCol} dir={cashSortDir} onSort={(c, d) => { setCashSortCol(c); setCashSortDir(d); }}>As Of</SortableHeader>
                       <th className="px-4 py-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
-                    {filteredCashBalances.length === 0 ? (
+                    {sortedCashBalances.length === 0 ? (
                       <tr><td className="px-4 py-6 text-slate-400" colSpan={4}>No cash balances yet.</td></tr>
                     ) : (
-                      filteredCashBalances.map((c) => (
+                      sortedCashBalances.map((c) => (
                         <tr key={c.public_id}>
                           <td className="px-4 py-3 text-white">{c.account_name}</td>
                           <td className="px-4 py-3">{formatCurrency(c.balance, c.currency, currencyDisplayPreference)}</td>
@@ -2110,6 +2200,42 @@ export const InvestingPage: React.FC = () => {
         </div>
       )}
     </PageShell>
+  );
+};
+
+type SortDir = 'asc' | 'desc';
+
+const SortableHeader = ({
+  children,
+  col,
+  activeCol,
+  dir,
+  onSort,
+  className,
+}: {
+  children: React.ReactNode;
+  col: string;
+  activeCol: string;
+  dir: SortDir;
+  onSort: (col: string, dir: SortDir) => void;
+  className?: string;
+}) => {
+  const isActive = activeCol === col;
+  const nextDir: SortDir = isActive && dir === 'asc' ? 'desc' : 'asc';
+  return (
+    <th
+      className={`px-4 py-3 cursor-pointer select-none hover:text-slate-200 transition-colors ${className ?? ''}`}
+      onClick={() => onSort(col, nextDir)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {children}
+        {isActive ? (
+          dir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronsUpDown className="h-3 w-3 opacity-30" />
+        )}
+      </span>
+    </th>
   );
 };
 
