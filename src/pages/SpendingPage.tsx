@@ -44,6 +44,7 @@ import {
   Percent,
   PiggyBank,
   CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { DropdownSelect } from '../components/DropdownSelect';
@@ -266,6 +267,22 @@ export const SpendingPage: React.FC = () => {
   const [transferTax, setTransferTax] = useState('0');
   const [transferNotes, setTransferNotes] = useState('');
   const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Edit / delete transfer state
+  const [editingTransfer, setEditingTransfer] = useState<import('../types/finance').CapitalTransfer | null>(null);
+  const [editTransferFromId, setEditTransferFromId] = useState('');
+  const [editTransferToId, setEditTransferToId] = useState('');
+  const [editTransferGross, setEditTransferGross] = useState('');
+  const [editTransferFxRate, setEditTransferFxRate] = useState('');
+  const [editTransferFxFee, setEditTransferFxFee] = useState('0');
+  const [editTransferPlatformFee, setEditTransferPlatformFee] = useState('0');
+  const [editTransferTax, setEditTransferTax] = useState('0');
+  const [editTransferNet, setEditTransferNet] = useState('');
+  const [editTransferNotes, setEditTransferNotes] = useState('');
+  const [editTransferDate, setEditTransferDate] = useState('');
+  const [editTransferError, setEditTransferError] = useState<string | null>(null);
+  const [deletingTransfer, setDeletingTransfer] = useState<import('../types/finance').CapitalTransfer | null>(null);
+  const [deleteTransferError, setDeleteTransferError] = useState<string | null>(null);
 
   const { data: categoriesResponse, isLoading: isCatsLoading } = useQuery({
     queryKey: ['categories'],
@@ -558,6 +575,94 @@ export const SpendingPage: React.FC = () => {
       setTransferOffset(0);
     },
   });
+
+  const updateTransferMutation = useMutation({
+    mutationFn: () => {
+      if (!editingTransfer) throw new Error('No transfer selected');
+      const gross = Number(editTransferGross);
+      if (Number.isNaN(gross) || gross <= 0) throw new Error('Gross amount must be a positive number');
+      const net = Number(editTransferNet);
+      if (Number.isNaN(net) || net < 0) throw new Error('Net amount must be a non-negative number');
+      const fxFee = editTransferFxFee ? Number(editTransferFxFee) : 0;
+      const platformFee = editTransferPlatformFee ? Number(editTransferPlatformFee) : 0;
+      const tax = editTransferTax ? Number(editTransferTax) : 0;
+      let parsedFxRate: string | null = null;
+      if (editTransferFxRate) {
+        const rate = Number(editTransferFxRate);
+        if (Number.isNaN(rate) || rate <= 0) throw new Error('FX rate must be a positive number');
+        parsedFxRate = rate.toFixed(10);
+      }
+      const parsedDate = new Date(editTransferDate);
+      if (Number.isNaN(parsedDate.getTime())) throw new Error('Invalid date');
+      const fromAccount = transferAccountById.get(editTransferFromId);
+      const toAccount = transferAccountById.get(editTransferToId);
+      return financeService.updateTransfer(editingTransfer.public_id, {
+        from_account_id: fromAccount?.public_id ?? editingTransfer.from_account_public_id ?? undefined,
+        to_account_id: toAccount?.public_id ?? editingTransfer.to_account_public_id ?? undefined,
+        from_currency_code: fromAccount?.default_currency_code,
+        to_currency_code: toAccount?.default_currency_code,
+        gross_amount: gross.toFixed(2),
+        fx_rate_used: parsedFxRate,
+        fx_fee_amount: fxFee.toFixed(2),
+        platform_fee_amount: platformFee.toFixed(2),
+        tax_amount: tax.toFixed(2),
+        net_amount_received: net.toFixed(2),
+        occurred_at: parsedDate.toISOString(),
+        notes: editTransferNotes || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance', 'transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setEditingTransfer(null);
+      setEditTransferError(null);
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        (err instanceof Error ? err.message : 'Failed to update transfer');
+      setEditTransferError(msg);
+    },
+  });
+
+  const deleteTransferMutation = useMutation({
+    mutationFn: () => {
+      if (!deletingTransfer) throw new Error('No transfer selected');
+      return financeService.deleteTransfer(deletingTransfer.public_id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance', 'transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setDeletingTransfer(null);
+      setDeleteTransferError(null);
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        (err instanceof Error ? err.message : 'Failed to delete transfer');
+      setDeleteTransferError(msg);
+    },
+  });
+
+  const openEditTransfer = (t: import('../types/finance').CapitalTransfer) => {
+    setEditingTransfer(t);
+    setEditTransferFromId(t.from_account_public_id ?? '');
+    setEditTransferToId(t.to_account_public_id ?? '');
+    setEditTransferGross(t.gross_amount);
+    setEditTransferFxRate(t.fx_rate_used ?? '');
+    setEditTransferFxFee(t.fx_fee_amount);
+    setEditTransferPlatformFee(t.platform_fee_amount);
+    setEditTransferTax(t.tax_amount);
+    setEditTransferNet(t.net_amount_received);
+    setEditTransferNotes(t.notes ?? '');
+    setEditTransferDate(
+      t.occurred_at && !Number.isNaN(Date.parse(t.occurred_at))
+        ? new Date(t.occurred_at).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0],
+    );
+    setEditTransferError(null);
+  };
+
   const createAccountMutation = useMutation({
     mutationFn: () =>
       financeService.createAccount({
@@ -1414,6 +1519,7 @@ export const SpendingPage: React.FC = () => {
                     <th className="px-6 py-4 text-right font-medium">Gross</th>
                     <th className="px-6 py-4 text-right font-medium">Net</th>
                     <th className="px-6 py-4 font-medium">Notes</th>
+                    <th className="px-6 py-4 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
@@ -1473,6 +1579,24 @@ export const SpendingPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <p className="truncate max-w-[280px] text-slate-400">{t.notes || '-'}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openEditTransfer(t)}
+                            className="rounded p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+                            title="Edit transfer"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => { setDeletingTransfer(t); setDeleteTransferError(null); }}
+                            className="rounded p-1.5 text-slate-400 hover:bg-red-900/40 hover:text-red-400 transition-colors"
+                            title="Delete transfer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2183,6 +2307,142 @@ export const SpendingPage: React.FC = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Transfer Modal */}
+      {editingTransfer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" onClick={() => setEditingTransfer(null)} />
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">Edit Transfer</h3>
+              <button onClick={() => setEditingTransfer(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form className="space-y-4 p-6" onSubmit={(e) => { e.preventDefault(); setEditTransferError(null); updateTransferMutation.mutate(); }}>
+              {editTransferError && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{editTransferError}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-slate-300 text-xs mb-1 block">From Account</Label>
+                  <DropdownSelect
+                    options={transferAccountOptions}
+                    value={editTransferFromId}
+                    onChange={setEditTransferFromId}
+                    placeholder="From account"
+                  />
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs mb-1 block">To Account</Label>
+                  <DropdownSelect
+                    options={transferAccountOptions}
+                    value={editTransferToId}
+                    onChange={setEditTransferToId}
+                    placeholder="To account"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-slate-300 text-xs mb-1 block">Gross Amount</Label>
+                  <Input value={editTransferGross} onChange={(e) => setEditTransferGross(e.target.value)} placeholder="1000.00" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs mb-1 block">Net Received</Label>
+                  <Input value={editTransferNet} onChange={(e) => setEditTransferNet(e.target.value)} placeholder="950.00" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-slate-300 text-xs mb-1 block">FX Rate</Label>
+                  <Input value={editTransferFxRate} onChange={(e) => setEditTransferFxRate(e.target.value)} placeholder="optional" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs mb-1 block">FX Fee</Label>
+                  <Input value={editTransferFxFee} onChange={(e) => setEditTransferFxFee(e.target.value)} placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs mb-1 block">Platform Fee</Label>
+                  <Input value={editTransferPlatformFee} onChange={(e) => setEditTransferPlatformFee(e.target.value)} placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-slate-300 text-xs mb-1 block">Date</Label>
+                <Input type="date" value={editTransferDate} onChange={(e) => setEditTransferDate(e.target.value)} className="bg-slate-800 border-slate-700 text-white" />
+              </div>
+              <div>
+                <Label className="text-slate-300 text-xs mb-1 block">Notes</Label>
+                <Input value={editTransferNotes} onChange={(e) => setEditTransferNotes(e.target.value)} placeholder="optional" className="bg-slate-800 border-slate-700 text-white" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditingTransfer(null)}>Cancel</Button>
+                <Button type="submit" className="flex-1" disabled={updateTransferMutation.isPending}>
+                  {updateTransferMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Transfer Confirmation */}
+      {deletingTransfer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" onClick={() => setDeletingTransfer(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-red-500/10 p-2.5">
+                  <Trash2 className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Delete Transfer</h3>
+                  <p className="text-sm text-slate-400">This action cannot be undone.</p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-3 text-sm text-slate-300 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Flow</span>
+                  <span>{deletingTransfer.from_account_name ?? '?'} → {deletingTransfer.to_account_name ?? '?'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Date</span>
+                  <span>
+                    {deletingTransfer.occurred_at && !Number.isNaN(Date.parse(deletingTransfer.occurred_at))
+                      ? new Date(deletingTransfer.occurred_at).toLocaleDateString(undefined, { timeZone: 'UTC' })
+                      : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Net received</span>
+                  <span>{formatCurrency(Number(deletingTransfer.net_amount_received), deletingTransfer.to_currency_code, currencyDisplayPreference)}</span>
+                </div>
+              </div>
+              {deleteTransferError && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{deleteTransferError}</span>
+                </div>
+              )}
+              <div className="flex gap-3 pt-1">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setDeletingTransfer(null)}>Cancel</Button>
+                <Button
+                  type="button"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  disabled={deleteTransferMutation.isPending}
+                  onClick={() => deleteTransferMutation.mutate()}
+                >
+                  {deleteTransferMutation.isPending ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -7,6 +7,7 @@ import type {
   AccountUpdate,
   CapitalTransfer,
   CapitalTransferCreate,
+  CapitalTransferUpdate,
   Currency,
   NetWorthData,
   ReconciliationSummary,
@@ -75,6 +76,15 @@ export const financeService = {
   ): Promise<PaginatedResponse<CapitalTransfer>> => {
     const response = await api.get('/finance/transfers', { params: { limit, offset } });
     return response.data;
+  },
+
+  updateTransfer: async (publicId: string, data: CapitalTransferUpdate): Promise<CapitalTransfer> => {
+    const response = await api.patch(`/finance/transfers/${publicId}`, data);
+    return response.data;
+  },
+
+  deleteTransfer: async (publicId: string): Promise<void> => {
+    await api.delete(`/finance/transfers/${publicId}`);
   },
 
   getAccountBalance: async (publicId: string): Promise<AccountBalanceResponse> => {
