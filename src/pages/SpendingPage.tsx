@@ -2322,7 +2322,19 @@ export const SpendingPage: React.FC = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <form className="space-y-4 p-6" onSubmit={(e) => { e.preventDefault(); setEditTransferError(null); updateTransferMutation.mutate(); }}>
+            <form
+              className="space-y-4 p-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!editTransferFromId || !editTransferToId) {
+                  setEditTransferError('Both From and To accounts must be selected.');
+                  return;
+                }
+                if (updateTransferMutation.isPending) return;
+                setEditTransferError(null);
+                updateTransferMutation.mutate();
+              }}
+            >
               {editTransferError && (
                 <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                   <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -2352,30 +2364,36 @@ export const SpendingPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-slate-300 text-xs mb-1 block">Gross Amount</Label>
-                  <Input value={editTransferGross} onChange={(e) => setEditTransferGross(e.target.value)} placeholder="1000.00" className="bg-slate-800 border-slate-700 text-white" />
+                  <Input type="number" min="0" step="0.01" value={editTransferGross} onChange={(e) => setEditTransferGross(e.target.value)} placeholder="1000.00" className="bg-slate-800 border-slate-700 text-white" />
                 </div>
                 <div>
                   <Label className="text-slate-300 text-xs mb-1 block">Net Received</Label>
-                  <Input value={editTransferNet} onChange={(e) => setEditTransferNet(e.target.value)} placeholder="950.00" className="bg-slate-800 border-slate-700 text-white" />
+                  <Input type="number" min="0" step="0.01" value={editTransferNet} onChange={(e) => setEditTransferNet(e.target.value)} placeholder="950.00" className="bg-slate-800 border-slate-700 text-white" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-slate-300 text-xs mb-1 block">FX Rate</Label>
-                  <Input value={editTransferFxRate} onChange={(e) => setEditTransferFxRate(e.target.value)} placeholder="optional" className="bg-slate-800 border-slate-700 text-white" />
+                  <Input type="number" min="0" step="any" value={editTransferFxRate} onChange={(e) => setEditTransferFxRate(e.target.value)} placeholder="optional" className="bg-slate-800 border-slate-700 text-white" />
                 </div>
                 <div>
                   <Label className="text-slate-300 text-xs mb-1 block">FX Fee</Label>
-                  <Input value={editTransferFxFee} onChange={(e) => setEditTransferFxFee(e.target.value)} placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
+                  <Input type="number" min="0" step="0.01" value={editTransferFxFee} onChange={(e) => setEditTransferFxFee(e.target.value)} placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-slate-300 text-xs mb-1 block">Platform Fee</Label>
-                  <Input value={editTransferPlatformFee} onChange={(e) => setEditTransferPlatformFee(e.target.value)} placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
+                  <Input type="number" min="0" step="0.01" value={editTransferPlatformFee} onChange={(e) => setEditTransferPlatformFee(e.target.value)} placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
+                </div>
+                <div>
+                  <Label className="text-slate-300 text-xs mb-1 block">Tax</Label>
+                  <Input type="number" min="0" step="0.01" value={editTransferTax} onChange={(e) => setEditTransferTax(e.target.value)} placeholder="0" className="bg-slate-800 border-slate-700 text-white" />
                 </div>
               </div>
               <div>
                 <Label className="text-slate-300 text-xs mb-1 block">Date</Label>
-                <Input type="date" value={editTransferDate} onChange={(e) => setEditTransferDate(e.target.value)} className="bg-slate-800 border-slate-700 text-white" />
+                <Input type="date" value={editTransferDate} onChange={(e) => setEditTransferDate(e.target.value)} className="bg-slate-800 border-slate-700 text-white" required />
               </div>
               <div>
                 <Label className="text-slate-300 text-xs mb-1 block">Notes</Label>
@@ -2383,7 +2401,11 @@ export const SpendingPage: React.FC = () => {
               </div>
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditingTransfer(null)}>Cancel</Button>
-                <Button type="submit" className="flex-1" disabled={updateTransferMutation.isPending}>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={updateTransferMutation.isPending || !editTransferFromId || !editTransferToId}
+                >
                   {updateTransferMutation.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
