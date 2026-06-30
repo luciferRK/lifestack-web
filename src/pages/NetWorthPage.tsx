@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Building2, Landmark, PieChart, TrendingUp, Wallet } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { formatCurrency } from '../utils/numberFormat';
+import { formatDate } from '../utils/dateFormat';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 
@@ -322,12 +323,7 @@ export const NetWorthPage: React.FC = () => {
                   {data.fx_as_of && (
                     <p className="text-xs text-slate-600">
                       FX rates as of{' '}
-                      {new Date(data.fx_as_of).toLocaleDateString(undefined, {
-                        timeZone: 'UTC',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                      {formatDate(data.fx_as_of)}
                     </p>
                   )}
                 </div>

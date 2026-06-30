@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '../lib/utils';
+import { formatDate } from '../utils/dateFormat';
 
 type DatePickerProps = {
   value: string;
@@ -34,7 +35,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const selectedDate = useMemo(() => parseValue(value), [value]);
-  const label = selectedDate ? format(selectedDate, 'MMM d, yyyy') : placeholder;
+  const label = selectedDate ? formatDate(selectedDate, { utc: false }) : placeholder;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

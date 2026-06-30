@@ -94,8 +94,8 @@ describe('TodoPage', () => {
     expect(await screen.findByText('Review budget')).toBeInTheDocument();
     expect(screen.getByText('Check the month-end category totals')).toBeInTheDocument();
     expect(screen.getByText('Medium')).toBeInTheDocument();
-    expect(screen.getByText(/Jun 21, 2026/)).toBeInTheDocument();
-    expect(screen.queryByText(/Jun 21, 2026.*12:00/)).not.toBeInTheDocument();
+    expect(screen.getByText(/21-Jun-2026/)).toBeInTheDocument();
+    expect(screen.queryByText(/21-Jun-2026.*12:00/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Add Task/i }));
     expect(await screen.findByTestId('todo-new-priority')).toHaveTextContent('Low');

@@ -13,6 +13,7 @@ import { SkeletonList } from '../components/ui/FeedbackStates';
 import { todoService } from '../services/todo';
 import type { RecurringTodoCreate, RecurringTodoRule, Todo, TodoCreate } from '../services/todo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { formatDate } from '../utils/dateFormat';
 
 type TodoPriority = 'low' | 'medium' | 'high';
 type TodoFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -85,10 +86,7 @@ const toIsoDueDate = (yyyyMmDd: string, hhMm: string): string | null => {
 const formatDueDateTime = (value: string | null | undefined): string | null => {
   if (!value || Number.isNaN(Date.parse(value))) return null;
   if (isUtcMidnight(value)) {
-    return new Date(value).toLocaleDateString(undefined, {
-      dateStyle: 'medium',
-      timeZone: 'UTC',
-    });
+    return formatDate(value);
   }
   return new Date(value).toLocaleString(undefined, {
     dateStyle: 'medium',
@@ -98,7 +96,7 @@ const formatDueDateTime = (value: string | null | undefined): string | null => {
 
 const formatUtcDate = (value: string | null | undefined): string | null => {
   if (!value || Number.isNaN(Date.parse(value))) return null;
-  return new Date(value).toLocaleDateString(undefined, { timeZone: 'UTC' });
+  return formatDate(value);
 };
 
 export const TodoPage: React.FC = () => {

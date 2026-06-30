@@ -65,6 +65,7 @@ import {
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { formatCurrency } from '../utils/numberFormat';
+import { formatDate, formatMonthYear } from '../utils/dateFormat';
 
 const budgetFormSchema = z.object({
   categoryId: z.string().min(1, 'Select a category'),
@@ -195,7 +196,7 @@ const monthValueToDateRange = (monthValue: string) => {
     fromDate: start.toISOString(),
     toDate: end.toISOString(),
     monthStart: `${monthValue}-01`,
-    label: start.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }),
+    label: formatMonthYear(start, { long: true }),
     isValid: true,
   };
 };
@@ -1168,7 +1169,7 @@ export const SpendingPage: React.FC = () => {
                         <td className="whitespace-nowrap px-6 py-4">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-slate-500" />
-                            {dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {formatDate(dateObj)}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -1424,10 +1425,7 @@ export const SpendingPage: React.FC = () => {
                     {r.last_generated_at && !Number.isNaN(Date.parse(r.last_generated_at)) && (
                       <p className="flex items-center gap-1.5 text-xs text-slate-500">
                         <Clock className="h-3.5 w-3.5" />
-                        Last generated{' '}
-                        {new Date(r.last_generated_at).toLocaleDateString(undefined, {
-                          timeZone: 'UTC',
-                        })}
+                        Last generated {formatDate(r.last_generated_at)}
                       </p>
                     )}
 
@@ -1526,14 +1524,7 @@ export const SpendingPage: React.FC = () => {
                   {transferItems.map((t) => (
                     <tr key={t.public_id} className="transition-colors hover:bg-slate-700/30">
                       <td className="whitespace-nowrap px-6 py-4">
-                        {t.occurred_at && !Number.isNaN(Date.parse(t.occurred_at))
-                          ? new Date(t.occurred_at).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              timeZone: 'UTC',
-                            })
-                          : 'N/A'}
+                        {formatDate(t.occurred_at, { fallback: 'N/A' })}
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-1">
@@ -2437,9 +2428,7 @@ export const SpendingPage: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-slate-400">Date</span>
                   <span>
-                    {deletingTransfer.occurred_at && !Number.isNaN(Date.parse(deletingTransfer.occurred_at))
-                      ? new Date(deletingTransfer.occurred_at).toLocaleDateString(undefined, { timeZone: 'UTC' })
-                      : 'N/A'}
+                    {formatDate(deletingTransfer.occurred_at, { fallback: 'N/A' })}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -3168,7 +3157,7 @@ const ReconciliationCard: React.FC<{
           )}
           {reconciliation.snapshot_as_of && !isNaN(new Date(reconciliation.snapshot_as_of).getTime()) && (
             <p className="text-[10px] text-slate-500 mt-0.5">
-              as of {new Date(reconciliation.snapshot_as_of).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })}
+              as of {formatDate(reconciliation.snapshot_as_of)}
             </p>
           )}
         </div>
@@ -3332,15 +3321,7 @@ const SpendingLedgerTab: React.FC<SpendingLedgerTabProps> = ({
                     const isCredit = entry.entry_kind === 'transfer_in' || entry.type === 'income';
                     const amount = Number(entry.amount);
                     const balance = Number(entry.running_balance);
-                    const dateObj = new Date(entry.occurred_at);
-                    const date = !isNaN(dateObj.getTime())
-                      ? dateObj.toLocaleDateString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          timeZone: 'UTC',
-                        })
-                      : '—';
+                    const date = formatDate(entry.occurred_at, { fallback: '—' });
 
                     // Derive description label for transfer rows
                     const descLabel = isTransfer
