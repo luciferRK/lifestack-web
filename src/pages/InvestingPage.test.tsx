@@ -699,6 +699,140 @@ describe('InvestingPage', () => {
     expect(instrumentPatchPayload).toBeNull();
   });
 
+  it('renames the symbol of an order-derived holding without sending quantity/avg_cost, with quantity/avg_cost disabled', async () => {
+    let holdingPatchPayload: Record<string, unknown> | null = null;
+
+    server.use(
+      http.get('*/v1/investing/holdings', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: 'holding-order-derived-id',
+              symbol: '122639',
+              instrument_type: 'mutual_fund',
+              account_id: '11111111-1111-1111-1111-111111111111',
+              account_name: 'Brokerage A',
+              quantity: '10.00000000',
+              avg_cost: '80.00',
+              currency: 'INR',
+              source_type: 'order',
+              current_price: '90.00',
+              current_value: '900.00',
+              gain_loss: '100.00',
+              gain_loss_pct: '12.50',
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/investing/cash-balances', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
+      http.get('*/v1/finance/accounts', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: '11111111-1111-1111-1111-111111111111',
+              name: 'Brokerage A',
+              account_type: 'brokerage',
+              default_currency_code: 'USD',
+              is_active: true,
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/finance/currencies', () =>
+        HttpResponse.json([
+          { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
+          { code: 'INR', name: 'Indian Rupee', symbol: 'Rs', minor_unit: 2, is_active: true },
+        ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
+      ),
+      http.get('*/v1/investing/summary', () =>
+        HttpResponse.json({
+          portfolio_value: '900.00',
+          holdings_count: 1,
+          cash_total: '0',
+          currency_breakdown: { INR: '900.00' },
+          daily_change: null,
+          reporting_currency: 'USD',
+          valuation_status: 'single_currency_native',
+        }),
+      ),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '900.00',
+          total_cost: '800.00',
+          total_gain_loss: '100.00',
+          total_gain_loss_pct: '12.50',
+          snapshot_date: '2026-05-24',
+          currency: 'INR',
+        }),
+      ),
+      http.get('*/v1/investing/instruments', () => HttpResponse.json([])),
+      http.patch('*/v1/investing/holdings/holding-order-derived-id', async ({ request }) => {
+        holdingPatchPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          public_id: 'holding-order-derived-id',
+          symbol: holdingPatchPayload.symbol,
+          instrument_type: holdingPatchPayload.instrument_type,
+          account_id: '11111111-1111-1111-1111-111111111111',
+          account_name: 'Brokerage A',
+          quantity: '10.00000000',
+          avg_cost: '80.00',
+          currency: holdingPatchPayload.currency,
+          source_type: 'order',
+          created_at: '2026-05-24T00:00:00Z',
+          updated_at: '2026-05-24T00:00:00Z',
+        });
+      }),
+    );
+
+    renderWithQuery(<InvestingPage />);
+
+    await screen.findByTestId('investing-holding-row-holding-order-derived-id');
+    fireEvent.click(screen.getByTestId('investing-edit-holding-holding-order-derived-id'));
+
+    const quantityInput = await screen.findByTestId('investing-edit-holding-quantity');
+    const avgCostInput = screen.getByTestId('investing-edit-holding-avg-cost');
+    expect(quantityInput).toBeDisabled();
+    expect(avgCostInput).toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('investing-edit-holding-symbol'), {
+      target: { value: '122640' },
+    });
+
+    fireEvent.click(screen.getByTestId('investing-edit-holding-submit'));
+
+    await waitFor(() => {
+      expect(holdingPatchPayload).not.toBeNull();
+    });
+    expect(holdingPatchPayload).toEqual({
+      symbol: '122640',
+      currency: 'INR',
+      instrument_type: 'mutual_fund',
+    });
+  });
+
   it('calculates converted table totals and shows portfolio value with date under multi-currency converted summary', async () => {
     server.use(
       http.get('*/v1/investing/holdings', () =>
