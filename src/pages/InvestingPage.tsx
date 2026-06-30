@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDownUp, BarChart3, Check, ChevronDown, ChevronUp, ChevronsUpDown, Edit2, Info, Landmark, Layers, Plus, RefreshCw, Trash2, WalletCards, X } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { investingService } from '../services/investing';
-import type { InvestingOrder, InvestingOrderCreate, InvestingOrderUpdate, OrderType } from '../services/investing';
+import type { CashBalance, InvestingOrder, InvestingOrderCreate, InvestingOrderUpdate, OrderType } from '../services/investing';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
 import { DatePicker } from '../components/DatePicker';
 import { DateTimePicker } from '../components/DateTimePicker';
@@ -15,6 +15,15 @@ import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { Pagination } from '../components/Pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Button } from '../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import type {
   CashBalanceCreate,
   Holding,
@@ -100,6 +109,7 @@ export const InvestingPage: React.FC = () => {
   const [holdingsAccountFilter, setHoldingsAccountFilter] = useState('');
   const [holdingsCurrencyFilter, setHoldingsCurrencyFilter] = useState('');
   const [holdingsTypeFilter, setHoldingsTypeFilter] = useState('');
+  const [hideZeroBookValue, setHideZeroBookValue] = useState(false);
   const [cashAccountFilter, setCashAccountFilter] = useState('');
   const [cashCurrencyFilter, setCashCurrencyFilter] = useState('');
   const [selectedInstrumentId, setSelectedInstrumentId] = useState('');
@@ -235,7 +245,10 @@ export const InvestingPage: React.FC = () => {
 
   const deleteHoldingMutation = useMutation({
     mutationFn: (publicId: string) => investingService.deleteHolding(publicId),
-    onSuccess: refresh,
+    onSuccess: () => {
+      setPendingDeleteHolding(null);
+      refresh();
+    },
   });
 
   const createCashMutation = useMutation({
@@ -254,7 +267,10 @@ export const InvestingPage: React.FC = () => {
 
   const deleteCashMutation = useMutation({
     mutationFn: (publicId: string) => investingService.deleteCashBalance(publicId),
-    onSuccess: refresh,
+    onSuccess: () => {
+      setPendingDeleteCash(null);
+      refresh();
+    },
   });
 
   const [isPlaceOrderModalOpen, setIsPlaceOrderModalOpen] = useState(false);
@@ -288,6 +304,9 @@ export const InvestingPage: React.FC = () => {
   const [orderSymbolFilter, setOrderSymbolFilter] = useState('');
   const [orderTypeFilter, setOrderTypeFilter] = useState<'' | 'buy' | 'sell'>('');
   const [tradeHistoryHolding, setTradeHistoryHolding] = useState<Holding | null>(null);
+  const [pendingDeleteHolding, setPendingDeleteHolding] = useState<Holding | null>(null);
+  const [pendingDeleteOrder, setPendingDeleteOrder] = useState<InvestingOrder | null>(null);
+  const [pendingDeleteCash, setPendingDeleteCash] = useState<CashBalance | null>(null);
 
   // Sort state
   const [holdingsSortCol, setHoldingsSortCol] = useState('symbol');
@@ -349,8 +368,26 @@ export const InvestingPage: React.FC = () => {
 
   const deleteOrderMutation = useMutation({
     mutationFn: (publicId: string) => investingService.deleteOrder(publicId),
-    onSuccess: refresh,
+    onSuccess: () => {
+      setPendingDeleteOrder(null);
+      refresh();
+    },
   });
+
+  const confirmDeleteHolding = () => {
+    if (!pendingDeleteHolding) return;
+    deleteHoldingMutation.mutate(pendingDeleteHolding.public_id);
+  };
+
+  const confirmDeleteOrder = () => {
+    if (!pendingDeleteOrder) return;
+    deleteOrderMutation.mutate(pendingDeleteOrder.public_id);
+  };
+
+  const confirmDeleteCash = () => {
+    if (!pendingDeleteCash) return;
+    deleteCashMutation.mutate(pendingDeleteCash.public_id);
+  };
 
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<InvestingOrder | null>(null);
@@ -593,9 +630,11 @@ export const InvestingPage: React.FC = () => {
         const currencyMatch =
           !holdingsCurrencyFilter || (holding.currency ?? 'USD').toUpperCase() === holdingsCurrencyFilter.toUpperCase();
         const typeMatch = !holdingsTypeFilter || (holding.instrument_type ?? 'stock') === holdingsTypeFilter;
-        return accountMatch && currencyMatch && typeMatch;
+        const bookValueMatch =
+          !hideZeroBookValue || toNumber(holding.quantity) * toNumber(holding.avg_cost) !== 0;
+        return accountMatch && currencyMatch && typeMatch && bookValueMatch;
       }),
-    [holdings, holdingsAccountFilter, holdingsCurrencyFilter, holdingsTypeFilter]
+    [holdings, holdingsAccountFilter, holdingsCurrencyFilter, holdingsTypeFilter, hideZeroBookValue]
   );
   const filteredCashBalances = useMemo(
     () =>
@@ -653,6 +692,7 @@ export const InvestingPage: React.FC = () => {
         case 'occurred_at': return dir * (new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime());
         case 'order_type': return dir * a.order_type.localeCompare(b.order_type);
         case 'symbol': return dir * a.symbol.localeCompare(b.symbol);
+        case 'account_name': return dir * a.account_name.localeCompare(b.account_name);
         case 'quantity': return dir * (toNumber(a.quantity) - toNumber(b.quantity));
         case 'price_per_unit': return dir * (toNumber(a.price_per_unit) - toNumber(b.price_per_unit));
         case 'gross_amount': return dir * (toNumber(a.gross_amount) - toNumber(b.gross_amount));
@@ -990,6 +1030,7 @@ export const InvestingPage: React.FC = () => {
                   setHoldingsAccountFilter('');
                   setHoldingsCurrencyFilter('');
                   setHoldingsTypeFilter('');
+                  setHideZeroBookValue(false);
                 }}
               >
                 <CompactFilterField label="Account">
@@ -1020,6 +1061,18 @@ export const InvestingPage: React.FC = () => {
                     placeholder="All types"
                     clearLabel="All types"
                   />
+                </CompactFilterField>
+                <CompactFilterField label="Book Value">
+                  <label className="flex h-9 items-center gap-2 rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 text-sm text-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      data-testid="investing-holdings-hide-zero-book-value"
+                      checked={hideZeroBookValue}
+                      onChange={(e) => setHideZeroBookValue(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+                    />
+                    Hide zero book value
+                  </label>
                 </CompactFilterField>
               </CompactFilterBar>
 
@@ -1153,7 +1206,7 @@ export const InvestingPage: React.FC = () => {
                                 <button
                                   type="button"
                                   disabled={deleteHoldingMutation.isPending}
-                                  onClick={() => deleteHoldingMutation.mutate(h.public_id)}
+                                  onClick={() => setPendingDeleteHolding(h)}
                                   className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                                   title="Delete holding"
                                 >
@@ -1193,7 +1246,7 @@ export const InvestingPage: React.FC = () => {
           {/* Trade History Modal */}
           {tradeHistoryHolding && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-              <div className="w-full max-w-3xl rounded-2xl border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
+              <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
                 <div className="mb-5 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-white">
                     Trade History — {tradeHistoryHolding.symbol} ({tradeHistoryHolding.account_name})
@@ -1216,13 +1269,14 @@ export const InvestingPage: React.FC = () => {
                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Price</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Net</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Realized G/L</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/30">
                       {tradeHistoryRes.isLoading ? (
-                        <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
+                        <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
                       ) : sortedTradeHistory.length === 0 ? (
-                        <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No trades found.</td></tr>
+                        <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">No trades found.</td></tr>
                       ) : (
                         sortedTradeHistory.map((o) => {
                             const isBuy = o.order_type === 'buy';
@@ -1257,6 +1311,29 @@ export const InvestingPage: React.FC = () => {
                                   ) : (
                                     <span className="text-slate-500">—</span>
                                   )}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      data-testid={`investing-trade-history-edit-${o.public_id}`}
+                                      onClick={() => handleStartEditOrder(o)}
+                                      className="rounded-lg border border-slate-600/70 p-2 text-slate-200 hover:bg-slate-700/60"
+                                      title="Edit order"
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      data-testid={`investing-trade-history-delete-${o.public_id}`}
+                                      disabled={deleteOrderMutation.isPending}
+                                      onClick={() => setPendingDeleteOrder(o)}
+                                      className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                      title="Delete order"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1326,6 +1403,7 @@ export const InvestingPage: React.FC = () => {
                     <SortableHeader col="occurred_at" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Date</SortableHeader>
                     <SortableHeader col="order_type" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Type</SortableHeader>
                     <SortableHeader col="symbol" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Symbol</SortableHeader>
+                    <SortableHeader col="account_name" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Account</SortableHeader>
                     <SortableHeader col="quantity" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Qty</SortableHeader>
                     <SortableHeader col="price_per_unit" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Price</SortableHeader>
                     <SortableHeader col="gross_amount" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Gross</SortableHeader>
@@ -1337,9 +1415,9 @@ export const InvestingPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-700/30">
                   {ordersRes.isLoading ? (
-                    <tr><td colSpan={10} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
+                    <tr><td colSpan={11} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
                   ) : sortedOrders.length === 0 ? (
-                    <tr><td colSpan={10} className="px-4 py-8 text-center text-slate-400">No orders yet. Place your first order to get started.</td></tr>
+                    <tr><td colSpan={11} className="px-4 py-8 text-center text-slate-400">No orders yet. Place your first order to get started.</td></tr>
                   ) : (
                     sortedOrders.map((o) => {
                       const fees = toNumber(o.brokerage_fee) + toNumber(o.tax_amount) + toNumber(o.other_fees);
@@ -1366,6 +1444,7 @@ export const InvestingPage: React.FC = () => {
                           >
                             {o.symbol}
                           </td>
+                          <td className="px-4 py-3 text-slate-300">{o.account_name}</td>
                           <td className="px-4 py-3 text-right text-slate-300">{toNumber(o.quantity).toLocaleString()}</td>
                           <td className="px-4 py-3 text-right text-slate-300">
                             {formatCurrency(toNumber(o.price_per_unit), o.currency, currencyDisplayPreference)}
@@ -1401,7 +1480,7 @@ export const InvestingPage: React.FC = () => {
                               <button
                                 type="button"
                                 disabled={deleteOrderMutation.isPending}
-                                onClick={() => deleteOrderMutation.mutate(o.public_id)}
+                                onClick={() => setPendingDeleteOrder(o)}
                                 className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                                 title="Delete order"
                               >
@@ -1427,7 +1506,7 @@ export const InvestingPage: React.FC = () => {
           {/* Place Order Modal */}
           {isPlaceOrderModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-              <div className="w-full max-w-lg rounded-2xl border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
+              <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
                 <div className="mb-5 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-white">Place Order</h2>
                   <button
@@ -1640,7 +1719,7 @@ export const InvestingPage: React.FC = () => {
           {/* Edit Order Modal */}
           {isEditOrderModalOpen && selectedOrder && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-              <div className="w-full max-w-lg rounded-2xl border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
+              <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
                 <div className="mb-5 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-white">Edit Order — {selectedOrder.symbol}</h2>
                   <button
@@ -1866,7 +1945,7 @@ export const InvestingPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <button disabled={deleteCashMutation.isPending} onClick={() => deleteCashMutation.mutate(c.public_id)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
+                            <button disabled={deleteCashMutation.isPending} onClick={() => setPendingDeleteCash(c)} className="rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
@@ -2116,7 +2195,7 @@ export const InvestingPage: React.FC = () => {
               setSelectedHolding(null);
             }}
           />
-          <div className="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="mb-4 flex items-center justify-between border-b border-slate-800 pb-4">
               <h2 className="text-lg font-semibold text-white">Edit Holding</h2>
               <button
@@ -2267,7 +2346,7 @@ export const InvestingPage: React.FC = () => {
             className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
             onClick={() => setIsAddCashModalOpen(false)}
           />
-          <div className="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
               <h2 className="text-lg font-semibold text-white">Add Cash Balance</h2>
               <button
@@ -2398,7 +2477,7 @@ export const InvestingPage: React.FC = () => {
             className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
             onClick={() => setIsCreateInstrumentModalOpen(false)}
           />
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
               <h2 className="text-lg font-semibold text-white">Create Instrument</h2>
               <button
@@ -2478,7 +2557,7 @@ export const InvestingPage: React.FC = () => {
             className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
             onClick={() => setIsSeedConstituentsModalOpen(false)}
           />
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
               <h2 className="text-lg font-semibold text-white">Seed Constituents</h2>
               <button
@@ -2536,6 +2615,126 @@ export const InvestingPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <Dialog
+        open={!!pendingDeleteHolding}
+        onOpenChange={(open) => !open && !deleteHoldingMutation.isPending && setPendingDeleteHolding(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete holding?</DialogTitle>
+            <DialogDescription>
+              {pendingDeleteHolding
+                ? `Delete the ${pendingDeleteHolding.symbol} holding in ${pendingDeleteHolding.account_name}? This does not delete any orders.`
+                : 'This does not delete any orders.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPendingDeleteHolding(null)}
+              disabled={deleteHoldingMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-rose-300 hover:text-rose-200"
+              onClick={confirmDeleteHolding}
+              disabled={deleteHoldingMutation.isPending}
+            >
+              {deleteHoldingMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+          {deleteHoldingMutation.isError && (
+            <p className="mt-2 text-sm text-rose-400 text-right">
+              {(deleteHoldingMutation.error as Error)?.message ?? 'Failed to delete holding'}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!pendingDeleteOrder}
+        onOpenChange={(open) => !open && !deleteOrderMutation.isPending && setPendingDeleteOrder(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete order?</DialogTitle>
+            <DialogDescription>
+              {pendingDeleteOrder
+                ? `Delete this ${pendingDeleteOrder.order_type} order for ${toNumber(pendingDeleteOrder.quantity).toLocaleString()} ${pendingDeleteOrder.symbol}? The holding will be recomputed from the remaining orders.`
+                : 'The holding will be recomputed from the remaining orders.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPendingDeleteOrder(null)}
+              disabled={deleteOrderMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-rose-300 hover:text-rose-200"
+              onClick={confirmDeleteOrder}
+              disabled={deleteOrderMutation.isPending}
+            >
+              {deleteOrderMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+          {deleteOrderMutation.isError && (
+            <p className="mt-2 text-sm text-rose-400 text-right">
+              {(deleteOrderMutation.error as Error)?.message ?? 'Failed to delete order'}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!pendingDeleteCash}
+        onOpenChange={(open) => !open && !deleteCashMutation.isPending && setPendingDeleteCash(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete cash balance entry?</DialogTitle>
+            <DialogDescription>
+              {pendingDeleteCash
+                ? `Delete this ${formatCurrency(toNumber(pendingDeleteCash.balance), pendingDeleteCash.currency, currencyDisplayPreference)} cash balance entry for ${pendingDeleteCash.account_name}?`
+                : 'This action cannot be undone.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPendingDeleteCash(null)}
+              disabled={deleteCashMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-rose-300 hover:text-rose-200"
+              onClick={confirmDeleteCash}
+              disabled={deleteCashMutation.isPending}
+            >
+              {deleteCashMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+          {deleteCashMutation.isError && (
+            <p className="mt-2 text-sm text-rose-400 text-right">
+              {(deleteCashMutation.error as Error)?.message ?? 'Failed to delete cash balance entry'}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 };
