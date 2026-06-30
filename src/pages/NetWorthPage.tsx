@@ -153,6 +153,7 @@ export const NetWorthPage: React.FC = () => {
 
   const isEmpty = data?.valuation_status === 'empty';
   const spendingAccounts = data?.spending_accounts ?? [];
+  const brokerageCashAccounts = data?.investing_accounts ?? [];
 
   return (
     <PageShell animated>
@@ -232,6 +233,77 @@ export const NetWorthPage: React.FC = () => {
                         <td className="px-5 py-3 font-semibold text-slate-300">Investing total</td>
                         <td className="px-5 py-3 text-right font-semibold text-slate-200">
                           {formatCurrency(data.investing_total, rc)}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* Brokerage cash accounts breakdown */}
+          {brokerageCashAccounts.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-slate-500">
+                Brokerage cash
+              </h2>
+              <div className="overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/30">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-700/60">
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-widest text-slate-500">
+                        Account
+                      </th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-widest text-slate-500">
+                        Native balance
+                      </th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-widest text-slate-500">
+                        {rc ? `In ${rc}` : 'Converted'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {brokerageCashAccounts.map((account) => (
+                      <tr
+                        key={`${account.account_public_id}-${account.currency_code}`}
+                        className="border-t border-slate-800"
+                      >
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <Landmark className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                            <span className="font-medium text-slate-100">
+                              {account.account_name}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 pl-5 text-xs text-slate-500">Brokerage</p>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <span className="text-slate-300">
+                            {formatCurrency(account.balance, account.currency_code)}
+                          </span>
+                          <span className="ml-1.5 text-xs text-slate-600 uppercase">
+                            {account.currency_code}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          {account.balance_in_reporting_currency != null ? (
+                            <span className="font-medium text-slate-200">
+                              {formatCurrency(account.balance_in_reporting_currency, rc)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-600">No FX rate</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {data?.investing_cash_total != null && (
+                      <tr className="border-t border-slate-700">
+                        <td className="px-5 py-3 font-semibold text-slate-300" colSpan={2}>
+                          Investing cash total
+                        </td>
+                        <td className="px-5 py-3 text-right font-semibold text-slate-200">
+                          {formatCurrency(data.investing_cash_total, rc)}
                         </td>
                       </tr>
                     )}

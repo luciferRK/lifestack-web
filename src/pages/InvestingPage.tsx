@@ -118,6 +118,7 @@ export const InvestingPage: React.FC = () => {
   const [holdingsAccountFilter, setHoldingsAccountFilter] = useState('');
   const [holdingsCurrencyFilter, setHoldingsCurrencyFilter] = useState('');
   const [holdingsTypeFilter, setHoldingsTypeFilter] = useState('');
+  const [holdingsSearch, setHoldingsSearch] = useState('');
   const [hideZeroBookValue, setHideZeroBookValue] = useState(false);
   const [cashAccountFilter, setCashAccountFilter] = useState('');
   const [cashCurrencyFilter, setCashCurrencyFilter] = useState('');
@@ -332,7 +333,7 @@ export const InvestingPage: React.FC = () => {
     queryKey: ['investing', 'orders', ordersOffset, orderSymbolFilter, orderTypeFilter],
     queryFn: () =>
       investingService.getOrders(ORDERS_PAGE_SIZE, ordersOffset, {
-        symbol: orderSymbolFilter || undefined,
+        search: orderSymbolFilter || undefined,
         order_type: orderTypeFilter || undefined,
       }),
     enabled: tab === 'orders',
@@ -639,18 +640,35 @@ export const InvestingPage: React.FC = () => {
     },
   });
 
-  const filteredHoldings = useMemo(
-    () =>
-      holdings.filter((holding) => {
-        const accountMatch = !holdingsAccountFilter || holding.account_id === holdingsAccountFilter;
-        const currencyMatch =
-          !holdingsCurrencyFilter || (holding.currency ?? 'USD').toUpperCase() === holdingsCurrencyFilter.toUpperCase();
-        const typeMatch = !holdingsTypeFilter || (holding.instrument_type ?? 'stock') === holdingsTypeFilter;
-        const bookValueMatch = !hideZeroBookValue || deriveBookValue(holding) !== 0;
-        return accountMatch && currencyMatch && typeMatch && bookValueMatch;
-      }),
-    [holdings, holdingsAccountFilter, holdingsCurrencyFilter, holdingsTypeFilter, hideZeroBookValue]
+  const instrumentBySymbol = useMemo(
+    () => new Map(instruments.map((i) => [i.symbol, i])),
+    [instruments]
   );
+
+  const filteredHoldings = useMemo(() => {
+    const q = holdingsSearch.trim().toLowerCase();
+    return holdings.filter((holding) => {
+      const accountMatch = !holdingsAccountFilter || holding.account_id === holdingsAccountFilter;
+      const currencyMatch =
+        !holdingsCurrencyFilter || (holding.currency ?? 'USD').toUpperCase() === holdingsCurrencyFilter.toUpperCase();
+      const typeMatch = !holdingsTypeFilter || (holding.instrument_type ?? 'stock') === holdingsTypeFilter;
+      const bookValueMatch = !hideZeroBookValue || deriveBookValue(holding) !== 0;
+      // Substring match on symbol or the resolved instrument name (so a
+      // mutual fund with a numeric folio symbol is searchable by name).
+      const name = instrumentBySymbol.get(holding.symbol)?.name ?? '';
+      const searchMatch =
+        !q || holding.symbol.toLowerCase().includes(q) || name.toLowerCase().includes(q);
+      return accountMatch && currencyMatch && typeMatch && bookValueMatch && searchMatch;
+    });
+  }, [
+    holdings,
+    holdingsAccountFilter,
+    holdingsCurrencyFilter,
+    holdingsTypeFilter,
+    holdingsSearch,
+    hideZeroBookValue,
+    instrumentBySymbol,
+  ]);
   const filteredCashBalances = useMemo(
     () =>
       cashBalances.filter((balance) => {
@@ -673,11 +691,6 @@ export const InvestingPage: React.FC = () => {
       }
     });
   }, [filteredCashBalances, cashSortCol, cashSortDir]);
-
-  const instrumentBySymbol = useMemo(
-    () => new Map(instruments.map((i) => [i.symbol, i])),
-    [instruments]
-  );
 
   const sortedHoldings = useMemo(() => {
     const dir = holdingsSortDir === 'asc' ? 1 : -1;
@@ -1045,9 +1058,20 @@ export const InvestingPage: React.FC = () => {
                   setHoldingsAccountFilter('');
                   setHoldingsCurrencyFilter('');
                   setHoldingsTypeFilter('');
+                  setHoldingsSearch('');
                   setHideZeroBookValue(false);
                 }}
               >
+                <CompactFilterField label="Search">
+                  <input
+                    type="text"
+                    data-testid="investing-holdings-search"
+                    placeholder="Symbol or name…"
+                    value={holdingsSearch}
+                    onChange={(e) => setHoldingsSearch(e.target.value)}
+                    className="w-40 rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-1.5 text-sm text-white placeholder:text-slate-500"
+                  />
+                </CompactFilterField>
                 <CompactFilterField label="Account">
                   <DropdownSelect
                     testId="investing-holdings-account-filter"
@@ -1383,7 +1407,7 @@ export const InvestingPage: React.FC = () => {
               <input
                 type="text"
                 data-testid="investing-orders-symbol-filter"
-                placeholder="Filter by symbol…"
+                placeholder="Filter by symbol or name…"
                 value={orderSymbolFilter}
                 onChange={(e) => {
                   setOrderSymbolFilter(e.target.value);
