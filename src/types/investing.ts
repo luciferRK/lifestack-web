@@ -7,6 +7,7 @@ export interface Holding {
   quantity: number | string;
   avg_cost: number | string;
   currency: string;
+  source_type?: string;
   current_price?: number | string;
   current_value?: number | string;
   book_value?: number | string;

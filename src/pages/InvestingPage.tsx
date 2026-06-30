@@ -221,15 +221,15 @@ export const InvestingPage: React.FC = () => {
     mutationFn: async (payload: {
       holding: Holding;
       symbol: string;
-      quantity: number;
-      avg_cost: number;
+      quantity?: number;
+      avg_cost?: number;
       currency: string;
       instrument_type: InstrumentType;
     }) => {
       const updatedHolding = await investingService.updateHolding(payload.holding.public_id, {
         symbol: payload.symbol,
-        quantity: payload.quantity,
-        avg_cost: payload.avg_cost,
+        ...(payload.quantity !== undefined ? { quantity: payload.quantity } : {}),
+        ...(payload.avg_cost !== undefined ? { avg_cost: payload.avg_cost } : {}),
         currency: payload.currency,
         instrument_type: payload.instrument_type,
       });
@@ -548,11 +548,18 @@ export const InvestingPage: React.FC = () => {
     e.preventDefault();
     if (!selectedHolding) return;
 
-    const qty = Number(editHoldingForm.quantity);
-    const cost = Number(editHoldingForm.avg_cost);
+    const isOrderDerived = selectedHolding.source_type === 'order';
     const symbol = editHoldingForm.symbol.trim().toUpperCase();
     const currency = editHoldingForm.currency.trim().toUpperCase();
-    if (!symbol || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0 || !currency) return;
+    if (!symbol || !currency) return;
+
+    let qty: number | undefined;
+    let cost: number | undefined;
+    if (!isOrderDerived) {
+      qty = Number(editHoldingForm.quantity);
+      cost = Number(editHoldingForm.avg_cost);
+      if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0) return;
+    }
 
     updateHoldingMutation.mutate({
       holding: selectedHolding,
@@ -1191,17 +1198,15 @@ export const InvestingPage: React.FC = () => {
                             </td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex justify-end gap-2">
-                                {h.source_type !== 'order' && (
-                                  <button
-                                    type="button"
-                                    data-testid={`investing-edit-holding-${h.public_id}`}
-                                    onClick={() => handleStartEditHolding(h)}
-                                    className="rounded-lg border border-slate-600/70 p-2 text-slate-200 hover:bg-slate-700/60"
-                                    title="Edit holding"
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </button>
-                                )}
+                                <button
+                                  type="button"
+                                  data-testid={`investing-edit-holding-${h.public_id}`}
+                                  onClick={() => handleStartEditHolding(h)}
+                                  className="rounded-lg border border-slate-600/70 p-2 text-slate-200 hover:bg-slate-700/60"
+                                  title="Edit holding"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
                                 <button
                                   type="button"
                                   data-testid={`investing-holding-trade-history-${h.public_id}`}
@@ -2149,27 +2154,41 @@ export const InvestingPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-300">Quantity</label>
                   <input
                     data-testid="investing-edit-holding-quantity"
-                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
                     type="number"
                     step="0.00000001"
                     value={editHoldingForm.quantity}
                     onChange={(e) => setEditHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
-                    required
+                    disabled={selectedHolding.source_type === 'order'}
+                    required={selectedHolding.source_type !== 'order'}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-semibold text-slate-300">Avg Cost</label>
                   <input
                     data-testid="investing-edit-holding-avg-cost"
-                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
                     type="number"
                     step="0.01"
                     value={editHoldingForm.avg_cost}
                     onChange={(e) => setEditHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
-                    required
+                    disabled={selectedHolding.source_type === 'order'}
+                    required={selectedHolding.source_type !== 'order'}
                   />
                 </div>
               </div>
+              {selectedHolding.source_type === 'order' && (
+                <p className="text-xs text-slate-500">
+                  Quantity and average cost are computed from orders — edit the order history to
+                  change these.
+                </p>
+              )}
+
+              {updateHoldingMutation.isError && (
+                <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+                  {(updateHoldingMutation.error as Error)?.message ?? 'Failed to update holding'}
+                </p>
+              )}
 
               <div className="flex gap-3 pt-3">
                 <button
