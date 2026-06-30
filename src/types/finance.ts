@@ -148,10 +148,19 @@ export interface SpendingAccountBalance {
   balance_in_reporting_currency: string | null; // null if FX rate unavailable
 }
 
+export interface InvestingAccountBalance {
+  account_public_id: string;
+  account_name: string;
+  currency_code: string;
+  balance: string; // decimal as string, native currency
+  balance_in_reporting_currency: string | null; // null if FX rate unavailable
+}
+
 export interface NetWorthData {
   reporting_currency: string | null;
   spending_accounts: SpendingAccountBalance[];
   spending_total: string | null;
+  investing_accounts: InvestingAccountBalance[];
   investing_cash_total: string | null;
   holdings_value: string | null;
   investing_total: string | null;

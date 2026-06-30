@@ -391,7 +391,7 @@ export const investingService = {
   getOrders: async (
     limit: number = 50,
     offset: number = 0,
-    filters?: { symbol?: string; order_type?: OrderType },
+    filters?: { symbol?: string; order_type?: OrderType; search?: string },
   ): Promise<z.infer<typeof PaginatedOrdersSchema>> => {
     const response = await api.get('/investing/orders', {
       params: { limit, offset, ...filters },
