@@ -823,4 +823,139 @@ describe('InvestingPage', () => {
     const portfolioCardValue = screen.getByTestId('investing-portfolio-value');
     expect(portfolioCardValue).toHaveTextContent('$3,114.00');
   });
+
+  it('shows a holding\'s trade history even when the order is outside the main Orders list page', async () => {
+    // Regression test: Trade History must call the dedicated unlimited
+    // /orders/by-holding endpoint, not filter the paginated /orders list.
+    // A historical order can fall off the (limited, occurred_at-desc-sorted)
+    // /orders page while still being a valid part of a holding's history.
+    server.use(
+      http.get('*/v1/investing/holdings', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: 'holding-old-order-id',
+              symbol: 'GMMPFAUDLR',
+              account_id: '11111111-1111-1111-1111-111111111111',
+              account_name: 'Groww',
+              quantity: '2.00000000',
+              avg_cost: '4540.00',
+              currency: 'INR',
+              current_price: '4540.00',
+              current_value: '9080.00',
+              gain_loss: '0.00',
+              gain_loss_pct: '0.00',
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/investing/cash-balances', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
+      http.get('*/v1/finance/accounts', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: '11111111-1111-1111-1111-111111111111',
+              name: 'Groww',
+              account_type: 'brokerage',
+              default_currency_code: 'INR',
+              is_active: true,
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/finance/currencies', () =>
+        HttpResponse.json([
+          { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
+          { code: 'INR', name: 'Indian Rupee', symbol: 'Rs', minor_unit: 2, is_active: true },
+        ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
+      ),
+      http.get('*/v1/investing/summary', () =>
+        HttpResponse.json({
+          portfolio_value: null,
+          holdings_count: 1,
+          cash_total: null,
+          currency_breakdown: { INR: '9080.00' },
+          daily_change: null,
+          reporting_currency: null,
+          valuation_status: 'multi_currency_unconverted',
+        }),
+      ),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '0',
+          total_cost: '0',
+          total_gain_loss: '0',
+          total_gain_loss_pct: '0',
+          snapshot_date: '2026-05-24',
+          currency: 'USD',
+        }),
+      ),
+      http.get('*/v1/investing/instruments', () => HttpResponse.json([])),
+      // Simulate the order having fallen off the capped/paginated main list —
+      // this is the exact condition that caused it to "vanish" in production.
+      http.get('*/v1/investing/orders', () =>
+        HttpResponse.json({ items: [], total: 250, limit: 50, offset: 0 }),
+      ),
+      // The dedicated by-holding endpoint has no limit, so it still returns it.
+      http.get('*/v1/investing/orders/by-holding/GMMPFAUDLR', () =>
+        HttpResponse.json([
+          {
+            public_id: 'order-old-id',
+            account_id: '11111111-1111-1111-1111-111111111111',
+            account_name: 'Groww',
+            order_type: 'buy',
+            symbol: 'GMMPFAUDLR',
+            instrument_type: null,
+            quantity: '2.00000000',
+            price_per_unit: '4540.000000',
+            gross_amount: '9080.00',
+            brokerage_fee: '0.00',
+            tax_amount: '0.00',
+            other_fees: '0.00',
+            net_amount: '9080.00',
+            currency: 'INR',
+            exchange_name: null,
+            occurred_at: '2021-10-21T03:57:00Z',
+            notes: null,
+            realized_gain_loss: null,
+            avg_cost_at_sale: null,
+            source_type: 'manual',
+            created_at: '2026-06-30T04:12:12.028065Z',
+          },
+        ]),
+      ),
+    );
+
+    renderWithQuery(<InvestingPage />);
+
+    await screen.findByTestId('investing-holding-row-holding-old-order-id');
+    fireEvent.click(screen.getByTestId('investing-holding-trade-history-holding-old-order-id'));
+
+    const row = await screen.findByTestId('investing-trade-history-row-order-old-id');
+    expect(row).toHaveTextContent(/buy/i);
+    expect(row).toHaveTextContent('2');
+  });
 });
