@@ -312,13 +312,20 @@ export const InvestingPage: React.FC = () => {
 
   const tradeHistoryRes = useQuery({
     queryKey: ['investing', 'orders', 'by-holding', tradeHistoryHolding?.symbol, tradeHistoryHolding?.account_id],
-    queryFn: () =>
-      investingService.getOrdersForHolding(
-        tradeHistoryHolding!.symbol,
-        tradeHistoryHolding!.account_id
-      ),
+    queryFn: () => {
+      if (!tradeHistoryHolding) return Promise.resolve([]);
+      return investingService.getOrdersForHolding(
+        tradeHistoryHolding.symbol,
+        tradeHistoryHolding.account_id
+      );
+    },
     enabled: tradeHistoryHolding != null,
   });
+
+  const sortedTradeHistory = useMemo(() => {
+    const data = tradeHistoryRes.data ?? [];
+    return [...data].sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
+  }, [tradeHistoryRes.data]);
 
   const placeOrderMutation = useMutation({
     mutationFn: (payload: InvestingOrderCreate) => investingService.placeOrder(payload),
@@ -1214,12 +1221,10 @@ export const InvestingPage: React.FC = () => {
                     <tbody className="divide-y divide-slate-700/30">
                       {tradeHistoryRes.isLoading ? (
                         <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
-                      ) : (tradeHistoryRes.data ?? []).length === 0 ? (
+                      ) : sortedTradeHistory.length === 0 ? (
                         <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No trades found.</td></tr>
                       ) : (
-                        [...(tradeHistoryRes.data ?? [])]
-                          .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
-                          .map((o) => {
+                        sortedTradeHistory.map((o) => {
                             const isBuy = o.order_type === 'buy';
                             return (
                               <tr
