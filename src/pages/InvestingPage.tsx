@@ -13,6 +13,7 @@ import { Combobox } from '../components/Combobox';
 import { CurrencyBadge } from '../components/finance/Badges';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
+import { Pagination } from '../components/Pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import type {
   CashBalanceCreate,
@@ -286,7 +287,7 @@ export const InvestingPage: React.FC = () => {
   });
   const [orderSymbolFilter, setOrderSymbolFilter] = useState('');
   const [orderTypeFilter, setOrderTypeFilter] = useState<'' | 'buy' | 'sell'>('');
-  const [tradeHistoryHoldingId, setTradeHistoryHoldingId] = useState<string | null>(null);
+  const [tradeHistoryHolding, setTradeHistoryHolding] = useState<Holding | null>(null);
 
   // Sort state
   const [holdingsSortCol, setHoldingsSortCol] = useState('symbol');
@@ -296,10 +297,27 @@ export const InvestingPage: React.FC = () => {
   const [cashSortCol, setCashSortCol] = useState('account_name');
   const [cashSortDir, setCashSortDir] = useState<'asc' | 'desc'>('asc');
 
+  const ORDERS_PAGE_SIZE = 50;
+  const [ordersOffset, setOrdersOffset] = useState(0);
+
   const ordersRes = useQuery({
-    queryKey: ['investing', 'orders'],
-    queryFn: () => investingService.getOrders(200, 0),
+    queryKey: ['investing', 'orders', ordersOffset, orderSymbolFilter, orderTypeFilter],
+    queryFn: () =>
+      investingService.getOrders(ORDERS_PAGE_SIZE, ordersOffset, {
+        symbol: orderSymbolFilter || undefined,
+        order_type: orderTypeFilter || undefined,
+      }),
     enabled: tab === 'orders',
+  });
+
+  const tradeHistoryRes = useQuery({
+    queryKey: ['investing', 'orders', 'by-holding', tradeHistoryHolding?.symbol, tradeHistoryHolding?.account_id],
+    queryFn: () =>
+      investingService.getOrdersForHolding(
+        tradeHistoryHolding!.symbol,
+        tradeHistoryHolding!.account_id
+      ),
+    enabled: tradeHistoryHolding != null,
   });
 
   const placeOrderMutation = useMutation({
@@ -620,19 +638,10 @@ export const InvestingPage: React.FC = () => {
   }, [filteredHoldings, holdingsSortCol, holdingsSortDir]);
 
   const orders = useMemo(() => ordersRes.data?.items ?? [], [ordersRes.data]);
-  const filteredOrders = useMemo(
-    () =>
-      orders.filter((o) => {
-        const symbolMatch = !orderSymbolFilter || o.symbol.includes(orderSymbolFilter.toUpperCase());
-        const typeMatch = !orderTypeFilter || o.order_type === orderTypeFilter;
-        return symbolMatch && typeMatch;
-      }),
-    [orders, orderSymbolFilter, orderTypeFilter]
-  );
 
   const sortedOrders = useMemo(() => {
     const dir = ordersSortDir === 'asc' ? 1 : -1;
-    return [...filteredOrders].sort((a, b) => {
+    return [...orders].sort((a, b) => {
       switch (ordersSortCol) {
         case 'occurred_at': return dir * (new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime());
         case 'order_type': return dir * a.order_type.localeCompare(b.order_type);
@@ -646,7 +655,7 @@ export const InvestingPage: React.FC = () => {
         default: return 0;
       }
     });
-  }, [filteredOrders, ordersSortCol, ordersSortDir]);
+  }, [orders, ordersSortCol, ordersSortDir]);
 
   const orderQty = Number(orderForm.quantity);
   const orderPrice = Number(orderForm.price_per_unit);
@@ -1128,13 +1137,7 @@ export const InvestingPage: React.FC = () => {
                                 <button
                                   type="button"
                                   data-testid={`investing-holding-trade-history-${h.public_id}`}
-                                  onClick={() => {
-                                    setTradeHistoryHoldingId(
-                                      tradeHistoryHoldingId === h.public_id ? null : h.public_id
-                                    );
-                                    setTab('orders');
-                                    setOrderSymbolFilter(h.symbol);
-                                  }}
+                                  onClick={() => setTradeHistoryHolding(h)}
                                   className="rounded-lg border border-slate-600/70 p-2 text-slate-300 hover:bg-slate-700/60"
                                   title="Trade History"
                                 >
@@ -1179,6 +1182,87 @@ export const InvestingPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Trade History Modal */}
+          {tradeHistoryHolding && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+              <div className="w-full max-w-3xl rounded-2xl border border-slate-700/60 bg-slate-900 p-6 shadow-2xl">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">
+                    Trade History — {tradeHistoryHolding.symbol} ({tradeHistoryHolding.account_name})
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setTradeHistoryHolding(null)}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="max-h-[60vh] overflow-y-auto overflow-x-auto rounded-xl border border-slate-700/50">
+                  <table data-testid="investing-trade-history-table" className="w-full text-sm">
+                    <thead className="border-b border-slate-700/50 bg-slate-800/40">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Type</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Qty</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Price</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Net</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Realized G/L</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/30">
+                      {tradeHistoryRes.isLoading ? (
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
+                      ) : (tradeHistoryRes.data ?? []).length === 0 ? (
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No trades found.</td></tr>
+                      ) : (
+                        [...(tradeHistoryRes.data ?? [])]
+                          .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
+                          .map((o) => {
+                            const isBuy = o.order_type === 'buy';
+                            return (
+                              <tr
+                                key={o.public_id}
+                                data-testid={`investing-trade-history-row-${o.public_id}`}
+                                className="bg-slate-900/20 hover:bg-slate-800/40 transition-colors"
+                              >
+                                <td className="px-4 py-3 text-slate-300 whitespace-nowrap">
+                                  {Number.isNaN(new Date(o.occurred_at).getTime())
+                                    ? 'N/A'
+                                    : new Date(o.occurred_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isBuy ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                                    {isBuy ? 'BUY' : 'SELL'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right text-slate-300">{toNumber(o.quantity).toLocaleString()}</td>
+                                <td className="px-4 py-3 text-right text-slate-300">
+                                  {formatCurrency(toNumber(o.price_per_unit), o.currency, currencyDisplayPreference)}
+                                </td>
+                                <td className="px-4 py-3 text-right font-medium text-white">
+                                  {formatCurrency(toNumber(o.net_amount), o.currency, currencyDisplayPreference)}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {o.realized_gain_loss != null ? (
+                                    <span className={toNumber(o.realized_gain_loss) >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+                                      {formatCurrency(toNumber(o.realized_gain_loss), o.currency, currencyDisplayPreference)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-500">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="orders">
@@ -1208,13 +1292,19 @@ export const InvestingPage: React.FC = () => {
                 data-testid="investing-orders-symbol-filter"
                 placeholder="Filter by symbol…"
                 value={orderSymbolFilter}
-                onChange={(e) => setOrderSymbolFilter(e.target.value)}
+                onChange={(e) => {
+                  setOrderSymbolFilter(e.target.value);
+                  setOrdersOffset(0);
+                }}
                 className="rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-1.5 text-sm text-white placeholder:text-slate-500"
               />
               <select
                 data-testid="investing-orders-type-filter"
                 value={orderTypeFilter}
-                onChange={(e) => setOrderTypeFilter(e.target.value as '' | 'buy' | 'sell')}
+                onChange={(e) => {
+                  setOrderTypeFilter(e.target.value as '' | 'buy' | 'sell');
+                  setOrdersOffset(0);
+                }}
                 className="rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-1.5 text-sm text-white"
               >
                 <option value="">All types</option>
@@ -1321,6 +1411,12 @@ export const InvestingPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              total={ordersRes.data?.total ?? 0}
+              limit={ORDERS_PAGE_SIZE}
+              offset={ordersOffset}
+              onPageChange={setOrdersOffset}
+            />
           </div>
 
           {/* Place Order Modal */}
