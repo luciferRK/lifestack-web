@@ -7,6 +7,7 @@ import { PageShell } from '../components/layout/PageShell';
 import { Pagination } from '../components/Pagination';
 import { SkeletonList, EmptyState, ErrorBanner } from '../components/ui/FeedbackStates';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
+import { formatDate } from '../utils/dateFormat';
 import type { WeeklySummary } from '../services/summaries';
 
 export const WeeklySummariesPage: React.FC = () => {
@@ -42,13 +43,7 @@ export const WeeklySummariesPage: React.FC = () => {
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
                     <h2 className="font-semibold text-white">
-                      Week of{' '}
-                      {!Number.isNaN(new Date(`${item.week_start}T00:00:00Z`).getTime())
-                        ? new Date(`${item.week_start}T00:00:00Z`).toLocaleDateString(undefined, {
-                            dateStyle: 'medium',
-                            timeZone: 'UTC',
-                          })
-                        : 'N/A'}
+                      Week of {formatDate(`${item.week_start}T00:00:00Z`, { fallback: 'N/A' })}
                     </h2>
                     <p className="mt-1 text-xs text-slate-500">
                       Generated{' '}

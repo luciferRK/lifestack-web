@@ -5,6 +5,7 @@ import { financeService } from '../services/finance';
 import { investingService } from '../services/investing';
 import type { CashBalance, InvestingOrder, InvestingOrderCreate, InvestingOrderUpdate, OrderType } from '../services/investing';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
+import { formatDate } from '../utils/dateFormat';
 import { DatePicker } from '../components/DatePicker';
 import { DateTimePicker } from '../components/DateTimePicker';
 import { CompactFilterBar, CompactFilterField } from '../components/filters/CompactFilterBar';
@@ -1287,9 +1288,7 @@ export const InvestingPage: React.FC = () => {
                                 className="bg-slate-900/20 hover:bg-slate-800/40 transition-colors"
                               >
                                 <td className="px-4 py-3 text-slate-300 whitespace-nowrap">
-                                  {Number.isNaN(new Date(o.occurred_at).getTime())
-                                    ? 'N/A'
-                                    : new Date(o.occurred_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}
+                                  {formatDate(o.occurred_at, { fallback: 'N/A' })}
                                 </td>
                                 <td className="px-4 py-3">
                                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isBuy ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
@@ -1429,9 +1428,7 @@ export const InvestingPage: React.FC = () => {
                           className="bg-slate-900/20 hover:bg-slate-800/40 transition-colors"
                         >
                           <td className="px-4 py-3 text-slate-300 whitespace-nowrap">
-                            {Number.isNaN(new Date(o.occurred_at).getTime())
-                              ? 'N/A'
-                              : new Date(o.occurred_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}
+                            {formatDate(o.occurred_at, { fallback: 'N/A' })}
                           </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isBuy ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>

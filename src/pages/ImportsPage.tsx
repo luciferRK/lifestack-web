@@ -5,6 +5,7 @@ import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { importsService } from '../services/imports';
 import type { ImportErrorItem, ImportModule, ImportValidateResponse } from '../types/imports';
+import { formatDate } from '../utils/dateFormat';
 
 const MODULE_OPTIONS: Array<{ value: ImportModule; label: string; testId?: string }> = [
   { value: 'spending-transactions', label: 'Spending Transactions' },
@@ -430,11 +431,7 @@ export const ImportsPage: React.FC = () => {
                             {activeDetail.import_batch.module === 'spending-transactions' && (
                               <>
                                 <td className="px-3 py-2 whitespace-nowrap">
-                                  {(() => {
-                                    if (!row.payload_json.occurred_at) return '-';
-                                    const d = new Date(row.payload_json.occurred_at);
-                                    return !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { timeZone: 'UTC' }) : '-';
-                                  })()}
+                                  {formatDate(row.payload_json.occurred_at)}
                                 </td>
                                 <td className="px-3 py-2 uppercase whitespace-nowrap">
                                   <span className={`px-1.5 py-0.5 rounded text-[10px] ${row.payload_json.type === 'income' ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}`}>
@@ -465,11 +462,7 @@ export const ImportsPage: React.FC = () => {
                             {activeDetail.import_batch.module === 'investing-orders' && (
                               <>
                                 <td className="px-3 py-2 whitespace-nowrap">
-                                  {(() => {
-                                    if (!row.payload_json.occurred_at) return '-';
-                                    const d = new Date(row.payload_json.occurred_at);
-                                    return !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { timeZone: 'UTC' }) : '-';
-                                  })()}
+                                  {formatDate(row.payload_json.occurred_at)}
                                 </td>
                                 <td className="px-3 py-2 uppercase whitespace-nowrap">
                                   <span className={`px-1.5 py-0.5 rounded text-[10px] ${row.payload_json.order_type === 'buy' ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}`}>
@@ -486,11 +479,7 @@ export const ImportsPage: React.FC = () => {
                             {activeDetail.import_batch.module === 'finance-transfers' && (
                               <>
                                 <td className="px-3 py-2 whitespace-nowrap">
-                                  {(() => {
-                                    if (!row.payload_json.occurred_at) return '-';
-                                    const d = new Date(row.payload_json.occurred_at);
-                                    return !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { timeZone: 'UTC' }) : '-';
-                                  })()}
+                                  {formatDate(row.payload_json.occurred_at)}
                                 </td>
                                 <td className="px-3 py-2">{row.payload_json.from_account ?? '-'}</td>
                                 <td className="px-3 py-2">{row.payload_json.to_account ?? '-'}</td>
