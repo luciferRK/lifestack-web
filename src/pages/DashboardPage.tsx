@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from '../services/dashboard';
 import { summariesService } from '../services/summaries';
 import { financeService } from '../services/finance';
-import { RefreshCw, AlertCircle, Clock3, CircleAlert, PiggyBank, Wallet, BriefcaseBusiness } from 'lucide-react';
+import { notificationsService } from '../services/notifications';
+import { RefreshCw, AlertCircle, Clock3, CircleAlert, PiggyBank, Wallet, BriefcaseBusiness, Lightbulb } from 'lucide-react';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
@@ -22,6 +23,16 @@ export const DashboardPage: React.FC = () => {
     queryKey: ['finance', 'settings', 'user'],
     queryFn: () => financeService.getUserSettings(),
   });
+  const {
+    data: insightsData,
+    isLoading: isInsightsLoading,
+    isError: isInsightsError,
+    refetch: refetchInsights,
+  } = useQuery({
+    queryKey: ['dashboard', 'insights'],
+    queryFn: () => notificationsService.list(5, 0, { category: 'insight', is_read: false }),
+  });
+  const insights = insightsData?.items ?? [];
   const displayCurrency = userFinanceSettings?.effective_reporting_currency_code ?? 'USD';
   const currencyDisplayPreference =
     userFinanceSettings?.effective_currency_display_preference ?? 'symbol';
@@ -54,7 +65,10 @@ export const DashboardPage: React.FC = () => {
         subtitle="Live totals for tasks, spending, and portfolio activity."
         actions={(
           <button
-            onClick={() => void refetch()}
+            onClick={() => {
+              void refetch();
+              void refetchInsights();
+            }}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
@@ -174,6 +188,62 @@ export const DashboardPage: React.FC = () => {
                 </div>
               );
             })()}
+
+            <div className="mt-6">
+              <section
+                data-testid="dashboard-insights"
+                className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 shadow-2xl shadow-black/10"
+              >
+                <div className="flex items-center gap-3">
+                  <Lightbulb className="h-5 w-5 text-cyan-400" />
+                  <h2 className="text-xl font-semibold">Insights</h2>
+                </div>
+                {isInsightsLoading ? (
+                  <div className="mt-4 flex justify-center py-4">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-cyan-400" />
+                  </div>
+                ) : isInsightsError ? (
+                  <p className="mt-3 text-sm text-rose-400">
+                    Failed to load insights. Please try refreshing.
+                  </p>
+                ) : insights.length === 0 ? (
+                  <p className="mt-3 text-sm text-slate-400">
+                    No insights right now — check back after your next few transactions.
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {insights.map((insight) => {
+                      const isWarning = insight.severity === 'warning';
+                      return (
+                        <div
+                          key={insight.public_id}
+                          data-testid="dashboard-insight-card"
+                          className={`flex items-start gap-3 rounded-2xl border p-4 ${
+                            isWarning
+                              ? 'border-amber-500/20 bg-amber-950/20 text-amber-200'
+                              : 'border-cyan-500/20 bg-cyan-950/20 text-cyan-200'
+                          }`}
+                        >
+                          <AlertCircle
+                            className={`h-5 w-5 shrink-0 mt-0.5 ${isWarning ? 'text-amber-400' : 'text-cyan-400'}`}
+                          />
+                          <div>
+                            <p className={`font-semibold ${isWarning ? 'text-amber-100' : 'text-cyan-100'}`}>
+                              {insight.title}
+                            </p>
+                            {insight.body ? (
+                              <p className={`mt-1 text-sm ${isWarning ? 'text-amber-300/90' : 'text-cyan-300/90'}`}>
+                                {insight.body}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </div>
 
             <div className="mt-6">
               <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 shadow-2xl shadow-black/10">
