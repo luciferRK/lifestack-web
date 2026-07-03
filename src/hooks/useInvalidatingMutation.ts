@@ -14,7 +14,14 @@ export function useInvalidatingMutation<TArgs, TResult>(
   return useMutation({
     mutationFn,
     onSuccess: (result: TResult) => {
-      invalidateKeys.forEach((key) => queryClient.invalidateQueries({ queryKey: [...key] }));
+      // One key's invalidation failing must not skip the rest.
+      for (const key of [...invalidateKeys]) {
+        try {
+          queryClient.invalidateQueries({ queryKey: [...key] });
+        } catch (error) {
+          console.error('useInvalidatingMutation: failed to invalidate query key', key, error);
+        }
+      }
       options?.onSuccess?.(result);
     },
     onError: options?.onError,
