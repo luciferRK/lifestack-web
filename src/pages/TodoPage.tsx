@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Edit2, Plus, Trash2, X } from 'lucide-react';
 
 import { DropdownSelect } from '../components/DropdownSelect';
@@ -10,6 +10,7 @@ import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { Pagination } from '../components/Pagination';
 import { SkeletonList } from '../components/ui/FeedbackStates';
+import { useInvalidatingMutation } from '../hooks/useInvalidatingMutation';
 import { queryKeys } from '../lib/queryKeys';
 import { todoService } from '../services/todo';
 import type { RecurringTodoCreate, RecurringTodoRule, Todo, TodoCreate } from '../services/todo';
@@ -98,7 +99,6 @@ const formatUtcDate = (value: string | null | undefined): string | null => {
 };
 
 export const TodoPage: React.FC = () => {
-  const queryClient = useQueryClient();
   const [taskForm, setTaskForm] = useState({
     title: '',
     description: '',
@@ -135,64 +135,45 @@ export const TodoPage: React.FC = () => {
     queryFn: () => todoService.getRecurringRules(true, 100, 0),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (newTodo: TodoCreate) => todoService.createTodo(newTodo),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.todo.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      closeTaskModal();
-    },
-  });
+  const createMutation = useInvalidatingMutation(
+    (newTodo: TodoCreate) => todoService.createTodo(newTodo),
+    [queryKeys.todo.list(), queryKeys.dashboard.all],
+    { onSuccess: closeTaskModal },
+  );
 
-  const updateMutation = useMutation({
-    mutationFn: (payload: { id: string; data: TodoCreate }) =>
-      todoService.updateTodo(payload.id, payload.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.todo.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      closeTaskModal();
-    },
-  });
+  const updateMutation = useInvalidatingMutation(
+    (payload: { id: string; data: TodoCreate }) => todoService.updateTodo(payload.id, payload.data),
+    [queryKeys.todo.list(), queryKeys.dashboard.all],
+    { onSuccess: closeTaskModal },
+  );
 
-  const toggleMutation = useMutation({
-    mutationFn: (todo: Todo) => todoService.updateTodo(todo.public_id, { completed: !todo.completed }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.todo.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-    },
-  });
+  const toggleMutation = useInvalidatingMutation(
+    (todo: Todo) => todoService.updateTodo(todo.public_id, { completed: !todo.completed }),
+    [queryKeys.todo.list(), queryKeys.dashboard.all],
+  );
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => todoService.deleteTodo(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.todo.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-    },
-  });
+  const deleteMutation = useInvalidatingMutation(
+    (id: string) => todoService.deleteTodo(id),
+    [queryKeys.todo.list(), queryKeys.dashboard.all],
+  );
 
-  const createRuleMutation = useMutation({
-    mutationFn: (payload: RecurringTodoCreate) => todoService.createRecurringRule(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.todo.recurring() });
-      closeRecurringModal();
-    },
-  });
+  const createRuleMutation = useInvalidatingMutation(
+    (payload: RecurringTodoCreate) => todoService.createRecurringRule(payload),
+    [queryKeys.todo.recurring()],
+    { onSuccess: closeRecurringModal },
+  );
 
-  const updateRuleMutation = useMutation({
-    mutationFn: (payload: { id: string; data: Omit<RecurringTodoCreate, 'anchor_date'> }) =>
+  const updateRuleMutation = useInvalidatingMutation(
+    (payload: { id: string; data: Omit<RecurringTodoCreate, 'anchor_date'> }) =>
       todoService.updateRecurringRule(payload.id, payload.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.todo.recurring() });
-      closeRecurringModal();
-    },
-  });
+    [queryKeys.todo.recurring()],
+    { onSuccess: closeRecurringModal },
+  );
 
-  const deleteRuleMutation = useMutation({
-    mutationFn: (id: string) => todoService.deleteRecurringRule(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.todo.recurring() });
-    },
-  });
+  const deleteRuleMutation = useInvalidatingMutation(
+    (id: string) => todoService.deleteRecurringRule(id),
+    [queryKeys.todo.recurring()],
+  );
 
   function closeTaskModal() {
     setTaskForm({
