@@ -1053,6 +1053,7 @@ export const SpendingPage: React.FC = () => {
           onEdit={openTransactionModalForEdit}
           onDelete={deleteMutation.mutate}
           onPageChange={setTxOffset}
+          isDeletePending={deleteMutation.isPending}
         />
       ) : activeTab === 'budgets' ? (
         <BudgetsTab

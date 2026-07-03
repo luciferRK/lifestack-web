@@ -19,6 +19,7 @@ interface TransactionsTabProps {
   onEdit: (tx: Transaction) => void;
   onDelete: (publicId: string) => void;
   onPageChange: (offset: number) => void;
+  isDeletePending?: boolean;
 }
 
 export const TransactionsTab: React.FC<TransactionsTabProps> = ({
@@ -32,6 +33,7 @@ export const TransactionsTab: React.FC<TransactionsTabProps> = ({
   onEdit,
   onDelete,
   onPageChange,
+  isDeletePending,
 }) => {
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -164,7 +166,8 @@ export const TransactionsTab: React.FC<TransactionsTabProps> = ({
                       </button>
                       <button
                         onClick={() => onDelete(tx.public_id)}
-                        className="ml-2 inline-flex rounded-lg p-2 text-slate-500 transition-all hover:bg-red-500/10 hover:text-red-400"
+                        disabled={isDeletePending}
+                        className="ml-2 inline-flex rounded-lg p-2 text-slate-500 transition-all hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-slate-500"
                         title="Delete transaction"
                       >
                         <Trash2 className="h-4 w-4" />
