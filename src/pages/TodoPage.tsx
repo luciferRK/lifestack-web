@@ -10,6 +10,7 @@ import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { Pagination } from '../components/Pagination';
 import { SkeletonList } from '../components/ui/FeedbackStates';
+import { queryKeys } from '../lib/queryKeys';
 import { todoService } from '../services/todo';
 import type { RecurringTodoCreate, RecurringTodoRule, Todo, TodoCreate } from '../services/todo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -125,20 +126,20 @@ export const TodoPage: React.FC = () => {
     statusFilter === 'all' ? undefined : statusFilter === 'completed';
 
   const { data: todosResponse, isLoading } = useQuery({
-    queryKey: ['todos', offset, statusFilter],
+    queryKey: queryKeys.todo.list(offset, statusFilter),
     queryFn: () => todoService.getTodos(completedFilterValue, limit, offset),
   });
 
   const { data: recurringResponse, isLoading: isRecurringLoading } = useQuery({
-    queryKey: ['todo-recurring'],
+    queryKey: queryKeys.todo.recurring(),
     queryFn: () => todoService.getRecurringRules(true, 100, 0),
   });
 
   const createMutation = useMutation({
     mutationFn: (newTodo: TodoCreate) => todoService.createTodo(newTodo),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todos'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.todo.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       closeTaskModal();
     },
   });
@@ -147,8 +148,8 @@ export const TodoPage: React.FC = () => {
     mutationFn: (payload: { id: string; data: TodoCreate }) =>
       todoService.updateTodo(payload.id, payload.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todos'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.todo.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       closeTaskModal();
     },
   });
@@ -156,23 +157,23 @@ export const TodoPage: React.FC = () => {
   const toggleMutation = useMutation({
     mutationFn: (todo: Todo) => todoService.updateTodo(todo.public_id, { completed: !todo.completed }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todos'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.todo.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => todoService.deleteTodo(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todos'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.todo.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
   });
 
   const createRuleMutation = useMutation({
     mutationFn: (payload: RecurringTodoCreate) => todoService.createRecurringRule(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todo-recurring'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.todo.recurring() });
       closeRecurringModal();
     },
   });
@@ -181,7 +182,7 @@ export const TodoPage: React.FC = () => {
     mutationFn: (payload: { id: string; data: Omit<RecurringTodoCreate, 'anchor_date'> }) =>
       todoService.updateRecurringRule(payload.id, payload.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todo-recurring'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.todo.recurring() });
       closeRecurringModal();
     },
   });
@@ -189,7 +190,7 @@ export const TodoPage: React.FC = () => {
   const deleteRuleMutation = useMutation({
     mutationFn: (id: string) => todoService.deleteRecurringRule(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todo-recurring'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.todo.recurring() });
     },
   });
 
