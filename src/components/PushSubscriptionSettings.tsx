@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, BellOff, Smartphone } from 'lucide-react';
 import { notificationsService } from '../services/notifications';
+import { queryKeys } from '../lib/queryKeys';
 
 // Web Push applicationServerKey must be a Uint8Array, not the base64url
 // string the server hands back.
@@ -33,7 +34,7 @@ export const PushSubscriptionSettings: React.FC = () => {
   const { isIOS, isStandalone, supportsPush } = useMemo(() => detectPlatform(), []);
 
   const { data: subscriptions } = useQuery({
-    queryKey: ['notifications', 'push-subscriptions'],
+    queryKey: queryKeys.notifications.pushSubscriptions(),
     queryFn: () => notificationsService.listPushSubscriptions(),
     enabled: supportsPush,
   });
@@ -68,7 +69,7 @@ export const PushSubscriptionSettings: React.FC = () => {
       });
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['notifications', 'push-subscriptions'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.pushSubscriptions() });
     },
     onError: (err: unknown) => {
       setError(err instanceof Error ? err.message : 'Could not enable push notifications');
@@ -78,7 +79,7 @@ export const PushSubscriptionSettings: React.FC = () => {
   const revokeMutation = useMutation({
     mutationFn: (id: string) => notificationsService.deletePushSubscription(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['notifications', 'push-subscriptions'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.pushSubscriptions() });
     },
   });
 

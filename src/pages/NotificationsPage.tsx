@@ -8,14 +8,15 @@ import { notificationsService } from '../services/notifications';
 import type { NotificationItem } from '../types/notifications';
 import { Pagination } from '../components/Pagination';
 import { SkeletonList, EmptyState, ErrorBanner } from '../components/ui/FeedbackStates';
+import { queryKeys } from '../lib/queryKeys';
 
 const NotificationRow: React.FC<{ n: NotificationItem }> = ({ n }) => {
   const queryClient = useQueryClient();
   const markReadMutation = useMutation({
     mutationFn: (id: string) => notificationsService.markRead(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
   });
 
@@ -52,12 +53,12 @@ export const NotificationsPage: React.FC = () => {
   const limit = 20;
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['notifications', offset],
+    queryKey: queryKeys.notifications.list(offset),
     queryFn: () => notificationsService.list(limit, offset),
   });
 
   const { data: preferences } = useQuery({
-    queryKey: ['notifications', 'preferences'],
+    queryKey: queryKeys.notifications.preferences(),
     queryFn: () => notificationsService.getPreferences(),
   });
 
@@ -65,7 +66,7 @@ export const NotificationsPage: React.FC = () => {
     mutationFn: ({ category, channel_push }: { category: string; channel_push: boolean }) =>
       notificationsService.updatePreference(category, { channel_push }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['notifications', 'preferences'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.preferences() });
     },
   });
 
@@ -87,8 +88,8 @@ export const NotificationsPage: React.FC = () => {
   const markAllMutation = useMutation({
     mutationFn: () => notificationsService.markAllRead(),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
   });
 

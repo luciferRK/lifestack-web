@@ -2,7 +2,7 @@
  * Central registry of TanStack Query key builders.
  *
  * All keys are `['module', 'resource', ...params]` so a mutation can
- * prefix-invalidate an entire module (`queryKeys.todo.all`) instead of
+ * prefix-invalidate an entire module (`queryKeys.spending.all`) instead of
  * listing every resource key by hand, and so two unrelated features never
  * accidentally share a cache prefix (e.g. spending categories vs.
  * MasterConfigPage categories).
@@ -12,13 +12,82 @@
  * import source, but their key *values* are unchanged.
  */
 export const queryKeys = {
+  // ── Todo ──────────────────────────────────────────────────────────────────
   todo: {
     all: ['todo'] as const,
     list: <T extends unknown[]>(...params: T) => ['todo', 'list', ...params] as const,
     recurring: <T extends unknown[]>(...params: T) => ['todo', 'recurring', ...params] as const,
   },
+
+  // ── Spending ──────────────────────────────────────────────────────────────
+  // Previously bare keys: ['categories'], ['transactions', ...], ['budgets', ...],
+  // ['recurring', ...], ['transactions-summary', ...].
+  // Migrated to module-prefixed form to prevent cross-page cache collisions
+  // (MasterConfigPage used ['categories'] as a prefix that leaked into
+  // SpendingPage's cache — both are now scoped independently).
+  spending: {
+    all: ['spending'] as const,
+    categories: <T extends unknown[]>(...params: T) => ['spending', 'categories', ...params] as const,
+    transactions: <T extends unknown[]>(...params: T) => ['spending', 'transactions', ...params] as const,
+    summary: <T extends unknown[]>(...params: T) => ['spending', 'summary', ...params] as const,
+    budgets: <T extends unknown[]>(...params: T) => ['spending', 'budgets', ...params] as const,
+    recurring: <T extends unknown[]>(...params: T) => ['spending', 'recurring', ...params] as const,
+  },
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  notifications: {
+    all: ['notifications'] as const,
+    list: <T extends unknown[]>(...params: T) => ['notifications', 'list', ...params] as const,
+    preferences: () => ['notifications', 'preferences'] as const,
+    pushSubscriptions: () => ['notifications', 'push-subscriptions'] as const,
+    unreadCount: () => ['notifications', 'unread-count'] as const,
+  },
+
+  // ── Net Worth ──────────────────────────────────────────────────────────────
+  netWorth: {
+    all: ['net-worth'] as const,
+    summary: () => ['net-worth'] as const,
+  },
+
+  // ── Investing ──────────────────────────────────────────────────────────────
+  // Already used module-prefix shape; centralized here for single import source.
+  // Key *values* are unchanged.
+  investing: {
+    all: ['investing'] as const,
+    summary: () => ['investing', 'summary'] as const,
+    performance: {
+      summary: () => ['investing', 'performance', 'summary'] as const,
+    },
+  },
+
+  // ── Finance ────────────────────────────────────────────────────────────────
+  // Already used module-prefix shape; centralized for single import source.
+  finance: {
+    all: ['finance'] as const,
+    accounts: <T extends unknown[]>(...params: T) => ['finance', 'accounts', ...params] as const,
+    currencies: <T extends unknown[]>(...params: T) => ['finance', 'currencies', ...params] as const,
+    settings: <T extends unknown[]>(...params: T) => ['finance', 'settings', ...params] as const,
+    transfers: <T extends unknown[]>(...params: T) => ['finance', 'transfers', ...params] as const,
+  },
+
+  // ── Dashboard ──────────────────────────────────────────────────────────────
   dashboard: {
     all: ['dashboard'] as const,
     summary: () => ['dashboard', 'summary'] as const,
+  },
+
+  // ── Exports ────────────────────────────────────────────────────────────────
+  exports: {
+    all: ['exports'] as const,
+  },
+
+  // ── Imports ────────────────────────────────────────────────────────────────
+  imports: {
+    all: ['imports'] as const,
+  },
+
+  // ── Master Config (scoped variants to avoid cross-page collisions) ──────────
+  masterConfig: {
+    categories: () => ['categories', 'master-config'] as const,
   },
 } as const;

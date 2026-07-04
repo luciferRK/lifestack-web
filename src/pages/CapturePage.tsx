@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { captureService } from '../services/capture';
+import { queryKeys } from '../lib/queryKeys';
 
 export const CapturePage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -28,10 +29,10 @@ export const CapturePage: React.FC = () => {
       setAmount('');
       setCategory('');
       setDueDate('');
-      void queryClient.invalidateQueries({ queryKey: ['todos'] });
-      void queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.todo.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.spending.transactions() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 

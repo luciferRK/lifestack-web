@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
+import { queryKeys } from '../lib/queryKeys';
 
 export const MasterConfigPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -95,7 +96,7 @@ export const MasterConfigPage: React.FC = () => {
     queryFn: () => financeService.getUserSettings(),
   });
   const { data: categoriesResponse } = useQuery({
-    queryKey: ['categories', 'master-config'],
+    queryKey: queryKeys.masterConfig.categories(),
     queryFn: () => spendingService.getCategories(200, 0),
   });
 
@@ -214,8 +215,8 @@ export const MasterConfigPage: React.FC = () => {
       }),
     onSuccess: () => {
       setEditingCategoryId(null);
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['categories', 'master-config'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spending.categories() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.masterConfig.categories() });
     },
   });
 
@@ -232,7 +233,7 @@ export const MasterConfigPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['finance', 'settings', 'master-config'] });
       queryClient.invalidateQueries({ queryKey: ['finance', 'settings', 'workspace'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spending.summary() });
     },
   });
   const updateUserSettingsMutation = useMutation({
@@ -247,7 +248,7 @@ export const MasterConfigPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['finance', 'settings', 'user'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spending.summary() });
       queryClient.invalidateQueries({ queryKey: ['investing'] });
     },
   });

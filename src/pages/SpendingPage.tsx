@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { SkeletonList } from '../components/ui/FeedbackStates';
 import { useInvalidatingMutation } from '../hooks/useInvalidatingMutation';
+import { queryKeys } from '../lib/queryKeys';
 import { spendingService } from '../services/spending';
 import { financeService } from '../services/finance';
 import type {
@@ -221,7 +222,7 @@ export const SpendingPage: React.FC = () => {
   const [deleteTransferError, setDeleteTransferError] = useState<string | null>(null);
 
   const { data: categoriesResponse, isLoading: isCatsLoading } = useQuery({
-    queryKey: ['categories'],
+    queryKey: queryKeys.spending.categories(),
     queryFn: () => spendingService.getCategories(200, 0)
   });
   const categories = categoriesResponse?.items;
@@ -291,7 +292,7 @@ export const SpendingPage: React.FC = () => {
   const isUnassignedFilterActive = selectedAccountFilter === UNASSIGNED_ACCOUNT_FILTER_VALUE;
 
   const { data: transactionsResponse, isLoading: isTxLoading } = useQuery({
-    queryKey: ['transactions', txOffset, fromDate, toDate, selectedCategoryFilter, selectedAccountFilter],
+    queryKey: queryKeys.spending.transactions(txOffset, fromDate, toDate, selectedCategoryFilter, selectedAccountFilter),
     queryFn: () => spendingService.getTransactions(limit, txOffset, {
       categoryId: selectedCategoryFilter || undefined,
       accountId: isUnassignedFilterActive ? undefined : selectedAccountFilter || undefined,
@@ -308,7 +309,7 @@ export const SpendingPage: React.FC = () => {
   // shown when the option is selected (the list query above also passes
   // fromDate/toDate through while the unassigned filter is active).
   const { data: unassignedCountResponse } = useQuery({
-    queryKey: ['transactions', 'unassigned-count', fromDate, toDate, selectedCategoryFilter],
+    queryKey: queryKeys.spending.transactions('unassigned-count', fromDate, toDate, selectedCategoryFilter),
     queryFn: () => spendingService.getTransactions(1, 0, {
       unassigned: true,
       categoryId: selectedCategoryFilter || undefined,
@@ -319,7 +320,7 @@ export const SpendingPage: React.FC = () => {
   const unassignedTransactionCount = unassignedCountResponse?.total ?? 0;
 
   const { data: summaryResponse, isLoading: isSummaryLoading } = useQuery({
-    queryKey: ['transactions-summary', fromDate, toDate, selectedCategoryFilter, selectedAccountFilter],
+    queryKey: queryKeys.spending.summary(fromDate, toDate, selectedCategoryFilter, selectedAccountFilter),
     queryFn: () => spendingService.getTransactionSummary({
       fromDate: fromDate ? `${fromDate}T00:00:00.000Z` : `${new Date().getFullYear()}-01-01T00:00:00.000Z`,
       toDate: toDate ? `${toDate}T23:59:59.999Z` : `${new Date().getFullYear()}-12-31T23:59:59.999Z`,
@@ -343,7 +344,7 @@ export const SpendingPage: React.FC = () => {
   );
 
   const { data: budgetsResponse, isLoading: isBudgetsLoading } = useQuery({
-    queryKey: ['budgets', budgetOffset, selectedMonth],
+    queryKey: queryKeys.spending.budgets(budgetOffset, selectedMonth),
     queryFn: () => spendingService.getBudgets(limit, budgetOffset, monthRange.monthStart),
     enabled: monthRange.isValid,
   });
@@ -354,36 +355,36 @@ export const SpendingPage: React.FC = () => {
 
   const createMutation = useInvalidatingMutation(
     (newTx: TransactionCreate) => spendingService.createTransaction(newTx),
-    [['transactions'], ['transactions-summary'], ['dashboard']],
+    [queryKeys.spending.transactions(), queryKeys.spending.summary(), queryKeys.dashboard.all],
     { onSuccess: () => closeTransactionModal() },
   );
 
   const updateMutation = useInvalidatingMutation(
     ({ id, data }: { id: string; data: TransactionUpdate }) => spendingService.updateTransaction(id, data),
-    [['transactions'], ['transactions-summary'], ['dashboard']],
+    [queryKeys.spending.transactions(), queryKeys.spending.summary(), queryKeys.dashboard.all],
     { onSuccess: () => closeTransactionModal() },
   );
 
   const deleteMutation = useInvalidatingMutation(
     (id: string) => spendingService.deleteTransaction(id),
-    [['transactions'], ['transactions-summary'], ['dashboard']],
+    [queryKeys.spending.transactions(), queryKeys.spending.summary(), queryKeys.dashboard.all],
   );
 
   const createBudgetMutation = useInvalidatingMutation(
     (newBudget: BudgetCreate) => spendingService.createBudget(newBudget),
-    [['budgets'], ['dashboard']],
+    [queryKeys.spending.budgets(), queryKeys.dashboard.all],
     { onSuccess: () => closeBudgetModal() },
   );
 
   const updateBudgetMutation = useInvalidatingMutation(
     ({ id, data }: { id: string; data: BudgetUpdate }) => spendingService.updateBudget(id, data),
-    [['budgets'], ['dashboard']],
+    [queryKeys.spending.budgets(), queryKeys.dashboard.all],
     { onSuccess: () => closeBudgetModal() },
   );
 
   // ----- Recurring Queries & Mutations -----
   const { data: recurringResponse, isLoading: isRecurringLoading } = useQuery({
-    queryKey: ['recurring', recurringOffset],
+    queryKey: queryKeys.spending.recurring(recurringOffset),
     queryFn: () => spendingService.getRecurring(limit, recurringOffset, true),
   });
   const { data: transfersResponse, isLoading: isTransfersLoading } = useQuery({
@@ -447,20 +448,20 @@ export const SpendingPage: React.FC = () => {
 
   const createRecurringMutation = useInvalidatingMutation(
     (data: RecurringTransactionCreate) => spendingService.createRecurring(data),
-    [['recurring']],
+    [queryKeys.spending.recurring()],
     { onSuccess: () => closeRecurringModal() },
   );
 
   const updateRecurringMutation = useInvalidatingMutation(
     ({ id, data }: { id: string; data: RecurringTransactionUpdate }) =>
       spendingService.updateRecurring(id, data),
-    [['recurring']],
+    [queryKeys.spending.recurring()],
     { onSuccess: () => closeRecurringModal() },
   );
 
   const deactivateRecurringMutation = useInvalidatingMutation(
     (id: string) => spendingService.deleteRecurring(id),
-    [['recurring']],
+    [queryKeys.spending.recurring()],
     {
       onError: (error) => {
         console.error('Failed to deactivate recurring rule:', error);
@@ -529,7 +530,7 @@ export const SpendingPage: React.FC = () => {
         notes: transferNotes || null,
       });
     },
-    [['dashboard'], ['finance', 'transfers']],
+    [queryKeys.dashboard.all, queryKeys.finance.transfers()],
     {
       onSuccess: () => {
         setIsTransferModalOpen(false);
@@ -603,7 +604,7 @@ export const SpendingPage: React.FC = () => {
         notes: editTransferNotes || null,
       });
     },
-    [['finance', 'transfers'], ['dashboard']],
+    [queryKeys.finance.transfers(), queryKeys.dashboard.all],
     {
       onSuccess: () => {
         setEditingTransfer(null);
@@ -623,7 +624,7 @@ export const SpendingPage: React.FC = () => {
       if (!deletingTransfer) throw new Error('No transfer selected');
       return financeService.deleteTransfer(deletingTransfer.public_id);
     },
-    [['finance', 'transfers'], ['dashboard']],
+    [queryKeys.finance.transfers(), queryKeys.dashboard.all],
     {
       onSuccess: () => {
         setDeletingTransfer(null);
@@ -664,7 +665,7 @@ export const SpendingPage: React.FC = () => {
         account_type: newAccountType,
         default_currency_code: newAccountCurrency.trim().toUpperCase(),
       }),
-    [['finance', 'accounts'], ['finance', 'accounts', 'spending']],
+    [queryKeys.finance.accounts(), queryKeys.finance.accounts('spending')],
     {
       onSuccess: (created) => {
         setAccountId(created.public_id);
@@ -680,7 +681,7 @@ export const SpendingPage: React.FC = () => {
   const createCategoryMutation = useInvalidatingMutation(
     (data: { name: string; icon?: string }) =>
       spendingService.createCategory({ name: data.name, icon: data.icon || null }),
-    [['categories']],
+    [queryKeys.spending.categories()],
     {
       onSuccess: () => {
         setNewCategoryName('');

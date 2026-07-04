@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryKeys';
 import { 
   Mic, 
   MicOff, 
@@ -295,14 +296,14 @@ export const VoiceAgentWidget: React.FC = () => {
 
       if (msg.status === 'success') {
         // Automatically refresh all relevant dashboards/lists
-        void queryClient.invalidateQueries({ queryKey: ['todos'] });
-        void queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        void queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-        void queryClient.invalidateQueries({ queryKey: ['budgets'] });
-        void queryClient.invalidateQueries({ queryKey: ['investing'] });
-        void queryClient.invalidateQueries({ queryKey: ['finance'] });
-        void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.todo.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.spending.transactions() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.spending.summary() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.spending.budgets() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.investing.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
       }
     } 
     

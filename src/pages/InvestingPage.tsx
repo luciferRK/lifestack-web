@@ -23,28 +23,29 @@ import { CashTab } from './investing/CashTab';
 import { AnalyticsTab } from './investing/AnalyticsTab';
 import { SummaryCard } from './investing/components';
 import { formatDateTimeLocalInput, formatPerformanceMetric, statusLabel } from './investing/format';
+import { queryKeys } from '../lib/queryKeys';
 
 export const InvestingPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'holdings' | 'cash' | 'analytics'>('holdings');
 
   const summary = useQuery({
-    queryKey: ['investing', 'summary'],
+    queryKey: queryKeys.investing.summary(),
     queryFn: () => investingService.getSummary(),
   });
   const performanceSummary = useQuery({
-    queryKey: ['investing', 'performance', 'summary'],
+    queryKey: queryKeys.investing.performance.summary(),
     queryFn: () => investingService.getPerformanceSummary(),
   });
 
   const currenciesRes = useQuery({
-    queryKey: ['finance', 'currencies'],
+    queryKey: queryKeys.finance.currencies(),
     queryFn: () => financeService.getCurrencies(),
   });
   const currencyOptions = (currenciesRes.data ?? []).map((currency) => currency.code);
 
   const userFinanceSettingsRes = useQuery({
-    queryKey: ['finance', 'settings', 'user'],
+    queryKey: queryKeys.finance.settings('user'),
     queryFn: () => financeService.getUserSettings(),
   });
   const userFinanceSettings = userFinanceSettingsRes.data;
@@ -57,9 +58,9 @@ export const InvestingPage: React.FC = () => {
       : null) ?? currencyOptions[0] ?? 'USD';
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ['investing'] });
-    void queryClient.invalidateQueries({ queryKey: ['finance'] });
-    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.investing.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
   };
 
   // Order editing/deletion is shared between the Holdings tab's Trade History
