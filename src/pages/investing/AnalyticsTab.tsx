@@ -4,6 +4,7 @@ import { BarChart3, Check, Edit2, Layers, Plus, X } from 'lucide-react';
 import { investingService } from '../../services/investing';
 import { formatCurrency, toNumber } from '../../utils/numberFormat';
 import { DatePicker } from '../../components/DatePicker';
+import { queryKeys } from '../../lib/queryKeys';
 import { DropdownSelect } from '../../components/DropdownSelect';
 import { Combobox } from '../../components/Combobox';
 import type {
@@ -39,27 +40,27 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
   });
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ['investing'] });
-    void queryClient.invalidateQueries({ queryKey: ['finance'] });
-    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.investing.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
   };
 
   const instrumentsRes = useQuery({
-    queryKey: ['investing', 'instruments'],
+    queryKey: queryKeys.investing.instruments(),
     queryFn: () => investingService.getInstruments(),
   });
   const instruments = useMemo(() => instrumentsRes.data ?? [], [instrumentsRes.data]);
   const instrumentsLoading = instrumentsRes.isLoading;
 
   const exposureRes = useQuery({
-    queryKey: ['investing', 'analytics', 'exposure', analyticsAsOf],
+    queryKey: queryKeys.investing.exposure(analyticsAsOf),
     queryFn: () => investingService.getExposureAnalytics(analyticsAsOf),
   });
   const exposure = exposureRes.data;
   const exposureLoading = exposureRes.isLoading;
 
   const overlapRes = useQuery({
-    queryKey: ['investing', 'analytics', 'overlap', analyticsAsOf],
+    queryKey: queryKeys.investing.overlap(analyticsAsOf),
     queryFn: () => investingService.getOverlapAnalytics(analyticsAsOf),
   });
   const overlap = overlapRes.data;

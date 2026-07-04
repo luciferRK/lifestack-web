@@ -6,6 +6,7 @@ import { formatCurrency } from '../utils/numberFormat';
 import { formatDate } from '../utils/dateFormat';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
+import { queryKeys } from '../lib/queryKeys';
 
 const accountTypeLabel = (type: string): string => {
   switch (type) {
@@ -84,7 +85,7 @@ const SummaryCard: React.FC<{
 
 export const NetWorthPage: React.FC = () => {
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['net-worth'],
+    queryKey: queryKeys.netWorth.summary(),
     queryFn: () => financeService.getNetWorth(),
     staleTime: 60_000,
   });

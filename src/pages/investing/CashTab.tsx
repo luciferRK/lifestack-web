@@ -9,6 +9,7 @@ import { formatCurrency, toNumber } from '../../utils/numberFormat';
 import { formatDate } from '../../utils/dateFormat';
 import { DateTimePicker } from '../../components/DateTimePicker';
 import { CompactFilterBar, CompactFilterField } from '../../components/filters/CompactFilterBar';
+import { queryKeys } from '../../lib/queryKeys';
 import { DropdownSelect } from '../../components/DropdownSelect';
 import { Combobox } from '../../components/Combobox';
 import { Pagination } from '../../components/Pagination';
@@ -95,9 +96,9 @@ export const CashTab: React.FC<CashTabProps> = ({
   const [ordersOffset, setOrdersOffset] = useState(0);
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ['investing'] });
-    void queryClient.invalidateQueries({ queryKey: ['finance'] });
-    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.investing.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
   };
 
   const cashRes = useQuery({
@@ -105,12 +106,12 @@ export const CashTab: React.FC<CashTabProps> = ({
     // accounts fetches that account's full history instead of relying on
     // whatever happens to be in the first 200 rows ordered by as_of desc --
     // an old backfilled snapshot can otherwise be invisible past that window.
-    queryKey: ['investing', 'cash-balances', cashAccountFilter],
+    queryKey: queryKeys.investing.cashBalances(cashAccountFilter),
     queryFn: () => investingService.getCashBalances(200, 0, cashAccountFilter || undefined),
   });
 
   const currenciesRes = useQuery({
-    queryKey: ['finance', 'currencies'],
+    queryKey: queryKeys.finance.currencies(),
     queryFn: () => financeService.getCurrencies(),
   });
   const currencies = useMemo(() => currenciesRes.data ?? [], [currenciesRes.data]);
@@ -121,7 +122,7 @@ export const CashTab: React.FC<CashTabProps> = ({
   );
 
   const accountsRes = useQuery({
-    queryKey: ['finance', 'accounts'],
+    queryKey: queryKeys.finance.accounts(),
     queryFn: () => financeService.getAccounts(200, 0),
   });
   const accounts = useMemo(() => accountsRes.data?.items ?? [], [accountsRes.data]);
@@ -140,7 +141,7 @@ export const CashTab: React.FC<CashTabProps> = ({
   );
 
   const userFinanceSettingsRes = useQuery({
-    queryKey: ['finance', 'settings', 'user'],
+    queryKey: queryKeys.finance.settings('user'),
     queryFn: () => financeService.getUserSettings(),
   });
   const userFinanceSettings = userFinanceSettingsRes.data;
@@ -155,7 +156,7 @@ export const CashTab: React.FC<CashTabProps> = ({
     currencyOptions.includes(cashForm.currency) ? cashForm.currency : preferredWorkspaceCurrency;
 
   const ordersRes = useQuery({
-    queryKey: ['investing', 'orders', ordersOffset, orderSymbolFilter, orderTypeFilter],
+    queryKey: queryKeys.investing.orders(ordersOffset, orderSymbolFilter, orderTypeFilter),
     queryFn: () =>
       investingService.getOrders(ORDERS_PAGE_SIZE, ordersOffset, {
         search: orderSymbolFilter || undefined,
@@ -166,14 +167,14 @@ export const CashTab: React.FC<CashTabProps> = ({
   // Transfers are surfaced read-only on the Cash tab for reconciliation
   // context; full transfer CRUD stays in Spending.
   const transfersRes = useQuery({
-    queryKey: ['finance', 'transfers', 'cash-tab'],
+    queryKey: queryKeys.finance.transfers('cash-tab'),
     queryFn: () => financeService.getTransfers(200, 0),
   });
 
   // Per-account reconciliation (projected-from-flows vs latest snapshot).
   // Only meaningful once a single account is selected in the Cash filter.
   const reconciliationRes = useQuery({
-    queryKey: ['finance', 'reconciliation', cashAccountFilter],
+    queryKey: queryKeys.finance.reconciliation(cashAccountFilter),
     queryFn: () => financeService.getAccountReconciliation(cashAccountFilter),
     enabled: cashAccountFilter !== '',
   });

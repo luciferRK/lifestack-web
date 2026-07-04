@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
+import { queryKeys } from '../lib/queryKeys';
 
 export const MasterConfigPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -79,23 +80,23 @@ export const MasterConfigPage: React.FC = () => {
   });
 
   const { data: currencies = [] } = useQuery({
-    queryKey: ['finance', 'currencies', 'master-config'],
+    queryKey: queryKeys.finance.currencies('master-config'),
     queryFn: () => financeService.getCurrencies(),
   });
   const { data: accountsResponse } = useQuery({
-    queryKey: ['finance', 'accounts', 'master-config'],
+    queryKey: queryKeys.finance.accounts('master-config'),
     queryFn: () => financeService.getAccounts(200, 0),
   });
   const { data: settings } = useQuery({
-    queryKey: ['finance', 'settings', 'master-config'],
+    queryKey: queryKeys.finance.settings('master-config'),
     queryFn: () => financeService.getSettings(),
   });
   const { data: userSettings } = useQuery({
-    queryKey: ['finance', 'settings', 'user'],
+    queryKey: queryKeys.finance.settings('user'),
     queryFn: () => financeService.getUserSettings(),
   });
   const { data: categoriesResponse } = useQuery({
-    queryKey: ['categories', 'master-config'],
+    queryKey: queryKeys.masterConfig.categories(),
     queryFn: () => spendingService.getCategories(200, 0),
   });
 
@@ -164,8 +165,8 @@ export const MasterConfigPage: React.FC = () => {
       }),
     onSuccess: () => {
       setNewAccountName('');
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts', 'master-config'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.accounts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.accounts('master-config') });
     },
   });
 
@@ -173,8 +174,8 @@ export const MasterConfigPage: React.FC = () => {
     mutationFn: (payload: { publicId: string; isActive: boolean }) =>
       financeService.updateAccount(payload.publicId, { is_active: payload.isActive }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts', 'master-config'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.accounts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.accounts('master-config') });
     },
   });
 
@@ -188,17 +189,17 @@ export const MasterConfigPage: React.FC = () => {
       }),
     onSuccess: () => {
       setEditingAccountId(null);
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts', 'master-config'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'settings'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.accounts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.accounts('master-config') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.settings() });
     },
   });
   const deleteAccountMutation = useMutation({
     mutationFn: (publicId: string) => financeService.deleteAccount(publicId),
     onSuccess: (_, publicId) => {
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts', 'master-config'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'settings'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.accounts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.accounts('master-config') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.settings() });
       if (editingAccountId === publicId) {
         setEditingAccountId(null);
       }
@@ -214,8 +215,8 @@ export const MasterConfigPage: React.FC = () => {
       }),
     onSuccess: () => {
       setEditingCategoryId(null);
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['categories', 'master-config'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spending.categories() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.masterConfig.categories() });
     },
   });
 
@@ -228,11 +229,11 @@ export const MasterConfigPage: React.FC = () => {
         default_spending_account_id: defaultSpendingAccountId || null,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['finance', 'settings'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'settings', 'master-config'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'settings', 'workspace'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.settings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.settings('master-config') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.settings('workspace') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spending.summary() });
     },
   });
   const updateUserSettingsMutation = useMutation({
@@ -245,10 +246,10 @@ export const MasterConfigPage: React.FC = () => {
             : (userDisplayPreferenceOverride as 'symbol' | 'code'),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['finance', 'settings', 'user'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['investing'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.finance.settings('user') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spending.summary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investing.all });
     },
   });
 

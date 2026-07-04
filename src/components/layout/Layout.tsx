@@ -19,6 +19,7 @@ import { useActiveWorkspace } from '../../hooks/useActiveWorkspace';
 import { Sidebar } from './Sidebar';
 import { MobileNavDrawer } from './MobileNavDrawer';
 import { ROLE_BADGE } from './constants';
+import { queryKeys } from '../../lib/queryKeys';
 
 // --------------------------------------------------------------------------
 // Route-level loading skeleton
@@ -53,7 +54,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   const clearSession = useAuthStore((state) => state.clearSession);
   const clearActiveWorkspace = useWorkspaceStore((state) => state.clearActiveWorkspace);
   const { data: unread } = useQuery({
-    queryKey: ['notifications', 'unread-count'],
+    queryKey: queryKeys.notifications.unreadCount(),
     queryFn: () => notificationsService.unreadCount(),
     enabled: isAuthenticated && isAuthResolved,
     refetchInterval: 60_000,
