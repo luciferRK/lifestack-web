@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
  * Collapses the "mutate, then invalidate N query keys" boilerplate repeated
  * across page components into one call.
  */
-export function useInvalidatingMutation<TArgs, TResult>(
+export function useInvalidatingMutation<TArgs = void, TResult = unknown>(
   mutationFn: (args: TArgs) => Promise<TResult>,
   invalidateKeys: readonly (readonly unknown[])[],
   options?: { onSuccess?: (result: TResult) => void; onError?: (error: unknown) => void },

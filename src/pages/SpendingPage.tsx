@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { SkeletonList } from '../components/ui/FeedbackStates';
+import { useInvalidatingMutation } from '../hooks/useInvalidatingMutation';
 import { spendingService } from '../services/spending';
 import { financeService } from '../services/finance';
 import type {
@@ -137,7 +138,6 @@ const setLastUsedAccountId = (accountId: string) => {
 const UNASSIGNED_ACCOUNT_FILTER_VALUE = '__unassigned__';
 
 export const SpendingPage: React.FC = () => {
-  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [amount, setAmount] = useState('');
@@ -352,54 +352,34 @@ export const SpendingPage: React.FC = () => {
     [budgetsResponse, selectedMonth]
   );
 
-  const createMutation = useMutation({
-    mutationFn: (newTx: TransactionCreate) => spendingService.createTransaction(newTx),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      closeTransactionModal();
-    }
-  });
+  const createMutation = useInvalidatingMutation(
+    (newTx: TransactionCreate) => spendingService.createTransaction(newTx),
+    [['transactions'], ['transactions-summary'], ['dashboard']],
+    { onSuccess: () => closeTransactionModal() },
+  );
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: TransactionUpdate }) => spendingService.updateTransaction(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      closeTransactionModal();
-    }
-  });
+  const updateMutation = useInvalidatingMutation(
+    ({ id, data }: { id: string; data: TransactionUpdate }) => spendingService.updateTransaction(id, data),
+    [['transactions'], ['transactions-summary'], ['dashboard']],
+    { onSuccess: () => closeTransactionModal() },
+  );
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => spendingService.deleteTransaction(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    }
-  });
+  const deleteMutation = useInvalidatingMutation(
+    (id: string) => spendingService.deleteTransaction(id),
+    [['transactions'], ['transactions-summary'], ['dashboard']],
+  );
 
+  const createBudgetMutation = useInvalidatingMutation(
+    (newBudget: BudgetCreate) => spendingService.createBudget(newBudget),
+    [['budgets'], ['dashboard']],
+    { onSuccess: () => closeBudgetModal() },
+  );
 
-
-  const createBudgetMutation = useMutation({
-    mutationFn: (newBudget: BudgetCreate) => spendingService.createBudget(newBudget),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      closeBudgetModal();
-    }
-  });
-
-  const updateBudgetMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: BudgetUpdate }) => spendingService.updateBudget(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      closeBudgetModal();
-    }
-  });
+  const updateBudgetMutation = useInvalidatingMutation(
+    ({ id, data }: { id: string; data: BudgetUpdate }) => spendingService.updateBudget(id, data),
+    [['budgets'], ['dashboard']],
+    { onSuccess: () => closeBudgetModal() },
+  );
 
   // ----- Recurring Queries & Mutations -----
   const { data: recurringResponse, isLoading: isRecurringLoading } = useQuery({
@@ -465,35 +445,31 @@ export const SpendingPage: React.FC = () => {
   const isRecurringNthWeekdayMode =
     recurringFrequencyWatch === 'monthly' && recurringMonthlyModeWatch === 'nth_weekday';
 
-  const createRecurringMutation = useMutation({
-    mutationFn: (data: RecurringTransactionCreate) => spendingService.createRecurring(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      closeRecurringModal();
-    },
-  });
+  const createRecurringMutation = useInvalidatingMutation(
+    (data: RecurringTransactionCreate) => spendingService.createRecurring(data),
+    [['recurring']],
+    { onSuccess: () => closeRecurringModal() },
+  );
 
-  const updateRecurringMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: RecurringTransactionUpdate }) =>
+  const updateRecurringMutation = useInvalidatingMutation(
+    ({ id, data }: { id: string; data: RecurringTransactionUpdate }) =>
       spendingService.updateRecurring(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
-      closeRecurringModal();
-    },
-  });
+    [['recurring']],
+    { onSuccess: () => closeRecurringModal() },
+  );
 
-  const deactivateRecurringMutation = useMutation({
-    mutationFn: (id: string) => spendingService.deleteRecurring(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recurring'] });
+  const deactivateRecurringMutation = useInvalidatingMutation(
+    (id: string) => spendingService.deleteRecurring(id),
+    [['recurring']],
+    {
+      onError: (error) => {
+        console.error('Failed to deactivate recurring rule:', error);
+        alert('Failed to deactivate recurring rule. Please try again.');
+      },
     },
-    onError: (error) => {
-      console.error('Failed to deactivate recurring rule:', error);
-      alert('Failed to deactivate recurring rule. Please try again.');
-    },
-  });
-  const createTransferMutation = useMutation({
-    mutationFn: () => {
+  );
+  const createTransferMutation = useInvalidatingMutation(
+    () => {
       const from = transferAccountById.get(transferFromAccountId);
       const to = transferAccountById.get(transferToAccountId);
       if (!from || !to) {
@@ -553,25 +529,26 @@ export const SpendingPage: React.FC = () => {
         notes: transferNotes || null,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'transfers'] });
-      setIsTransferModalOpen(false);
-      setTransferFromAccountId('');
-      setTransferToAccountId('');
-      setTransferAmount('');
-      setTransferFxRate('');
-      setTransferFxFee('0');
-      setTransferPlatformFee('0');
-      setTransferTax('0');
-      setTransferNotes('');
-      setTransferDate(new Date().toISOString().split('T')[0]);
-      setTransferOffset(0);
+    [['dashboard'], ['finance', 'transfers']],
+    {
+      onSuccess: () => {
+        setIsTransferModalOpen(false);
+        setTransferFromAccountId('');
+        setTransferToAccountId('');
+        setTransferAmount('');
+        setTransferFxRate('');
+        setTransferFxFee('0');
+        setTransferPlatformFee('0');
+        setTransferTax('0');
+        setTransferNotes('');
+        setTransferDate(new Date().toISOString().split('T')[0]);
+        setTransferOffset(0);
+      },
     },
-  });
+  );
 
-  const updateTransferMutation = useMutation({
-    mutationFn: () => {
+  const updateTransferMutation = useInvalidatingMutation(
+    () => {
       if (!editingTransfer) throw new Error('No transfer selected');
       if (!editTransferFromId || !editTransferToId) {
         throw new Error('Both From and To accounts must be selected');
@@ -626,38 +603,40 @@ export const SpendingPage: React.FC = () => {
         notes: editTransferNotes || null,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['finance', 'transfers'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      setEditingTransfer(null);
-      setEditTransferError(null);
+    [['finance', 'transfers'], ['dashboard']],
+    {
+      onSuccess: () => {
+        setEditingTransfer(null);
+        setEditTransferError(null);
+      },
+      onError: (err: unknown) => {
+        const msg =
+          (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+          (err instanceof Error ? err.message : 'Failed to update transfer');
+        setEditTransferError(msg);
+      },
     },
-    onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        (err instanceof Error ? err.message : 'Failed to update transfer');
-      setEditTransferError(msg);
-    },
-  });
+  );
 
-  const deleteTransferMutation = useMutation({
-    mutationFn: () => {
+  const deleteTransferMutation = useInvalidatingMutation(
+    () => {
       if (!deletingTransfer) throw new Error('No transfer selected');
       return financeService.deleteTransfer(deletingTransfer.public_id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['finance', 'transfers'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      setDeletingTransfer(null);
-      setDeleteTransferError(null);
+    [['finance', 'transfers'], ['dashboard']],
+    {
+      onSuccess: () => {
+        setDeletingTransfer(null);
+        setDeleteTransferError(null);
+      },
+      onError: (err: unknown) => {
+        const msg =
+          (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+          (err instanceof Error ? err.message : 'Failed to delete transfer');
+        setDeleteTransferError(msg);
+      },
     },
-    onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        (err instanceof Error ? err.message : 'Failed to delete transfer');
-      setDeleteTransferError(msg);
-    },
-  });
+  );
 
   const openEditTransfer = (t: import('../types/finance').CapitalTransfer) => {
     setEditingTransfer(t);
@@ -678,35 +657,38 @@ export const SpendingPage: React.FC = () => {
     setEditTransferError(null);
   };
 
-  const createAccountMutation = useMutation({
-    mutationFn: () =>
+  const createAccountMutation = useInvalidatingMutation(
+    () =>
       financeService.createAccount({
         name: newAccountName.trim(),
         account_type: newAccountType,
         default_currency_code: newAccountCurrency.trim().toUpperCase(),
       }),
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['finance', 'accounts', 'spending'] });
-      setAccountId(created.public_id);
-      if (!transferFromAccountId) setTransferFromAccountId(created.public_id);
-      setNewAccountName('');
-      setNewAccountType('wallet');
-      setNewAccountCurrency(created.default_currency_code);
-      setIsQuickAccountModalOpen(false);
+    [['finance', 'accounts'], ['finance', 'accounts', 'spending']],
+    {
+      onSuccess: (created) => {
+        setAccountId(created.public_id);
+        if (!transferFromAccountId) setTransferFromAccountId(created.public_id);
+        setNewAccountName('');
+        setNewAccountType('wallet');
+        setNewAccountCurrency(created.default_currency_code);
+        setIsQuickAccountModalOpen(false);
+      },
     },
-  });
+  );
 
-  const createCategoryMutation = useMutation({
-    mutationFn: (data: { name: string; icon?: string }) =>
+  const createCategoryMutation = useInvalidatingMutation(
+    (data: { name: string; icon?: string }) =>
       spendingService.createCategory({ name: data.name, icon: data.icon || null }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['categories'] });
-      setNewCategoryName('');
-      setNewCategoryIcon('');
-      setIsManageCategoriesOpen(false);
+    [['categories']],
+    {
+      onSuccess: () => {
+        setNewCategoryName('');
+        setNewCategoryIcon('');
+        setIsManageCategoriesOpen(false);
+      },
     },
-  });
+  );
 
   const handleSaveTransaction = (e: React.FormEvent) => {
     e.preventDefault();
