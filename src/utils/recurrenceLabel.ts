@@ -3,9 +3,11 @@ const ORDINAL_NAMES: Record<number, string> = { 1: 'first', 2: 'second', 3: 'thi
 const UNIT_NAMES: Record<string, string> = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year' };
 
 const ordinalSuffix = (n: number): string => {
-  if (n === 1) return '1st';
-  if (n === 2) return '2nd';
-  if (n === 3) return '3rd';
+  const lastTwoDigits = n % 100;
+  const lastDigit = n % 10;
+  if (lastDigit === 1 && lastTwoDigits !== 11) return `${n}st`;
+  if (lastDigit === 2 && lastTwoDigits !== 12) return `${n}nd`;
+  if (lastDigit === 3 && lastTwoDigits !== 13) return `${n}rd`;
   return `${n}th`;
 };
 

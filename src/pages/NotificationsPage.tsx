@@ -72,16 +72,17 @@ export const NotificationsPage: React.FC = () => {
   // A category with no preference row yet defaults to channel_in_app=true,
   // channel_push=false (the model defaults) — todo_reminder is spec-052's
   // new source, so always show it even before the user has touched it.
-  const displayedPreferences = (() => {
-    const known = preferences ?? [];
-    if (known.some((p) => p.category === 'todo_reminder')) {
-      return known;
-    }
-    return [
-      ...known,
-      { category: 'todo_reminder', channel_in_app: true, channel_email: false, channel_push: false, is_muted: false },
-    ];
-  })();
+  // Stays undefined while `preferences` is still loading, instead of
+  // defaulting to an empty list, so the grid doesn't flash a single
+  // todo_reminder card before the rest pop in.
+  const displayedPreferences = preferences
+    ? preferences.some((p) => p.category === 'todo_reminder')
+      ? preferences
+      : [
+          ...preferences,
+          { category: 'todo_reminder', channel_in_app: true, channel_email: false, channel_push: false, is_muted: false },
+        ]
+    : undefined;
 
   const markAllMutation = useMutation({
     mutationFn: () => notificationsService.markAllRead(),
@@ -111,7 +112,7 @@ export const NotificationsPage: React.FC = () => {
         <div>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">Preferences</h2>
           <div className="grid gap-2 sm:grid-cols-2">
-            {displayedPreferences.map((pref) => (
+            {displayedPreferences?.map((pref) => (
               <div key={pref.category} className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm">
                 <p className="font-semibold text-white">{pref.category}</p>
                 <p className="text-slate-400">In-app: {pref.channel_in_app ? 'On' : 'Off'} | Muted: {pref.is_muted ? 'Yes' : 'No'}</p>

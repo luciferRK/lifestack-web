@@ -47,6 +47,9 @@ export const PushSubscriptionSettings: React.FC = () => {
       }
       const { key } = await notificationsService.getVapidPublicKey();
       const registration = await navigator.serviceWorker.ready;
+      if (!registration.pushManager) {
+        throw new Error('Push notifications are not supported on this browser or in this context');
+      }
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(key) as BufferSource,
