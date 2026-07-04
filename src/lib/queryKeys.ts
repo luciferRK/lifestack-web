@@ -14,8 +14,8 @@
 export const queryKeys = {
   todo: {
     all: ['todo'] as const,
-    list: (...params: unknown[]) => ['todo', 'list', ...params] as const,
-    recurring: (...params: unknown[]) => ['todo', 'recurring', ...params] as const,
+    list: <T extends unknown[]>(...params: T) => ['todo', 'list', ...params] as const,
+    recurring: <T extends unknown[]>(...params: T) => ['todo', 'recurring', ...params] as const,
   },
   dashboard: {
     all: ['dashboard'] as const,
