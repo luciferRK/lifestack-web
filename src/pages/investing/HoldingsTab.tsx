@@ -7,6 +7,7 @@ import type { InvestingOrder } from '../../services/investing';
 import { formatCurrency, toNumber } from '../../utils/numberFormat';
 import { formatDate } from '../../utils/dateFormat';
 import { CompactFilterBar, CompactFilterField } from '../../components/filters/CompactFilterBar';
+import { queryKeys } from '../../lib/queryKeys';
 import { DropdownSelect } from '../../components/DropdownSelect';
 import { CurrencyBadge } from '../../components/finance/Badges';
 import { Button } from '../../components/ui/button';
@@ -68,29 +69,29 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
   const [tradeHistoryHolding, setTradeHistoryHolding] = useState<Holding | null>(null);
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ['investing'] });
-    void queryClient.invalidateQueries({ queryKey: ['finance'] });
-    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.investing.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.finance.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
   };
 
   const holdingsRes = useQuery({
-    queryKey: ['investing', 'holdings'],
+    queryKey: queryKeys.investing.holdings(),
     queryFn: () => investingService.getHoldings(200, 0),
   });
 
   const summary = useQuery({
-    queryKey: ['investing', 'summary'],
+    queryKey: queryKeys.investing.summary(),
     queryFn: () => investingService.getSummary(),
   });
 
   const instrumentsRes = useQuery({
-    queryKey: ['investing', 'instruments'],
+    queryKey: queryKeys.investing.instruments(),
     queryFn: () => investingService.getInstruments(),
   });
   const instruments = useMemo(() => instrumentsRes.data ?? [], [instrumentsRes.data]);
 
   const currenciesRes = useQuery({
-    queryKey: ['finance', 'currencies'],
+    queryKey: queryKeys.finance.currencies(),
     queryFn: () => financeService.getCurrencies(),
   });
   const currencies = useMemo(() => currenciesRes.data ?? [], [currenciesRes.data]);
@@ -101,7 +102,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
   );
 
   const accountsRes = useQuery({
-    queryKey: ['finance', 'accounts'],
+    queryKey: queryKeys.finance.accounts(),
     queryFn: () => financeService.getAccounts(200, 0),
   });
   const accounts = useMemo(() => accountsRes.data?.items ?? [], [accountsRes.data]);
@@ -111,7 +112,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
   );
 
   const tradeHistoryRes = useQuery({
-    queryKey: ['investing', 'orders', 'by-holding', tradeHistoryHolding?.symbol, tradeHistoryHolding?.account_id],
+    queryKey: queryKeys.investing.ordersByHolding(tradeHistoryHolding?.symbol, tradeHistoryHolding?.account_id),
     queryFn: () => {
       if (!tradeHistoryHolding) return Promise.resolve([]);
       return investingService.getOrdersForHolding(

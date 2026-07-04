@@ -9,18 +9,19 @@ import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
 import { formatDate, formatDateTime } from '../utils/dateFormat';
+import { queryKeys } from '../lib/queryKeys';
 
 export const DashboardPage: React.FC = () => {
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['dashboard', 'summary'],
+    queryKey: queryKeys.dashboard.summary(),
     queryFn: () => dashboardService.getSummary(),
   });
   const { data: latestSummary } = useQuery({
-    queryKey: ['summaries', 'weekly', 'latest'],
+    queryKey: queryKeys.summaries.weeklyLatest(),
     queryFn: () => summariesService.latestWeekly(),
   });
   const { data: userFinanceSettings } = useQuery({
-    queryKey: ['finance', 'settings', 'user'],
+    queryKey: queryKeys.finance.settings('user'),
     queryFn: () => financeService.getUserSettings(),
   });
   const {
@@ -29,7 +30,7 @@ export const DashboardPage: React.FC = () => {
     isError: isInsightsError,
     refetch: refetchInsights,
   } = useQuery({
-    queryKey: ['dashboard', 'insights'],
+    queryKey: queryKeys.dashboard.insights(),
     queryFn: () => notificationsService.list(5, 0, { category: 'insight', is_read: false }),
   });
   const insights = insightsData?.items ?? [];

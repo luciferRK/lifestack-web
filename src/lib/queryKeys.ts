@@ -49,31 +49,17 @@ export const queryKeys = {
     summary: () => ['net-worth'] as const,
   },
 
-  // ── Investing ──────────────────────────────────────────────────────────────
-  // Already used module-prefix shape; centralized here for single import source.
-  // Key *values* are unchanged.
-  investing: {
-    all: ['investing'] as const,
-    summary: () => ['investing', 'summary'] as const,
-    performance: {
-      summary: () => ['investing', 'performance', 'summary'] as const,
-    },
-  },
-
-  // ── Finance ────────────────────────────────────────────────────────────────
-  // Already used module-prefix shape; centralized for single import source.
-  finance: {
-    all: ['finance'] as const,
-    accounts: <T extends unknown[]>(...params: T) => ['finance', 'accounts', ...params] as const,
-    currencies: <T extends unknown[]>(...params: T) => ['finance', 'currencies', ...params] as const,
-    settings: <T extends unknown[]>(...params: T) => ['finance', 'settings', ...params] as const,
-    transfers: <T extends unknown[]>(...params: T) => ['finance', 'transfers', ...params] as const,
-  },
-
   // ── Dashboard ──────────────────────────────────────────────────────────────
   dashboard: {
     all: ['dashboard'] as const,
     summary: () => ['dashboard', 'summary'] as const,
+    insights: () => ['dashboard', 'insights'] as const,
+  },
+
+  // ── Summaries ──────────────────────────────────────────────────────────────
+  summaries: {
+    all: ['summaries'] as const,
+    weeklyLatest: () => ['summaries', 'weekly', 'latest'] as const,
   },
 
   // ── Exports ────────────────────────────────────────────────────────────────
@@ -84,6 +70,34 @@ export const queryKeys = {
   // ── Imports ────────────────────────────────────────────────────────────────
   imports: {
     all: ['imports'] as const,
+  },
+
+  // ── Investing ──────────────────────────────────────────────────────────────
+  // Centralized here for single import source.
+  investing: {
+    all: ['investing'] as const,
+    summary: () => ['investing', 'summary'] as const,
+    performance: {
+      summary: () => ['investing', 'performance', 'summary'] as const,
+    },
+    holdings: () => ['investing', 'holdings'] as const,
+    instruments: () => ['investing', 'instruments'] as const,
+    orders: <T extends unknown[]>(...params: T) => ['investing', 'orders', ...params] as const,
+    ordersByHolding: (symbol?: string, accountId?: string | null) => ['investing', 'orders', 'by-holding', symbol, accountId] as const,
+    cashBalances: <T extends unknown[]>(...params: T) => ['investing', 'cash-balances', ...params] as const,
+    exposure: (asOf: string) => ['investing', 'analytics', 'exposure', asOf] as const,
+    overlap: (asOf: string) => ['investing', 'analytics', 'overlap', asOf] as const,
+  },
+
+  // ── Finance ────────────────────────────────────────────────────────────────
+  // Centralized for single import source.
+  finance: {
+    all: ['finance'] as const,
+    accounts: <T extends unknown[]>(...params: T) => ['finance', 'accounts', ...params] as const,
+    currencies: <T extends unknown[]>(...params: T) => ['finance', 'currencies', ...params] as const,
+    settings: <T extends unknown[]>(...params: T) => ['finance', 'settings', ...params] as const,
+    transfers: <T extends unknown[]>(...params: T) => ['finance', 'transfers', ...params] as const,
+    reconciliation: <T extends unknown[]>(...params: T) => ['finance', 'reconciliation', ...params] as const,
   },
 
   // ── Master Config (scoped variants to avoid cross-page collisions) ──────────
