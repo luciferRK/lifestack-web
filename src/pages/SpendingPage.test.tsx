@@ -166,9 +166,11 @@ describe('SpendingPage', () => {
 
     renderWithQuery(<SpendingPage />);
 
-    expect(await screen.findByText('Grocery run')).toBeInTheDocument();
-    expect(await screen.findByText('Food')).toBeInTheDocument();
-    expect(await screen.findByText('My Wallet')).toBeInTheDocument();
+    // Transactions render in two responsive layouts (mobile cards + desktop
+    // table), so this content appears twice in the DOM — assert on all matches.
+    expect((await screen.findAllByText('Grocery run')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Food')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('My Wallet')).length).toBeGreaterThan(0);
   });
 
   it('opens and closes the new transaction modal', async () => {
@@ -330,7 +332,7 @@ describe('SpendingPage', () => {
     const noAccountOption = await screen.findByRole('option', { name: /No account \(1\)/ });
     fireEvent.click(noAccountOption);
 
-    await screen.findByText('legacy row');
+    await screen.findAllByText('legacy row');
   });
 
   it('switches to budgets tab and shows empty state', async () => {
@@ -542,8 +544,9 @@ describe('SpendingPage', () => {
     await screen.findByText('Spending Overview');
     fireEvent.click(screen.getByTestId('spending-tab-transfers'));
 
-    expect(await screen.findByText('Monthly top-up')).toBeInTheDocument();
-    expect(await screen.findByText('My Bank')).toBeInTheDocument();
+    // Transfers render in two responsive layouts (mobile cards + desktop table).
+    expect((await screen.findAllByText('Monthly top-up')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('My Bank')).length).toBeGreaterThan(0);
   });
 
   it('blocks saving an edited transfer with an invalid FX fee', async () => {
@@ -601,9 +604,9 @@ describe('SpendingPage', () => {
     renderWithQuery(<SpendingPage />);
     await screen.findByText('Spending Overview');
     fireEvent.click(screen.getByTestId('spending-tab-transfers'));
-    await screen.findByText('Monthly top-up');
+    await screen.findAllByText('Monthly top-up');
 
-    fireEvent.click(screen.getByTitle('Edit transfer'));
+    fireEvent.click(screen.getAllByTitle('Edit transfer')[0]);
     const modalHeading = await screen.findByText('Edit Transfer');
     const modal = modalHeading.closest('div.relative') as HTMLElement;
     expect(modal).not.toBeNull();
@@ -654,9 +657,9 @@ describe('SpendingPage', () => {
     renderWithQuery(<SpendingPage />);
     await screen.findByText('Spending Overview');
     fireEvent.click(screen.getByTestId('spending-tab-transfers'));
-    await screen.findByText('Self transfer edge case');
+    await screen.findAllByText('Self transfer edge case');
 
-    fireEvent.click(screen.getByTitle('Edit transfer'));
+    fireEvent.click(screen.getAllByTitle('Edit transfer')[0]);
     await screen.findByText('Edit Transfer');
 
     expect(screen.getByRole('button', { name: 'Save Changes' })).toBeDisabled();
