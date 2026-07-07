@@ -87,7 +87,7 @@ export const TransactionsTab: React.FC<TransactionsTabProps> = ({
                 </div>
 
                 {tx.description ? (
-                  <p className="mt-2 text-sm text-slate-200">{tx.description}</p>
+                  <p data-testid="transaction-description-card" className="mt-2 text-sm text-slate-200">{tx.description}</p>
                 ) : null}
 
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
@@ -182,7 +182,7 @@ export const TransactionsTab: React.FC<TransactionsTabProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="max-w-[240px] truncate text-slate-200">{tx.description || '-'}</p>
+                      <p data-testid="transaction-description-table" className="max-w-[240px] truncate text-slate-200">{tx.description || '-'}</p>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex max-w-[220px] flex-wrap gap-1">
