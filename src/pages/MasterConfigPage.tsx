@@ -23,6 +23,7 @@ import {
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { queryKeys } from '../lib/queryKeys';
+import { ToggleSwitch } from '../components/ui/toggle-switch';
 
 const SETTINGS_TABS = ['currency', 'accounts', 'categories', 'danger'] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
@@ -88,11 +89,23 @@ export const MasterConfigPage: React.FC = () => {
   const [resetStatus, setResetStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
   const [resetConfirmationText, setResetConfirmationText] = useState('');
+  const [showLauncher, setShowLauncher] = useState(true);
 
   const { activeWorkspace: currentWorkspace } = useActiveWorkspace(true);
   const activeWorkspaceId = currentWorkspace?.public_id;
 
+  const handleToggleLauncher = (checked: boolean) => {
+    setShowLauncher(checked);
+    if (activeWorkspaceId) {
+      window.localStorage.setItem(`lifestack:show-capture-launcher:${activeWorkspaceId}`, String(checked));
+      window.dispatchEvent(new Event('lifestack:show-capture-launcher-change'));
+    }
+  };
+
   React.useEffect(() => {
+    if (activeWorkspaceId) {
+      setShowLauncher(window.localStorage.getItem(`lifestack:show-capture-launcher:${activeWorkspaceId}`) !== 'false');
+    }
     setEditingAccountId(null);
     setEditingAccountName('');
     setEditingAccountType('wallet');
@@ -565,6 +578,21 @@ export const MasterConfigPage: React.FC = () => {
           >
             {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
           </Button>
+        </div>
+      </section>
+
+      <section data-testid="master-capture-settings" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
+        <h2 className="text-lg font-semibold text-white">Capture Launcher</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Control the visibility of the floating quick-capture launcher.
+        </p>
+        <div className="mt-4 max-w-sm">
+          <ToggleSwitch
+            testId="settings-capture-launcher-toggle"
+            checked={showLauncher}
+            onChange={handleToggleLauncher}
+            label="Show floating capture launcher"
+          />
         </div>
       </section>
 
