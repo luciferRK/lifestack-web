@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Edit2, Plus, Trash2, X } from 'lucide-react';
@@ -36,6 +36,7 @@ interface CashTabProps {
   onDeleteOrder: (order: InvestingOrder) => void;
   deleteOrderPending: boolean;
   updateOrderPending: boolean;
+  autoOpenOrder?: boolean;
 }
 
 const ORDERS_PAGE_SIZE = 50;
@@ -46,6 +47,7 @@ export const CashTab: React.FC<CashTabProps> = ({
   onDeleteOrder,
   deleteOrderPending,
   updateOrderPending,
+  autoOpenOrder,
 }) => {
   const [cashAccountFilter, setCashAccountFilter] = useState('');
   const [cashCurrencyFilter, setCashCurrencyFilter] = useState('');
@@ -64,6 +66,15 @@ export const CashTab: React.FC<CashTabProps> = ({
   const [newAccountType, setNewAccountType] = useState<'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'>('brokerage');
 
   const [isPlaceOrderModalOpen, setIsPlaceOrderModalOpen] = useState(false);
+
+  // The Holdings tab's empty state deep-links here (?tab=cash&order=1) to
+  // open the order flow directly instead of leaving the user to find it.
+  useEffect(() => {
+    if (autoOpenOrder) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to an external ?order=1 deep link, not derived render state
+      setIsPlaceOrderModalOpen(true);
+    }
+  }, [autoOpenOrder]);
   const [orderForm, setOrderForm] = useState<{
     order_type: OrderType;
     account_id: string;
