@@ -11,6 +11,7 @@ import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { OnboardingChecklist } from '../components/dashboard/OnboardingChecklist';
 import type { OnboardingChecklistStep } from '../components/dashboard/OnboardingChecklist';
+import { BriefingCard } from '../components/dashboard/BriefingCard';
 import { formatCurrency, toNumber } from '../utils/numberFormat';
 import { formatDateTime } from '../utils/dateFormat';
 import { queryKeys } from '../lib/queryKeys';
@@ -54,6 +55,16 @@ export const DashboardPage: React.FC = () => {
   const { data: pushSubscriptions } = useQuery({
     queryKey: queryKeys.notifications.pushSubscriptions(),
     queryFn: () => notificationsService.listPushSubscriptions(),
+  });
+  const {
+    data: briefingData,
+    isLoading: isBriefingLoading,
+    isError: isBriefingError,
+    refetch: refetchBriefing,
+    isFetching: isBriefingFetching,
+  } = useQuery({
+    queryKey: queryKeys.dashboard.briefing(),
+    queryFn: () => dashboardService.getBriefing(),
   });
 
   const insights = insightsData?.items ?? [];
@@ -116,10 +127,11 @@ export const DashboardPage: React.FC = () => {
             onClick={() => {
               void refetch();
               void refetchInsights();
+              void refetchBriefing();
             }}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
           >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isFetching || isBriefingFetching ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         )}
@@ -141,6 +153,13 @@ export const DashboardPage: React.FC = () => {
         ) : data ? (
           <>
             <OnboardingChecklist workspaceId={activeWorkspaceId} steps={checklistSteps} />
+
+            <BriefingCard
+              isLoading={isBriefingLoading}
+              isError={isBriefingError}
+              allClear={briefingData?.all_clear}
+              lines={briefingData?.lines}
+            />
 
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               <MetricCard
