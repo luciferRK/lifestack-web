@@ -29,6 +29,14 @@ interface BudgetsTabProps {
     status: string;
     utilization: number;
     remaining: number;
+    monthly: Array<{
+      month: string;
+      label: string;
+      amount: number;
+      spent: number;
+      utilization: number;
+      status: string;
+    }>;
   }>;
 }
 
@@ -106,13 +114,39 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
                     />
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                    <span>{Math.round(b.utilization)}% utilized</span>
+                    <span>{Math.round(b.utilization)}% utilized overall</span>
                     <span>
                       {isExceeded
                         ? `${formatCurrency(Math.abs(b.remaining), displayCurrency, currencyDisplayPreference)} over`
                         : `${formatCurrency(b.remaining, displayCurrency, currencyDisplayPreference)} left`}
                     </span>
                   </div>
+
+                  {b.monthly.length > 0 ? (
+                    <div className="mt-4 border-t border-slate-700/50 pt-3">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        By month
+                      </p>
+                      <div className="flex items-end gap-1.5" data-testid={`budget-monthly-${b.id || 'unassigned'}`}>
+                        {b.monthly.map((m) => {
+                          const mProgress = Math.min(100, Math.max(0, m.utilization));
+                          const mColor =
+                            m.status === 'exceeded' ? 'bg-red-500' : m.status === 'warning' ? 'bg-amber-500' : 'bg-emerald-500';
+                          return (
+                            <div key={m.month} className="flex flex-1 flex-col items-center gap-1" title={`${m.label}: ${Math.round(m.utilization)}% of ${formatCurrency(m.amount, displayCurrency, currencyDisplayPreference)}`}>
+                              <div className="flex h-14 w-full items-end overflow-hidden rounded bg-slate-900/50">
+                                <div
+                                  className={`w-full rounded-t transition-all duration-500 ${mColor}`}
+                                  style={{ height: `${Math.max(mProgress, 3)}%` }}
+                                />
+                              </div>
+                              <span className="text-[9px] font-medium text-slate-500">{m.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
