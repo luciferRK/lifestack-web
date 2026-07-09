@@ -106,7 +106,7 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
                     />
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                    <span>{Math.round(progress)}% utilized</span>
+                    <span>{Math.round(b.utilization)}% utilized</span>
                     <span>
                       {isExceeded
                         ? `${formatCurrency(Math.abs(b.remaining), displayCurrency, currencyDisplayPreference)} over`
