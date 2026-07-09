@@ -80,6 +80,7 @@ export const MasterConfigPage: React.FC = () => {
   const [editingGroupName, setEditingGroupName] = useState('');
   const [editingGroupColor, setEditingGroupColor] = useState('');
   const [editingGroupIcon, setEditingGroupIcon] = useState('');
+  const [editingGroupMemberIds, setEditingGroupMemberIds] = useState<string[]>([]);
   const [groupPendingDelete, setGroupPendingDelete] = useState<{ publicId: string; name: string } | null>(null);
   const [deleteGroupError, setDeleteGroupError] = useState<string | null>(null);
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
@@ -350,15 +351,32 @@ export const MasterConfigPage: React.FC = () => {
   });
 
   const updateGroupMutation = useMutation({
-    mutationFn: () =>
-      spendingService.updateCategoryGroup(editingGroupId!, {
+    mutationFn: async () => {
+      await spendingService.updateCategoryGroup(editingGroupId!, {
         name: editingGroupName.trim() || undefined,
         color: editingGroupColor.trim() || null,
         icon: editingGroupIcon.trim() || null,
-      }),
+      });
+
+      // The multiselect below lets an editor reassign category membership
+      // in bulk instead of opening each category individually — diff
+      // against the group's membership when the editor opened and push
+      // only the categories that actually changed.
+      const originalMemberIds = categories
+        .filter((c) => c.category_group_id === editingGroupId)
+        .map((c) => c.public_id);
+      const toAdd = editingGroupMemberIds.filter((id) => !originalMemberIds.includes(id));
+      const toRemove = originalMemberIds.filter((id) => !editingGroupMemberIds.includes(id));
+      await Promise.all([
+        ...toAdd.map((id) => spendingService.updateCategory(id, { category_group_id: editingGroupId })),
+        ...toRemove.map((id) => spendingService.updateCategory(id, { category_group_id: null })),
+      ]);
+    },
     onSuccess: () => {
       setEditingGroupId(null);
       queryClient.invalidateQueries({ queryKey: queryKeys.masterConfig.categoryGroups() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.spending.categories() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.masterConfig.categories() });
     },
   });
 
@@ -422,6 +440,16 @@ export const MasterConfigPage: React.FC = () => {
     setEditingAccountType(account.account_type);
     setEditingAccountCurrency(account.default_currency_code);
     setEditingAccountIsActive(account.is_active);
+    scrollEditorIntoView('master-account-editor');
+  };
+
+  // The edit form renders above the (often long) table, so clicking "Edit"
+  // on a row far down the page left the form open off-screen — scroll it
+  // into view so editing can continue without a manual scroll-up.
+  const scrollEditorIntoView = (testId: string) => {
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-testid="${testId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const openCategoryEditor = (category: typeof categories[number]) => {
@@ -430,6 +458,7 @@ export const MasterConfigPage: React.FC = () => {
     setEditingCategoryColor(category.color ?? '#64748b');
     setEditingCategoryIcon(category.icon ?? '');
     setEditingCategoryGroupId(category.category_group_id ?? '');
+    scrollEditorIntoView('master-category-editor');
   };
 
   const openGroupEditor = (group: typeof categoryGroups[number]) => {
@@ -437,6 +466,16 @@ export const MasterConfigPage: React.FC = () => {
     setEditingGroupName(group.name);
     setEditingGroupColor(group.color ?? '#64748b');
     setEditingGroupIcon(group.icon ?? '');
+    setEditingGroupMemberIds(
+      categories.filter((c) => c.category_group_id === group.public_id).map((c) => c.public_id)
+    );
+    scrollEditorIntoView('master-group-editor');
+  };
+
+  const toggleGroupMember = (publicId: string) => {
+    setEditingGroupMemberIds((prev) =>
+      prev.includes(publicId) ? prev.filter((id) => id !== publicId) : [...prev, publicId]
+    );
   };
 
   const toggleMergeSource = (publicId: string) => {
@@ -1054,6 +1093,49 @@ export const MasterConfigPage: React.FC = () => {
               {updateGroupMutation.isError ? (
                 <p className="text-sm text-rose-400">Failed to save group. Please try again.</p>
               ) : null}
+            </div>
+
+            <div className="mt-4">
+              <Label className="text-slate-400">Member categories</Label>
+              <p className="mt-1 text-xs text-slate-500">
+                Check every category that should belong to this group. Unchecking a category removes it from the
+                group (it becomes ungrouped unless reassigned elsewhere).
+              </p>
+              <div
+                data-testid="master-group-member-categories"
+                className="mt-2 grid max-h-48 gap-1.5 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-2 md:grid-cols-3"
+              >
+                {categories.map((category) => {
+                  const isChecked = editingGroupMemberIds.includes(category.public_id);
+                  const belongsElsewhere =
+                    !isChecked &&
+                    category.category_group_id &&
+                    category.category_group_id !== editingGroupId
+                      ? groupById.get(category.category_group_id)?.name
+                      : null;
+                  return (
+                    <label
+                      key={category.public_id}
+                      data-testid={`master-group-member-${category.public_id}`}
+                      className="flex items-center gap-2 rounded px-1.5 py-1 text-sm text-slate-300 hover:bg-slate-800/60"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleGroupMember(category.public_id)}
+                        className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 accent-cyan-500"
+                      />
+                      <span className="truncate">{category.name}</span>
+                      {belongsElsewhere ? (
+                        <span className="ml-auto shrink-0 text-[10px] text-slate-500">in {belongsElsewhere}</span>
+                      ) : null}
+                    </label>
+                  );
+                })}
+                {categories.length === 0 ? (
+                  <p className="text-xs text-slate-500">No categories yet.</p>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : null}
