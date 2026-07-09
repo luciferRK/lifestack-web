@@ -101,17 +101,6 @@ export const TransactionsTab: React.FC<TransactionsTabProps> = ({
                   <p data-testid="transaction-description-card" className="mt-2 text-sm text-slate-200">{tx.description}</p>
                 ) : null}
 
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-slate-500" />
-                    {formatDate(dateObj)}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Wallet className="h-3.5 w-3.5 text-slate-500" />
-                    {sourceName}
-                  </span>
-                </div>
-
                 {labels.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-1">
                     {labels.map((label, index) => (
@@ -125,21 +114,35 @@ export const TransactionsTab: React.FC<TransactionsTabProps> = ({
                   </div>
                 ) : null}
 
-                <div className="mt-3 flex justify-end gap-2 border-t border-slate-700/40 pt-3">
-                  <button
-                    onClick={() => onEdit(tx)}
-                    disabled={isDeletePending}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-all hover:bg-cyan-500/10 hover:text-cyan-400 disabled:opacity-50"
-                  >
-                    <Edit2 className="h-4 w-4" /> Edit
-                  </button>
-                  <button
-                    onClick={() => onDelete(tx.public_id)}
-                    disabled={isDeletePending}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-all hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-4 w-4" /> Delete
-                  </button>
+                <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-700/40 pt-3">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                      {formatDate(dateObj)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Wallet className="h-3.5 w-3.5 text-slate-500" />
+                      {sourceName}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onEdit(tx)}
+                      disabled={isDeletePending}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-cyan-500/10 hover:text-cyan-400 disabled:opacity-50"
+                      title="Edit"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onDelete(tx.public_id)}
+                      disabled={isDeletePending}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-all hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );

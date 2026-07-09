@@ -207,6 +207,37 @@ export const SpendingPage: React.FC = () => {
   // which used to leak into "spent this month" (UX-REVIEW P2 item 4).
   const [budgetsMonth, setBudgetsMonth] = useState(() => getCurrentMonthValue());
   const budgetsMonthRange = useMemo(() => monthValueToDateRange(budgetsMonth), [budgetsMonth]);
+  const [budgetsDuration, setBudgetsDuration] = useState(1);
+  const budgetsRange = useMemo(() => {
+    if (!/^\d{4}-\d{2}$/.test(budgetsMonth)) {
+      return { fromMonth: budgetsMonth, toMonth: budgetsMonth, label: budgetsMonthRange.label };
+    }
+    const [yearStr, monthStr] = budgetsMonth.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+
+    const startMonthDate = new Date(Date.UTC(year, month - 1 - (budgetsDuration - 1), 1));
+    const fromMonthVal = `${startMonthDate.getUTCFullYear()}-${String(startMonthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+
+    const endMonthDate = new Date(Date.UTC(year, month - 1, 1));
+    const toMonthVal = `${endMonthDate.getUTCFullYear()}-${String(endMonthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+
+    const formatMonthShort = (mStr: string) => {
+      const [, m] = mStr.split('-');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return months[Number(m) - 1];
+    };
+
+    const label = budgetsDuration === 1 
+      ? budgetsMonthRange.label 
+      : `${formatMonthShort(fromMonthVal)} ${startMonthDate.getUTCFullYear()} - ${formatMonthShort(toMonthVal)} ${endMonthDate.getUTCFullYear()}`;
+
+    return {
+      fromMonth: fromMonthVal,
+      toMonth: toMonthVal,
+      label
+    };
+  }, [budgetsMonth, budgetsDuration, budgetsMonthRange]);
 
   // Tabs — deep-linkable via ?tab= so dashboard cues can land on the right one.
   // "Transfers" was merged into "Account activity" (formerly Ledger) — the
@@ -428,6 +459,44 @@ export const SpendingPage: React.FC = () => {
     }),
     enabled: budgetsMonthRange.isValid,
   });
+
+  const { data: budgetsPerfData, isLoading: isBudgetsPerfLoading } = useQuery({
+    queryKey: ['spending-budget-perf-tab', budgetsRange.fromMonth, budgetsRange.toMonth],
+    queryFn: () => spendingService.getBudgetPerformance(budgetsRange.fromMonth, budgetsRange.toMonth),
+    enabled: budgetsDuration > 1 && !!budgetsRange.fromMonth,
+  });
+
+  const periodBudgets = useMemo(() => {
+    if (!budgetsPerfData) return [];
+
+    const cats = (budgetsPerfData.categories ?? [])
+      .filter((item) => item.budget_amount !== null)
+      .map((item) => ({
+        id: item.category_id ?? '',
+        name: item.category_name ?? '',
+        isGroup: false,
+        amount: Number(item.budget_amount),
+        spent: Number(item.actual_amount),
+        status: item.status,
+        utilization: item.utilization_pct ?? 0,
+        remaining: Number(item.remaining ?? 0),
+      }));
+
+    const groups = (budgetsPerfData.groups ?? [])
+      .filter((item) => item.budget_amount !== null)
+      .map((item) => ({
+        id: item.category_group_id ?? '',
+        name: item.category_group_name ?? '',
+        isGroup: true,
+        amount: Number(item.budget_amount),
+        spent: Number(item.actual_amount),
+        status: item.status,
+        utilization: item.utilization_pct ?? 0,
+        remaining: Number(item.remaining ?? 0),
+      }));
+
+    return [...cats, ...groups].sort((a, b) => b.utilization - a.utilization);
+  }, [budgetsPerfData]);
 
   const createMutation = useInvalidatingMutation(
     (newTx: TransactionCreate) => spendingService.createTransaction(newTx),
@@ -1287,7 +1356,12 @@ export const SpendingPage: React.FC = () => {
         <div className="flex min-h-[300px] items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-600 border-t-cyan-500" />
         </div>
-      ) : (isBudgetsLoading || isBudgetsSummaryLoading) && activeTab === 'budgets' ? (
+      ) : (
+        activeTab === 'budgets' && (
+          (budgetsDuration === 1 && (isBudgetsLoading || isBudgetsSummaryLoading)) ||
+          (budgetsDuration > 1 && isBudgetsPerfLoading)
+        )
+      ) ? (
         <SkeletonList rows={4} />
       ) : isLoading && activeTab !== 'recurring' && activeTab !== 'budgets' && activeTab !== 'analytics' && activeTab !== 'ledger' ? (
         <SkeletonList rows={5} />
@@ -1308,20 +1382,42 @@ export const SpendingPage: React.FC = () => {
         />
       ) : activeTab === 'budgets' ? (
         <div className="space-y-4">
-          <div className="flex min-w-[220px] max-w-[260px] flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Month</label>
-            <DropdownSelect
-              testId="spending-budgets-month"
-              value={budgetsMonth}
-              onChange={(value) => { setBudgetsMonth(value); setBudgetOffset(0); }}
-              options={monthFilterOptions}
-              placeholder="Select month"
-            />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-700/50 bg-slate-800/20 p-4 animate-in fade-in duration-200">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Month</label>
+              <div className="min-w-[220px] max-w-[260px]">
+                <DropdownSelect
+                  testId="spending-budgets-month"
+                  value={budgetsMonth}
+                  onChange={(value) => { setBudgetsMonth(value); setBudgetOffset(0); }}
+                  options={monthFilterOptions}
+                  placeholder="Select month"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 sm:items-end">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Duration</span>
+              <div className="flex flex-wrap items-center gap-2">
+                {[1, 3, 6, 12].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setBudgetsDuration(m)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                      budgetsDuration === m
+                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                        : 'bg-slate-800/40 text-slate-400 border border-transparent hover:bg-slate-800/80 hover:text-slate-200'
+                    }`}
+                  >
+                    {m === 1 ? '1 Month' : `${m} Months`}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <BudgetsTab
             budgets={budgets}
             budgetsResponse={budgetsResponse}
-            monthLabel={budgetsMonthRange.label}
+            monthLabel={budgetsRange.label}
             spentByCategory={spentByCategory}
             spentByGroup={spentByGroup}
             displayCurrency={displayCurrency}
@@ -1331,6 +1427,8 @@ export const SpendingPage: React.FC = () => {
             onEdit={openBudgetModalForEdit}
             onPageChange={setBudgetOffset}
             onAddFirst={openBudgetModalForNew}
+            isMultiMonth={budgetsDuration > 1}
+            multiMonthBudgets={periodBudgets}
           />
         </div>
       ) : activeTab === 'recurring' ? (

@@ -143,12 +143,12 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
   }
 
   // --- 4. Budget Performance sorting ---
-  const sortedBudgetItems = [...(budgetPerfData?.categories ?? [])].sort(
-    (a, b) => (b.utilization_pct ?? 0) - (a.utilization_pct ?? 0)
-  );
-  const sortedGroupBudgetItems = [...(budgetPerfData?.groups ?? [])].sort(
-    (a, b) => (b.utilization_pct ?? 0) - (a.utilization_pct ?? 0)
-  );
+  const sortedBudgetItems = [...(budgetPerfData?.categories ?? [])]
+    .filter((item) => item.budget_amount !== null)
+    .sort((a, b) => (b.utilization_pct ?? 0) - (a.utilization_pct ?? 0));
+  const sortedGroupBudgetItems = [...(budgetPerfData?.groups ?? [])]
+    .filter((item) => item.budget_amount !== null)
+    .sort((a, b) => (b.utilization_pct ?? 0) - (a.utilization_pct ?? 0));
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -534,105 +534,111 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
             </h4>
           </div>
 
-          {sortedBudgetItems.length === 0 ? (
-            <div className="flex h-56 items-center justify-center text-sm text-slate-500">
-              No active budgets found for this month window
+          {sortedBudgetItems.length === 0 && sortedGroupBudgetItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <CheckCircle2 className="h-8 w-8 text-slate-500 mb-2" />
+              <p className="text-sm text-slate-400">No active budgets set for this period</p>
+              <p className="text-xs text-slate-500 mt-1">Configure budgets in the Budgets tab to track limits.</p>
             </div>
           ) : (
-            <div className="max-h-56 overflow-y-auto space-y-4 pr-2">
-              {sortedBudgetItems.map((item) => {
-                const isWarning = item.status === 'warning';
-                const isExceeded = item.status === 'exceeded';
-                const statusColor = isExceeded ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-emerald-400';
-                const progressColor = isExceeded ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500';
-                const uPct = item.utilization_pct !== null ? Math.round(item.utilization_pct) : 0;
+            <>
+              {sortedBudgetItems.length > 0 && (
+                <div className="max-h-56 overflow-y-auto space-y-4 pr-2">
+                  {sortedBudgetItems.map((item) => {
+                    const isWarning = item.status === 'warning';
+                    const isExceeded = item.status === 'exceeded';
+                    const statusColor = isExceeded ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-emerald-400';
+                    const progressColor = isExceeded ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500';
+                    const uPct = item.utilization_pct !== null ? Math.round(item.utilization_pct) : 0;
 
-                return (
-                  <div key={item.category_id} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-200">{item.category_name}</span>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                        {item.status?.replace(/_/g, ' ') || ''}
-                      </span>
-                    </div>
+                    return (
+                      <div key={item.category_id} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-200">{item.category_name}</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                            {item.status?.replace(/_/g, ' ') || ''}
+                          </span>
+                        </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>
-                        Spent {formatCurrency(Number(item.actual_amount), displayCurrency, currencyDisplayPreference)} of{' '}
-                        {item.budget_amount !== null
-                          ? formatCurrency(Number(item.budget_amount), displayCurrency, currencyDisplayPreference)
-                          : 'N/A'}
-                      </span>
-                      <span className="font-semibold">{uPct}%</span>
-                    </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>
+                            Spent {formatCurrency(Number(item.actual_amount), displayCurrency, currencyDisplayPreference)} of{' '}
+                            {item.budget_amount !== null
+                              ? formatCurrency(Number(item.budget_amount), displayCurrency, currencyDisplayPreference)
+                              : 'N/A'}
+                          </span>
+                          <span className="font-semibold">{uPct}%</span>
+                        </div>
 
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-950/40">
-                      <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.max(0, Math.min(100, uPct))}%` }} />
-                    </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-950/40">
+                          <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.max(0, Math.min(100, uPct))}%` }} />
+                        </div>
 
-                    {item.remaining !== null && (
-                      <p className="text-[10px] text-right font-medium text-slate-500">
-                        {isExceeded
-                          ? `${formatCurrency(Math.abs(Number(item.remaining)), displayCurrency, currencyDisplayPreference)} over limit`
-                          : `${formatCurrency(Number(item.remaining), displayCurrency, currencyDisplayPreference)} remaining`}
-                      </p>
-                    )}
+                        {item.remaining !== null && (
+                          <p className="text-[10px] text-right font-medium text-slate-500">
+                            {isExceeded
+                              ? `${formatCurrency(Math.abs(Number(item.remaining)), displayCurrency, currencyDisplayPreference)} over limit`
+                              : `${formatCurrency(Number(item.remaining), displayCurrency, currencyDisplayPreference)} remaining`}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {sortedGroupBudgetItems.length > 0 && (
+                <div className={`${sortedBudgetItems.length > 0 ? 'mt-6 border-t border-slate-800 pt-4' : ''}`}>
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+                    <CheckCircle2 className="h-4 w-4 text-violet-400" />
+                    Group Budgets
+                  </h4>
+                  <div className="max-h-56 overflow-y-auto space-y-4 pr-2" data-testid="analytics-group-budgets">
+                    {sortedGroupBudgetItems.map((item) => {
+                      const isWarning = item.status === 'warning';
+                      const isExceeded = item.status === 'exceeded';
+                      const statusColor = isExceeded ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-emerald-400';
+                      const progressColor = isExceeded ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500';
+                      const uPct = item.utilization_pct !== null ? Math.round(item.utilization_pct) : 0;
+
+                      return (
+                        <div key={item.category_group_id} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-semibold text-slate-200">{item.category_group_name}</span>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                              {item.status?.replace(/_/g, ' ') || ''}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>
+                              Spent {formatCurrency(Number(item.actual_amount), displayCurrency, currencyDisplayPreference)} of{' '}
+                              {item.budget_amount !== null
+                                ? formatCurrency(Number(item.budget_amount), displayCurrency, currencyDisplayPreference)
+                                : 'N/A'}
+                            </span>
+                            <span className="font-semibold">{uPct}%</span>
+                          </div>
+
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-950/40">
+                            <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.max(0, Math.min(100, uPct))}%` }} />
+                          </div>
+
+                          {item.remaining !== null && (
+                            <p className="text-[10px] text-right font-medium text-slate-500">
+                              {isExceeded
+                                ? `${formatCurrency(Math.abs(Number(item.remaining)), displayCurrency, currencyDisplayPreference)} over limit`
+                                : `${formatCurrency(Number(item.remaining), displayCurrency, currencyDisplayPreference)} remaining`}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              )}
+            </>
           )}
-
-          {sortedGroupBudgetItems.length > 0 ? (
-            <div className="mt-6 border-t border-slate-800 pt-4">
-              <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-                <CheckCircle2 className="h-4 w-4 text-violet-400" />
-                Group Budgets
-              </h4>
-              <div className="max-h-56 overflow-y-auto space-y-4 pr-2" data-testid="analytics-group-budgets">
-                {sortedGroupBudgetItems.map((item) => {
-                  const isWarning = item.status === 'warning';
-                  const isExceeded = item.status === 'exceeded';
-                  const statusColor = isExceeded ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-emerald-400';
-                  const progressColor = isExceeded ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500';
-                  const uPct = item.utilization_pct !== null ? Math.round(item.utilization_pct) : 0;
-
-                  return (
-                    <div key={item.category_group_id} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-slate-200">{item.category_group_name}</span>
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                          {item.status?.replace(/_/g, ' ') || ''}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>
-                          Spent {formatCurrency(Number(item.actual_amount), displayCurrency, currencyDisplayPreference)} of{' '}
-                          {item.budget_amount !== null
-                            ? formatCurrency(Number(item.budget_amount), displayCurrency, currencyDisplayPreference)
-                            : 'N/A'}
-                        </span>
-                        <span className="font-semibold">{uPct}%</span>
-                      </div>
-
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-950/40">
-                        <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${Math.max(0, Math.min(100, uPct))}%` }} />
-                      </div>
-
-                      {item.remaining !== null && (
-                        <p className="text-[10px] text-right font-medium text-slate-500">
-                          {isExceeded
-                            ? `${formatCurrency(Math.abs(Number(item.remaining)), displayCurrency, currencyDisplayPreference)} over limit`
-                            : `${formatCurrency(Number(item.remaining), displayCurrency, currencyDisplayPreference)} remaining`}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
