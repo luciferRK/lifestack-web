@@ -45,7 +45,7 @@ export const DoseChecklist: React.FC<DoseChecklistProps> = ({
         const parsedDate = new Date(slot.scheduled_for);
         const isValid = !isNaN(parsedDate.getTime());
         const time = isValid
-          ? parsedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+          ? parsedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           : '';
         return (
           <li
