@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
@@ -23,12 +24,8 @@ const medicationFormSchema = z
     interval: z.number().int().min(1, 'Must be at least 1'),
     days_of_week: z.array(z.number()),
     times: z
-      .string()
-      .min(1, 'Enter at least one dose time')
-      .refine(
-        (v) => v.split(',').every((t) => TIME_RE.test(t.trim())),
-        'Use 24-hour HH:MM times, comma-separated (e.g. 09:00, 21:00)',
-      ),
+      .array(z.string().regex(TIME_RE, 'Pick a valid time'))
+      .min(1, 'Add at least one dose time'),
     anchor_date: z.string().min(1, 'Select a start date'),
     end_date: z.string().optional(),
     timezone: z.string().min(1),
@@ -60,7 +57,7 @@ const defaultsFor = (medication?: Medication | null): MedicationFormValues => ({
   frequency: (medication?.frequency as 'daily' | 'weekly' | 'monthly') ?? 'daily',
   interval: medication?.interval ?? 1,
   days_of_week: medication?.days_of_week ?? [],
-  times: medication?.times && medication.times.length > 0 ? medication.times.join(', ') : '09:00',
+  times: medication?.times && medication.times.length > 0 ? medication.times : ['09:00'],
   anchor_date: medication?.anchor_date || formatDateInputValue(new Date()),
   end_date: medication?.end_date ?? '',
   timezone: medication?.timezone || browserTimezone,
@@ -119,7 +116,7 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
       frequency: values.frequency,
       interval: values.interval,
       days_of_week: values.frequency === 'weekly' ? values.days_of_week : null,
-      times: values.times.split(',').map((t) => t.trim()),
+      times: values.times,
       anchor_date: values.anchor_date,
       end_date: values.end_date || null,
       timezone: values.timezone,
@@ -207,13 +204,56 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-300">Dose times</label>
-            <input
-              {...register('times')}
-              data-testid="medication-times-input"
-              className="h-10 w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white"
-              placeholder="09:00, 21:00"
+            <Controller
+              control={control}
+              name="times"
+              render={({ field }) => (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {field.value.map((t, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/70 px-2"
+                      >
+                        <input
+                          type="time"
+                          value={t}
+                          data-testid={`medication-time-input-${idx}`}
+                          onChange={(e) => {
+                            const next = [...field.value];
+                            next[idx] = e.target.value;
+                            field.onChange(next);
+                          }}
+                          className="h-10 bg-transparent text-sm text-white focus:outline-none [color-scheme:dark]"
+                        />
+                        {field.value.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => field.onChange(field.value.filter((_, i) => i !== idx))}
+                            data-testid={`medication-time-remove-${idx}`}
+                            aria-label="Remove time"
+                            className="text-slate-500 hover:text-rose-400"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => field.onChange([...field.value, '09:00'])}
+                    data-testid="medication-time-add"
+                    className="text-xs font-medium text-cyan-400 hover:text-cyan-300"
+                  >
+                    + Add time
+                  </button>
+                </div>
+              )}
             />
-            {errors.times ? <p className="mt-1 text-sm text-rose-400">{errors.times.message}</p> : null}
+            {errors.times?.message ? (
+              <p className="mt-1 text-sm text-rose-400">{errors.times.message}</p>
+            ) : null}
           </div>
 
           <button
@@ -291,7 +331,7 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
               frequency: watched.frequency,
               interval: watched.interval || 1,
               days_of_week: watched.days_of_week,
-              times: watched.times ? watched.times.split(',').map((t) => t.trim()).filter(Boolean) : [],
+              times: watched.times ?? [],
               end_date: watched.end_date || null,
             })}
           </p>

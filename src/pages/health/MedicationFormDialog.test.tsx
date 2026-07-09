@@ -50,19 +50,30 @@ describe('MedicationFormDialog', () => {
     expect(payload.name).toBe('Vitamin D');
   });
 
-  it('rejects malformed dose times', async () => {
+  it('uses a native time picker for dose times, defaulting to one entry that cannot be removed', async () => {
+    render(<MedicationFormDialog open onOpenChange={vi.fn()} onSubmit={vi.fn()} />);
+
+    const timeInput = screen.getByTestId('medication-time-input-0');
+    expect(timeInput).toHaveAttribute('type', 'time');
+    expect(timeInput).toHaveValue('09:00');
+    expect(screen.queryByTestId('medication-time-remove-0')).not.toBeInTheDocument();
+  });
+
+  it('supports adding and removing multiple dose times', async () => {
     const onSubmit = vi.fn();
     render(<MedicationFormDialog open onOpenChange={vi.fn()} onSubmit={onSubmit} />);
 
     fireEvent.change(screen.getByTestId('medication-name-input'), { target: { value: 'Aspirin' } });
-    fireEvent.change(screen.getByTestId('medication-times-input'), { target: { value: 'not-a-time' } });
+    fireEvent.click(screen.getByTestId('medication-time-add'));
+
+    const secondTime = screen.getByTestId('medication-time-input-1');
+    fireEvent.change(secondTime, { target: { value: '21:00' } });
+
+    fireEvent.click(screen.getByTestId('medication-time-remove-0'));
     fireEvent.click(screen.getByTestId('medication-save-button'));
 
-    await waitFor(() => {
-      expect(
-        screen.getByText('Use 24-hour HH:MM times, comma-separated (e.g. 09:00, 21:00)'),
-      ).toBeInTheDocument();
-    });
-    expect(onSubmit).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    const payload = onSubmit.mock.calls[0][0];
+    expect(payload.times).toEqual(['21:00']);
   });
 });
