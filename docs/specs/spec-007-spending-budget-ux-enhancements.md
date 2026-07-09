@@ -1,5 +1,5 @@
 # Feature Spec: Spending Page Budget UX & Mobile Optimizations
-**Status:** Planned
+**Status:** Implemented
 **Spec ID:** 007
 
 ## 1. Overview
