@@ -787,7 +787,7 @@ describe('SpendingPage', () => {
     expect(screen.getByRole('button', { name: 'Save Changes' })).toBeDisabled();
   });
 
-  it('switches to analytics tab and filters out categories without budgets, showing correct empty state if none', async () => {
+  it('switches to analytics tab without showing budget performance (that now lives only on the Budgets tab)', async () => {
     server.use(
       http.get('*/v1/spending/analytics/trends', () =>
         HttpResponse.json({ months: [] })
@@ -798,31 +798,6 @@ describe('SpendingPage', () => {
       http.get('*/v1/spending/analytics/savings-rate', () =>
         HttpResponse.json({ months: [], period_totals: { total_income: 0, total_expense: 0, total_savings: 0, average_savings_rate_pct: 0 } })
       ),
-      http.get('*/v1/spending/analytics/budget-performance', () =>
-        HttpResponse.json({
-          categories: [
-            {
-              category_id: 'cat-food-id',
-              category_name: 'Food',
-              budget_amount: '500',
-              actual_amount: '200',
-              utilization_pct: 40.0,
-              remaining: '300',
-              status: 'on_track'
-            },
-            {
-              category_id: 'cat-shopping-id',
-              category_name: 'Shopping',
-              budget_amount: null,
-              actual_amount: '100',
-              utilization_pct: null,
-              remaining: null,
-              status: 'exceeded'
-            }
-          ],
-          groups: []
-        })
-      ),
       ...baseHandlers,
     );
 
@@ -830,14 +805,12 @@ describe('SpendingPage', () => {
     await screen.findByText('Spending Overview');
     fireEvent.click(screen.getByTestId('spending-tab-analytics'));
 
-    await screen.findByText('Budget Guardrails & Performance');
+    await screen.findByText('Income vs Expenses Trend');
 
-    expect(screen.getByText('Food')).toBeInTheDocument();
-    expect(screen.getByText(/Spent \$200\.00 of \$500\.00/)).toBeInTheDocument();
-    expect(screen.queryByText('Shopping')).not.toBeInTheDocument();
+    expect(screen.queryByText('Budget Guardrails & Performance')).not.toBeInTheDocument();
   });
 
-  it('allows selecting multi-month budget performance range on the budgets tab', async () => {
+  it('allows selecting multi-month budget performance range on the budgets tab, showing a per-month breakdown', async () => {
     server.use(
       http.get('*/v1/spending/analytics/budget-performance', () =>
         HttpResponse.json({
@@ -866,11 +839,14 @@ describe('SpendingPage', () => {
     fireEvent.click(threeMonthsBtn);
 
     await screen.findByText(/Budget Performance: [A-Za-z]{3} \d{4} - [A-Za-z]{3} \d{4}/);
-    
+
     expect(screen.getByText('Food')).toBeInTheDocument();
     expect(screen.getByText('Total Spent')).toBeInTheDocument();
     expect(screen.getByText('Total Budget')).toBeInTheDocument();
-    expect(screen.getByText('$600.00')).toBeInTheDocument();
-    expect(screen.getByText('$1,500.00')).toBeInTheDocument();
+    // The mocked endpoint returns the same single-month figures for every
+    // month in the 3-month window, so the aggregated total is 3x that.
+    expect(screen.getByText('$1,800.00')).toBeInTheDocument();
+    expect(screen.getByText('$4,500.00')).toBeInTheDocument();
+    expect(screen.getByText('By month')).toBeInTheDocument();
   });
 });
