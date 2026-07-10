@@ -810,6 +810,54 @@ describe('SpendingPage', () => {
     expect(screen.queryByText('Budget Guardrails & Performance')).not.toBeInTheDocument();
   });
 
+  it('lets the analytics tab select a specific month independent of the transactions date-range filter', async () => {
+    const breakdownRanges: Array<{ from: string | null; to: string | null }> = [];
+    server.use(
+      http.get('*/v1/spending/analytics/trends', () => HttpResponse.json({ months: [] })),
+      http.get('*/v1/spending/analytics/breakdown', ({ request }) => {
+        const url = new URL(request.url);
+        breakdownRanges.push({ from: url.searchParams.get('from'), to: url.searchParams.get('to') });
+        return HttpResponse.json({ categories: [], total: 0 });
+      }),
+      http.get('*/v1/spending/analytics/savings-rate', () =>
+        HttpResponse.json({ months: [], period_totals: { total_income: 0, total_expense: 0, total_savings: 0, average_savings_rate_pct: 0 } })
+      ),
+      ...baseHandlers,
+    );
+
+    renderWithQuery(<SpendingPage />);
+    await screen.findByText('Spending Overview');
+    fireEvent.click(screen.getByTestId('spending-tab-analytics'));
+    await screen.findByText('Income vs Expenses Trend');
+
+    // Narrow to a single month via the Duration selector — this is what
+    // isolates one specific month's split, same as Budgets' "1 Month" mode.
+    // The window change swaps in a fresh (uncached) query combo, so the tab
+    // briefly re-renders its loading skeleton before the controls return.
+    fireEvent.click(screen.getByRole('button', { name: 'This Month' }));
+    await screen.findByTestId('spending-analytics-month');
+
+    const rangesBeforeChange = breakdownRanges.length;
+
+    // Pick a month a few months back — far enough from "now" to be unambiguous
+    // in the dropdown, and always present given buildMonthOptions' 24-month lookback.
+    const now = new Date();
+    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 3, 1));
+    const targetValue = `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, '0')}`;
+    const targetLabel = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(target);
+
+    fireEvent.click(await screen.findByTestId('spending-analytics-month'));
+    const targetOption = await screen.findByRole('option', { name: targetLabel });
+    fireEvent.click(targetOption);
+
+    await waitFor(() => expect(breakdownRanges.length).toBeGreaterThan(rangesBeforeChange));
+    const latest = breakdownRanges[breakdownRanges.length - 1];
+    // With Duration = "This Month", both ends of the range fall in the
+    // selected month — proving the breakdown is scoped to exactly that month.
+    expect(latest.from?.startsWith(targetValue)).toBe(true);
+    expect(latest.to?.startsWith(targetValue)).toBe(true);
+  });
+
   it('allows selecting multi-month budget performance range on the budgets tab, showing a per-month breakdown', async () => {
     server.use(
       http.get('*/v1/spending/analytics/budget-performance', () =>
