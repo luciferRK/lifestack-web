@@ -234,6 +234,11 @@ export const SpendingPage: React.FC = () => {
     };
   }, [budgetsMonth, budgetsDuration, budgetsMonthRange]);
 
+  // Analytics has its own month picker for the same reason Budgets does — it
+  // must NOT derive from the Transactions date-range filter bar, so a single
+  // specific month's breakdown can be selected independently of that filter.
+  const [analyticsMonth, setAnalyticsMonth] = useState(() => getCurrentMonthValue());
+
   // Tabs — deep-linkable via ?tab= so dashboard cues can land on the right one.
   // "Transfers" was merged into "Account activity" (formerly Ledger) — the
   // ledger already rendered transfer_in/out rows; it now also carries their
@@ -1533,7 +1538,9 @@ export const SpendingPage: React.FC = () => {
         />
       ) : activeTab === 'analytics' ? (
         <AnalyticsTab
-          selectedMonth={selectedMonth}
+          selectedMonth={analyticsMonth}
+          onMonthChange={setAnalyticsMonth}
+          monthOptions={monthFilterOptions}
           displayCurrency={displayCurrency}
           currencyDisplayPreference={currencyDisplayPreference}
           getCategoryTheme={getCategoryTheme}
