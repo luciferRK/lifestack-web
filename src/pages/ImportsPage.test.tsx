@@ -227,6 +227,60 @@ describe('ImportsPage', () => {
     expect(screen.queryByTestId('imports-delete')).not.toBeInTheDocument();
   });
 
+  it('allows deleting a batch stuck at uploaded (background validation never ran)', async () => {
+    let deletedImportId: string | null = null;
+    const importId = '22222222-2222-2222-2222-222222222222';
+
+    const stuckBatch = {
+      public_id: importId,
+      status: 'uploaded',
+      module: 'spending-transactions',
+      filename: 'stuck.csv',
+      content_type: 'text/csv',
+      file_size_bytes: 64,
+      file_sha256: 'def',
+      storage_backend: 'db',
+      storage_key: null,
+      total_rows: 0,
+      valid_rows: 0,
+      error_rows: 0,
+      started_at: '2026-06-01T00:00:00Z',
+      validated_at: null,
+      committed_at: null,
+    };
+
+    server.use(
+      http.get('*/v1/imports', () =>
+        HttpResponse.json({ items: [stuckBatch], total: 1, limit: 20, offset: 0 }),
+      ),
+      http.get(`*/v1/imports/${importId}`, () =>
+        HttpResponse.json({
+          import_batch: stuckBatch,
+          errors: [],
+          error_summary: { total_errors: 0, returned_errors: 0, by_code: {}, by_field: {} },
+        }),
+      ),
+      http.delete(`*/v1/imports/${importId}`, () => {
+        deletedImportId = importId;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderWithQuery(<ImportsPage />);
+
+    fireEvent.click(await screen.findByTestId(`imports-list-item-${importId}`));
+    const deleteButton = await screen.findByTestId('imports-delete');
+    expect(deleteButton).toHaveTextContent('Delete import batch');
+    expect(deleteButton).toBeEnabled();
+
+    fireEvent.click(deleteButton);
+    expect(await screen.findByRole('dialog')).toHaveTextContent(/Delete import batch\?/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(deletedImportId).toBe(importId));
+    expect(screen.queryByTestId('imports-delete')).not.toBeInTheDocument();
+  });
+
   it('shows the target-account picker only for spending-transactions and sends the selection', async () => {
     let uploadedTargetAccountId: string | null | undefined;
 

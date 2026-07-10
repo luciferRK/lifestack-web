@@ -55,6 +55,13 @@ const lifecycleCopy = (status: string) => {
       description: 'Delete the validation batch, uploaded artifact, preview rows, and validation errors.',
     };
   }
+  if (status === 'uploaded') {
+    return {
+      action: 'Delete import batch',
+      description:
+        'Validation has not produced a result yet. If this batch is stuck here (no progress after a few minutes), it is safe to delete — nothing has been committed.',
+    };
+  }
   return {
     action: 'Delete import batch',
     description: 'Deletion is available after validation or commit has finished.',
@@ -470,9 +477,13 @@ export const ImportsPage: React.FC = () => {
             <>
               {(() => {
                 const lifecycle = lifecycleCopy(activeDetail.import_batch.status);
-                const canDelete = ['validated', 'failed_validation', 'completed', 'failed_commit'].includes(
-                  activeDetail.import_batch.status,
-                );
+                const canDelete = [
+                  'uploaded',
+                  'validated',
+                  'failed_validation',
+                  'completed',
+                  'failed_commit',
+                ].includes(activeDetail.import_batch.status);
                 return (
                   <div className="mb-4 rounded-lg border border-slate-700 bg-slate-950/40 p-3 text-sm text-slate-300">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
