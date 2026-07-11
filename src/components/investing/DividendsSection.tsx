@@ -71,16 +71,20 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
   const [offset, setOffset] = useState(0);
   // A filter change on a later page must never strand the user on an empty
   // page — reset during render (React's adjust-state-on-prop-change pattern).
+  // Use a local `pageOffset` for the query in this same render so the
+  // transient pre-reset offset never keys a redundant fetch.
   const [prevAccountFilter, setPrevAccountFilter] = useState(accountFilter);
+  let pageOffset = offset;
   if (prevAccountFilter !== accountFilter) {
     setPrevAccountFilter(accountFilter);
     setOffset(0);
+    pageOffset = 0;
   }
 
   const dividendsRes = useQuery({
-    queryKey: queryKeys.investing.dividends(accountFilter, offset),
+    queryKey: queryKeys.investing.dividends(accountFilter, pageOffset),
     queryFn: () =>
-      investingService.getDividends(DIVIDENDS_PAGE_SIZE, offset, accountFilter || undefined),
+      investingService.getDividends(DIVIDENDS_PAGE_SIZE, pageOffset, accountFilter || undefined),
   });
   const dividends = useMemo(() => dividendsRes.data?.items ?? [], [dividendsRes.data]);
   const dividendsTotal = dividendsRes.data?.total ?? 0;

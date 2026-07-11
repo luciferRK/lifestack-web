@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
@@ -106,6 +106,14 @@ export const ImportsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialModule = (searchParams.get('module') as ImportModule) || '';
   const [module, setModule] = useState<ImportModule | ''>(initialModule);
+
+  // Deep-link support: when the ?module= param changes while this page stays
+  // mounted (e.g. navigating between two "Bulk import" links), sync the
+  // selected module. Guarded on a non-empty param so a plain /imports visit
+  // never clobbers a manual dropdown selection.
+  useEffect(() => {
+    if (initialModule) setModule(initialModule);
+  }, [initialModule]);
 
   const [file, setFile] = useState<File | null>(null);
   const [targetAccountId, setTargetAccountId] = useState('');

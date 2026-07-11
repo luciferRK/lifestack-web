@@ -426,10 +426,14 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                         <svg className="h-full w-full" viewBox="0 0 200 200">
                           {(() => {
                             const circumference = 2 * Math.PI * 60;
+                            // A single slice (100% in one holding) must render as a
+                            // continuous ring — subtracting the inter-segment gap
+                            // would leave a small broken notch.
+                            const gap = concentration.slices.length > 1 ? CONCENTRATION_GAP : 0;
                             let cumulative = 0;
                             return concentration.slices.map((slice) => {
                               const sliceLength = slice.pct * circumference;
-                              const dash = Math.max(sliceLength - CONCENTRATION_GAP, 0);
+                              const dash = Math.max(sliceLength - gap, 0);
                               const offset = -cumulative;
                               cumulative += sliceLength;
                               return (
