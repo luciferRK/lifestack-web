@@ -113,6 +113,80 @@ export interface CashBalanceUpdate {
   as_of?: string;
 }
 
+export const DIVIDEND_INCOME_TYPES = ['dividend', 'interest', 'coupon'] as const;
+export type DividendIncomeType = (typeof DIVIDEND_INCOME_TYPES)[number];
+
+export const DividendSchema = z.object({
+  public_id: z.string().default(''),
+  account_id: z.string().default(''),
+  account_name: z.string().default(''),
+  holding_id: z.string().nullable().default(null),
+  symbol: z.string().nullable().default(null),
+  income_type: z.string().default('dividend'),
+  gross_amount: z.union([z.number(), z.string()]).default(0),
+  tax_withheld: z.union([z.number(), z.string()]).default(0),
+  net_amount: z.union([z.number(), z.string()]).default(0),
+  currency: z.string().default(''),
+  pay_date: z.string().default(''),
+  external_ref: z.string().nullable().default(null),
+  notes: z.string().nullable().default(null),
+  created_at: z.string().default(''),
+  updated_at: z.string().default(''),
+});
+
+export type Dividend = z.infer<typeof DividendSchema>;
+
+export interface DividendCreate {
+  account_id: string;
+  symbol?: string | null;
+  income_type: DividendIncomeType;
+  gross_amount: number;
+  tax_withheld?: number;
+  currency: string;
+  pay_date: string;
+  external_ref?: string | null;
+  notes?: string | null;
+}
+
+export interface DividendUpdate {
+  symbol?: string | null;
+  income_type?: DividendIncomeType;
+  gross_amount?: number;
+  tax_withheld?: number;
+  currency?: string;
+  pay_date?: string;
+  external_ref?: string | null;
+  notes?: string | null;
+}
+
+export interface DividendBulkImportRow {
+  account_id: string;
+  symbol?: string | null;
+  income_type: DividendIncomeType;
+  gross_amount: number;
+  tax_withheld?: number;
+  currency: string;
+  pay_date: string;
+  external_ref?: string | null;
+  notes?: string | null;
+}
+
+export const DividendBulkImportResultSchema = z.object({
+  imported: z.number().default(0),
+  updated: z.number().default(0),
+  skipped: z.number().default(0),
+  rejected: z.array(z.object({ row: z.number(), reason: z.string() })).default([]),
+});
+
+export type DividendBulkImportResult = z.infer<typeof DividendBulkImportResultSchema>;
+
+export const PaginatedDividendsSchema = z.object({
+  items: z.array(DividendSchema).default([]),
+  total: z.number().default(0),
+  limit: z.number().optional().default(50),
+  offset: z.number().optional().default(0),
+});
+
 export const OrderTypeSchema = z.enum(['buy', 'sell']).default('buy');
 export type OrderType = z.infer<typeof OrderTypeSchema>;
 
@@ -262,3 +336,102 @@ export const PerformanceSummarySchema = z.object({
 });
 
 export type PerformanceSummary = z.infer<typeof PerformanceSummarySchema>;
+
+export const PositionMetricsSchema = z.object({
+  xirr: z.union([z.number(), z.string()]).nullable().default(null),
+  annualized_return_pct: z.union([z.number(), z.string()]).nullable().default(null),
+  annualization_reliable: z.boolean().default(false),
+  holding_days: z.number().nullable().default(null),
+  total_return_pct: z.union([z.number(), z.string()]).nullable().default(null),
+  realized: z.union([z.number(), z.string()]).default(0),
+  unrealized: z.union([z.number(), z.string()]).default(0),
+  market_value: z.union([z.number(), z.string()]).default(0),
+  invested: z.union([z.number(), z.string()]).default(0),
+});
+export type PositionMetrics = z.infer<typeof PositionMetricsSchema>;
+
+const ScopeReturnMetricsFields = {
+  xirr: z.union([z.number(), z.string()]).nullable().default(null),
+  annualized_return_pct: z.union([z.number(), z.string()]).nullable().default(null),
+  annualization_reliable: z.boolean().default(false),
+  holding_days: z.number().nullable().default(null),
+  // Simple (non-annualized) total return — the INV-7 display for sub-year
+  // spans, where no annualized figure (XIRR included) may be shown.
+  total_return_pct: z.union([z.number(), z.string()]).nullable().default(null),
+  realized: z.union([z.number(), z.string()]).default(0),
+  unrealized: z.union([z.number(), z.string()]).default(0),
+  data_quality: z.string().default('complete'),
+  open: PositionMetricsSchema,
+  closed: PositionMetricsSchema,
+};
+
+export const MaxDrawdownSchema = z.object({
+  pct: z.union([z.number(), z.string()]).default(0),
+  peak_date: z.string().default(''),
+  trough_date: z.string().default(''),
+});
+export type MaxDrawdown = z.infer<typeof MaxDrawdownSchema>;
+
+export const OverallReturnMetricsSchema = z.object({
+  ...ScopeReturnMetricsFields,
+  max_drawdown: MaxDrawdownSchema.nullable().default(null),
+});
+export type OverallReturnMetrics = z.infer<typeof OverallReturnMetricsSchema>;
+
+export const AccountReturnMetricsSchema = z.object({
+  ...ScopeReturnMetricsFields,
+  account_id: z.string().default(''),
+  account_name: z.string().default(''),
+  currency: z.string().default(''),
+});
+export type AccountReturnMetrics = z.infer<typeof AccountReturnMetricsSchema>;
+
+export const CurrencyReturnMetricsSchema = z.object({
+  ...ScopeReturnMetricsFields,
+  currency: z.string().default(''),
+});
+export type CurrencyReturnMetrics = z.infer<typeof CurrencyReturnMetricsSchema>;
+
+export const ReturnMetricsResponseSchema = z.object({
+  currency: z.string().nullable().default(null),
+  valuation_status: z.string().default('current'),
+  overall: OverallReturnMetricsSchema,
+  by_account: z.array(AccountReturnMetricsSchema).default([]),
+  by_currency: z.array(CurrencyReturnMetricsSchema).default([]),
+});
+export type ReturnMetricsResponse = z.infer<typeof ReturnMetricsResponseSchema>;
+
+export const CorporateActionTypeSchema = z.enum(['split', 'bonus']).default('split');
+export type CorporateActionType = z.infer<typeof CorporateActionTypeSchema>;
+
+export const CorporateActionSchema = z.object({
+  public_id: z.string().default(''),
+  account_id: z.string().default(''),
+  account_name: z.string().default(''),
+  symbol: z.string().default(''),
+  action_type: CorporateActionTypeSchema,
+  ratio_base: z.union([z.number(), z.string()]).default(1),
+  ratio_quote: z.union([z.number(), z.string()]).default(1),
+  ex_date: z.string().default(''),
+  notes: z.string().nullable().default(null),
+  created_at: z.string().default(''),
+});
+
+export type CorporateAction = z.infer<typeof CorporateActionSchema>;
+
+export interface CorporateActionCreate {
+  account_id: string;
+  symbol: string;
+  action_type: CorporateActionType;
+  ratio_base: number;
+  ratio_quote: number;
+  ex_date: string;
+  notes?: string | null;
+}
+
+export const PaginatedCorporateActionsSchema = z.object({
+  items: z.array(CorporateActionSchema).default([]),
+  total: z.number().default(0),
+  limit: z.number().optional().default(50),
+  offset: z.number().optional().default(0),
+});

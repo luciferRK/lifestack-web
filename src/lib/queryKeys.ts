@@ -22,10 +22,12 @@ export const queryKeys = {
   // ── Health ────────────────────────────────────────────────────────────────
   health: {
     all: ['health'] as const,
-    medications: <T extends unknown[]>(...params: T) => ['health', 'medications', ...params] as const,
+    medications: <T extends unknown[]>(...params: T) =>
+      ['health', 'medications', ...params] as const,
     schedule: <T extends unknown[]>(...params: T) => ['health', 'schedule', ...params] as const,
     weight: <T extends unknown[]>(...params: T) => ['health', 'weight', ...params] as const,
-    weightTrend: <T extends unknown[]>(...params: T) => ['health', 'weight-trend', ...params] as const,
+    weightTrend: <T extends unknown[]>(...params: T) =>
+      ['health', 'weight-trend', ...params] as const,
   },
 
   // ── Spending ──────────────────────────────────────────────────────────────
@@ -36,9 +38,12 @@ export const queryKeys = {
   // SpendingPage's cache — both are now scoped independently).
   spending: {
     all: ['spending'] as const,
-    categories: <T extends unknown[]>(...params: T) => ['spending', 'categories', ...params] as const,
-    categoryGroups: <T extends unknown[]>(...params: T) => ['spending', 'category-groups', ...params] as const,
-    transactions: <T extends unknown[]>(...params: T) => ['spending', 'transactions', ...params] as const,
+    categories: <T extends unknown[]>(...params: T) =>
+      ['spending', 'categories', ...params] as const,
+    categoryGroups: <T extends unknown[]>(...params: T) =>
+      ['spending', 'category-groups', ...params] as const,
+    transactions: <T extends unknown[]>(...params: T) =>
+      ['spending', 'transactions', ...params] as const,
     summary: <T extends unknown[]>(...params: T) => ['spending', 'summary', ...params] as const,
     budgets: <T extends unknown[]>(...params: T) => ['spending', 'budgets', ...params] as const,
     recurring: <T extends unknown[]>(...params: T) => ['spending', 'recurring', ...params] as const,
@@ -58,6 +63,8 @@ export const queryKeys = {
     all: ['net-worth'] as const,
     summary: () => ['net-worth'] as const,
     history: <T extends unknown[]>(...params: T) => ['net-worth', 'history', ...params] as const,
+    userPoints: () => ['net-worth', 'user-points'] as const,
+    userFxRates: () => ['net-worth', 'user-fx-rates'] as const,
   },
 
   // ── Dashboard ──────────────────────────────────────────────────────────────
@@ -91,12 +98,19 @@ export const queryKeys = {
     summary: () => ['investing', 'summary'] as const,
     performance: {
       summary: () => ['investing', 'performance', 'summary'] as const,
+      returns: () => ['investing', 'performance', 'returns'] as const,
     },
     holdings: () => ['investing', 'holdings'] as const,
     instruments: () => ['investing', 'instruments'] as const,
     orders: <T extends unknown[]>(...params: T) => ['investing', 'orders', ...params] as const,
-    ordersByHolding: (symbol?: string, accountId?: string | null) => ['investing', 'orders', 'by-holding', symbol, accountId] as const,
-    cashBalances: <T extends unknown[]>(...params: T) => ['investing', 'cash-balances', ...params] as const,
+    ordersByHolding: (symbol?: string, accountId?: string | null) =>
+      ['investing', 'orders', 'by-holding', symbol, accountId] as const,
+    cashBalances: <T extends unknown[]>(...params: T) =>
+      ['investing', 'cash-balances', ...params] as const,
+    dividends: <T extends unknown[]>(...params: T) =>
+      ['investing', 'dividends', ...params] as const,
+    corporateActions: <T extends unknown[]>(...params: T) =>
+      ['investing', 'corporate-actions', ...params] as const,
     exposure: (asOf: string) => ['investing', 'analytics', 'exposure', asOf] as const,
     overlap: (asOf: string) => ['investing', 'analytics', 'overlap', asOf] as const,
   },
@@ -106,10 +120,12 @@ export const queryKeys = {
   finance: {
     all: ['finance'] as const,
     accounts: <T extends unknown[]>(...params: T) => ['finance', 'accounts', ...params] as const,
-    currencies: <T extends unknown[]>(...params: T) => ['finance', 'currencies', ...params] as const,
+    currencies: <T extends unknown[]>(...params: T) =>
+      ['finance', 'currencies', ...params] as const,
     settings: <T extends unknown[]>(...params: T) => ['finance', 'settings', ...params] as const,
     transfers: <T extends unknown[]>(...params: T) => ['finance', 'transfers', ...params] as const,
-    reconciliation: <T extends unknown[]>(...params: T) => ['finance', 'reconciliation', ...params] as const,
+    reconciliation: <T extends unknown[]>(...params: T) =>
+      ['finance', 'reconciliation', ...params] as const,
   },
 
   // ── Master Config (scoped variants to avoid cross-page collisions) ──────────
