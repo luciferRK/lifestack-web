@@ -1,13 +1,14 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '../components/ui/toast';
 import { http, HttpResponse } from 'msw';
 
 import { ImportsPage } from './ImportsPage';
 import { server } from '../test/setup';
 
-const renderWithQuery = (ui: React.ReactNode) => {
+const renderWithQuery = (ui: React.ReactNode, initialEntry = '/imports') => {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -15,9 +16,11 @@ const renderWithQuery = (ui: React.ReactNode) => {
     },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>{ui}</ToastProvider>
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>{ui}</ToastProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 };
 

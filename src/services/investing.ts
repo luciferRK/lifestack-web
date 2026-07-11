@@ -3,7 +3,6 @@ import api from './api';
 import {
   CashBalanceSchema,
   CorporateActionSchema,
-  DividendBulkImportResultSchema,
   DividendSchema,
   ExposureAnalyticsSchema,
   HoldingSchema,
@@ -24,10 +23,9 @@ import type {
   CorporateAction,
   CorporateActionCreate,
   Dividend,
-  DividendBulkImportResult,
-  DividendBulkImportRow,
   DividendCreate,
   DividendUpdate,
+
   ExposureAnalytics,
   Holding,
   HoldingUpdate,
@@ -140,11 +138,6 @@ export const investingService = {
 
   deleteDividend: async (publicId: string): Promise<void> => {
     await api.delete(`/investing/dividends/${publicId}`);
-  },
-
-  bulkImportDividends: async (rows: DividendBulkImportRow[]): Promise<DividendBulkImportResult> => {
-    const response = await api.post('/investing/dividends/bulk', { rows });
-    return DividendBulkImportResultSchema.parse(response.data);
   },
 
   getCorporateActions: async (

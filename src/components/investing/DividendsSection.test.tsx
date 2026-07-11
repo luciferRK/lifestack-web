@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 
 import { DividendsSection } from './DividendsSection';
@@ -52,11 +53,13 @@ const renderSection = () => {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <DividendsSection accounts={accounts} accountFilter="" currencyDisplayPreference="code" />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <DividendsSection accounts={accounts} accountFilter="" currencyDisplayPreference="code" />
+        </ToastProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 };
 
@@ -99,51 +102,17 @@ describe('DividendsSection', () => {
     expect(await screen.findByText('No dividends or income recorded yet.')).toBeInTheDocument();
   });
 
-  it('bulk-imports pasted CSV (account name resolved to id) and surfaces per-row rejects', async () => {
-    let postedBody: unknown = null;
+  it('routes bulk import to the shared imports framework (spec-074)', async () => {
+    // The bespoke paste-CSV modal was retired in spec-074; bulk import now
+    // deep-links into the /imports flow for the dividends module.
     server.use(
       http.get('*/v1/investing/dividends', () =>
         HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
       ),
-      http.post('*/v1/investing/dividends/bulk', async ({ request }) => {
-        postedBody = await request.json();
-        return HttpResponse.json({
-          imported: 1,
-          updated: 0,
-          skipped: 0,
-          rejected: [{ row: 1, reason: 'tax_withheld must be less than gross_amount' }],
-        });
-      }),
     );
     renderSection();
-    fireEvent.click(await screen.findByRole('button', { name: /Bulk import/ }));
-    const textarea = screen.getByPlaceholderText(
-      'account,symbol,income_type,gross,tax,currency,pay_date,external_ref',
-    );
-    fireEvent.change(textarea, {
-      target: {
-        value: [
-          'account,symbol,income_type,gross,tax,currency,pay_date,external_ref',
-          'Zerodha,NVDA,dividend,100.00,10.00,USD,2026-06-15,ref-1',
-          'Zerodha,AAPL,dividend,50.00,60.00,USD,2026-06-15,',
-        ].join('\n'),
-      },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
-
-    expect(await screen.findByText(/Imported 1, updated 0, skipped 0, rejected 1/)).toBeVisible();
-    expect(screen.getByText(/Row 1: tax_withheld must be less than gross_amount/)).toBeVisible();
-    const body = postedBody as { rows: Record<string, unknown>[] };
-    expect(body.rows).toHaveLength(2);
-    expect(body.rows[0]).toMatchObject({
-      account_id: 'acc-1',
-      symbol: 'NVDA',
-      gross_amount: 100,
-      tax_withheld: 10,
-      currency: 'USD',
-      pay_date: '2026-06-15',
-      external_ref: 'ref-1',
-    });
+    const link = await screen.findByRole('link', { name: /Bulk import/ });
+    expect(link).toHaveAttribute('href', '/imports?module=investing-dividends');
   });
 
   it('deletes a dividend after confirmation', async () => {

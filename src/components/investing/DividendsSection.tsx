@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, Upload } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { investingService } from '../../services/investing';
 import type {
   Dividend,
-  DividendBulkImportRow,
   DividendCreate,
   DividendIncomeType,
 } from '../../types/investing';
@@ -67,14 +67,6 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [pendingDelete, setPendingDelete] = useState<Dividend | null>(null);
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const [bulkCsv, setBulkCsv] = useState('');
-  const [bulkResult, setBulkResult] = useState<{
-    imported: number;
-    updated: number;
-    skipped: number;
-    rejected: { row: number; reason: string }[];
-  } | null>(null);
 
   const [offset, setOffset] = useState(0);
   // A filter change on a later page must never strand the user on an empty
@@ -117,14 +109,6 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
     { successMessage: 'Dividend deleted', onSuccess: () => setPendingDelete(null) },
   );
 
-  const bulkImportMutation = useInvalidatingMutation(
-    (rows: DividendBulkImportRow[]) => investingService.bulkImportDividends(rows),
-    refreshKeys,
-    {
-      successMessage: 'Bulk import complete',
-      onSuccess: (result) => setBulkResult(result),
-    },
-  );
 
   const selectedAccount = brokerageAccounts.find((a) => a.public_id === form.account_id);
 
@@ -147,42 +131,6 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
     });
   };
 
-  const parseCsv = (text: string): DividendBulkImportRow[] => {
-    const lines = text
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length === 0) return [];
-    const [header, ...rows] = lines;
-    const cols = header.split(',').map((c) => c.trim().toLowerCase());
-    return rows.map((line) => {
-      const values = line.split(',').map((v) => v.trim());
-      const get = (name: string) => {
-        const idx = cols.indexOf(name);
-        return idx >= 0 ? values[idx] : undefined;
-      };
-      const accountNameOrId = get('account') ?? '';
-      const account = brokerageAccounts.find(
-        (a) => a.public_id === accountNameOrId || a.name === accountNameOrId,
-      );
-      return {
-        account_id: account?.public_id ?? accountNameOrId,
-        symbol: get('symbol') || null,
-        income_type: (get('income_type') as DividendIncomeType) || 'dividend',
-        gross_amount: Number(get('gross') ?? get('gross_amount') ?? '0'),
-        tax_withheld: Number(get('tax') ?? get('tax_withheld') ?? '0'),
-        currency: (get('currency') || 'USD').toUpperCase(),
-        pay_date: get('pay_date') || '',
-        external_ref: get('external_ref') || null,
-      };
-    });
-  };
-
-  const onBulkImport = () => {
-    const rows = parseCsv(bulkCsv);
-    if (rows.length === 0) return;
-    bulkImportMutation.mutate(rows);
-  };
 
   return (
     <div className="space-y-4">
@@ -194,13 +142,11 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              setBulkResult(null);
-              setBulkCsv('');
-              setIsBulkModalOpen(true);
-            }}
+            asChild
           >
-            <Upload className="h-4 w-4 mr-1" /> Bulk import
+            <Link to="/imports?module=investing-dividends">
+              <Upload className="h-4 w-4 mr-1" /> Bulk import
+            </Link>
           </Button>
           <Button
             size="sm"
@@ -379,46 +325,6 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isBulkModalOpen} onOpenChange={(open) => !open && setIsBulkModalOpen(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk import dividends</DialogTitle>
-            <DialogDescription>
-              Paste CSV with headers:
-              account,symbol,income_type,gross,tax,currency,pay_date,external_ref. Rows with an
-              external_ref upsert on re-upload; without one, an exact re-upload is a no-op and a
-              changed amount at the same (account, symbol, pay_date) is rejected.
-            </DialogDescription>
-          </DialogHeader>
-          <textarea
-            className="w-full h-40 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-            value={bulkCsv}
-            onChange={(e) => setBulkCsv(e.target.value)}
-            placeholder="account,symbol,income_type,gross,tax,currency,pay_date,external_ref"
-          />
-          {bulkResult ? (
-            <div className="text-xs space-y-1">
-              <p>
-                Imported {bulkResult.imported}, updated {bulkResult.updated}, skipped{' '}
-                {bulkResult.skipped}, rejected {bulkResult.rejected.length}
-              </p>
-              {bulkResult.rejected.map((r) => (
-                <p key={r.row} className="text-rose-500">
-                  Row {r.row}: {r.reason}
-                </p>
-              ))}
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setIsBulkModalOpen(false)}>
-              Close
-            </Button>
-            <Button type="button" onClick={onBulkImport} disabled={bulkImportMutation.isPending}>
-              Import
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <DialogContent>
