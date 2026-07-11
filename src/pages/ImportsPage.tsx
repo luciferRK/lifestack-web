@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
@@ -29,7 +29,23 @@ const MODULE_OPTIONS: Array<{ value: ImportModule; label: string; testId?: strin
     label: 'Demat CAS (Holdings Verification)',
     testId: 'import-type-investing-demat-cas',
   },
+  {
+    value: 'investing-dividends',
+    label: 'Dividend Income',
+    testId: 'import-type-investing-dividends',
+  },
+  {
+    value: 'finance-fx-rates',
+    label: 'FX Rates History',
+    testId: 'import-type-finance-fx-rates',
+  },
+  {
+    value: 'finance-net-worth-history',
+    label: 'Net Worth History',
+    testId: 'import-type-finance-net-worth-history',
+  },
 ];
+
 
 // PDF-based imports (spec-056, spec-060): no CSV template, a required
 // brokerage target account, and — for Demat CAS only — a statement password.
@@ -87,7 +103,18 @@ export const ImportsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [module, setModule] = useState<ImportModule | ''>('');
+  const [searchParams] = useSearchParams();
+  const initialModule = (searchParams.get('module') as ImportModule) || '';
+  const [module, setModule] = useState<ImportModule | ''>(initialModule);
+
+  // Deep-link support: when the ?module= param changes while this page stays
+  // mounted (e.g. navigating between two "Bulk import" links), sync the
+  // selected module. Guarded on a non-empty param so a plain /imports visit
+  // never clobbers a manual dropdown selection.
+  useEffect(() => {
+    if (initialModule) setModule(initialModule);
+  }, [initialModule]);
+
   const [file, setFile] = useState<File | null>(null);
   const [targetAccountId, setTargetAccountId] = useState('');
   const [filePassword, setFilePassword] = useState('');
@@ -613,6 +640,36 @@ export const ImportsPage: React.FC = () => {
                               <th className="px-3 py-2 text-left">Currency</th>
                             </>
                           )}
+                          {activeDetail.import_batch.module === 'investing-dividends' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Account</th>
+                              <th className="px-3 py-2 text-left">Symbol</th>
+                              <th className="px-3 py-2 text-left">Type</th>
+                              <th className="px-3 py-2 text-left">Gross</th>
+                              <th className="px-3 py-2 text-left">Tax</th>
+                              <th className="px-3 py-2 text-left">Currency</th>
+                              <th className="px-3 py-2 text-left">Pay Date</th>
+                            </>
+                          )}
+                          {activeDetail.import_batch.module === 'finance-fx-rates' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Base</th>
+                              <th className="px-3 py-2 text-left">Quote</th>
+                              <th className="px-3 py-2 text-left">Rate</th>
+                              <th className="px-3 py-2 text-left">As of</th>
+                            </>
+                          )}
+                          {activeDetail.import_batch.module === 'finance-net-worth-history' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Date</th>
+                              <th className="px-3 py-2 text-left">Currency</th>
+                              <th className="px-3 py-2 text-left">Net Worth</th>
+                              <th className="px-3 py-2 text-left">Holdings</th>
+                              <th className="px-3 py-2 text-left">Inv Cash</th>
+                              <th className="px-3 py-2 text-left">Spd Cash</th>
+                            </>
+                          )}
+
                         </tr>
                       </thead>
                       <tbody>
@@ -710,6 +767,35 @@ export const ImportsPage: React.FC = () => {
                                     ? row.payload_json.from_currency 
                                     : `${row.payload_json.from_currency} → ${row.payload_json.to_currency}`}
                                 </td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'investing-dividends' && (
+                              <>
+                                <td className="px-3 py-2">{row.payload_json.account_name ?? '-'}</td>
+                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.symbol}</td>
+                                <td className="px-3 py-2 capitalize">{row.payload_json.income_type}</td>
+                                <td className="px-3 py-2">{row.payload_json.gross_amount}</td>
+                                <td className="px-3 py-2">{row.payload_json.tax_withheld ?? '-'}</td>
+                                <td className="px-3 py-2 uppercase">{row.payload_json.currency}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.pay_date)}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'finance-fx-rates' && (
+                              <>
+                                <td className="px-3 py-2 uppercase font-semibold text-white">{row.payload_json.base_currency_code}</td>
+                                <td className="px-3 py-2 uppercase">{row.payload_json.quote_currency_code}</td>
+                                <td className="px-3 py-2">{row.payload_json.rate}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.as_of_date)}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'finance-net-worth-history' && (
+                              <>
+                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.date)}</td>
+                                <td className="px-3 py-2 uppercase">{row.payload_json.reporting_currency}</td>
+                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.total_net_worth}</td>
+                                <td className="px-3 py-2">{row.payload_json.holdings_value ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.investing_cash ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.spending_cash ?? '-'}</td>
                               </>
                             )}
                           </tr>

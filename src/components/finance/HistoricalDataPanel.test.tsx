@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 
 import { HistoricalDataPanel } from './HistoricalDataPanel';
@@ -13,11 +14,13 @@ const renderPanel = () => {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <HistoricalDataPanel />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <HistoricalDataPanel />
+        </ToastProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 };
 
@@ -25,46 +28,17 @@ const openDialog = () =>
   fireEvent.click(screen.getByRole('button', { name: /Add historical data/ }));
 
 describe('HistoricalDataPanel', () => {
-  it('imports pasted net-worth CSV and shows per-row reject feedback', async () => {
-    let postedBody: unknown = null;
+  it('routes net-worth CSV import to the shared imports framework (spec-074)', async () => {
+    // The bespoke paste-CSV modal was retired in spec-074; import now
+    // deep-links into the /imports flow for the net-worth-history module.
     server.use(
       http.get('*/v1/finance/net-worth/history/user-points', () => HttpResponse.json(emptyPage)),
       http.get('*/v1/finance/fx/history', () => HttpResponse.json(emptyPage)),
-      http.post('*/v1/finance/net-worth/history/import', async ({ request }) => {
-        postedBody = await request.json();
-        return HttpResponse.json({
-          imported: 1,
-          skipped: 0,
-          rejected: [{ row: 1, reason: 'date_not_backfill' }],
-        });
-      }),
     );
     renderPanel();
     openDialog();
-    const textarea = await screen.findByPlaceholderText(
-      'date,total_net_worth,holdings_value,investing_cash,spending_cash,reporting_currency',
-    );
-    fireEvent.change(textarea, {
-      target: {
-        value: [
-          'date,total_net_worth,reporting_currency',
-          '2024-01-01,10000.00,USD',
-          '2027-01-01,5000.00,USD',
-        ].join('\n'),
-      },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
-
-    expect(await screen.findByText(/Imported 1, skipped 0, rejected 1/)).toBeVisible();
-    expect(screen.getByText(/Row 1: date_not_backfill/)).toBeVisible();
-    const body = postedBody as { rows: Record<string, unknown>[] };
-    expect(body.rows).toHaveLength(2);
-    expect(body.rows[0]).toMatchObject({
-      date: '2024-01-01',
-      total_net_worth: 10000,
-      holdings_value: null,
-      reporting_currency: 'USD',
-    });
+    const link = await screen.findByRole('link', { name: /Import Net Worth CSV/ });
+    expect(link).toHaveAttribute('href', '/imports?module=finance-net-worth-history');
   });
 
   it('lists existing user points and deletes one', async () => {
@@ -101,8 +75,7 @@ describe('HistoricalDataPanel', () => {
     await waitFor(() => expect(deleted).toBe(true));
   });
 
-  it('imports historical FX rows from the FX tab and lists/deletes existing rates', async () => {
-    let postedBody: unknown = null;
+  it('links FX CSV import to the imports framework and lists/deletes existing rates', async () => {
     let deleted = false;
     server.use(
       http.get('*/v1/finance/net-worth/history/user-points', () => HttpResponse.json(emptyPage)),
@@ -123,10 +96,6 @@ describe('HistoricalDataPanel', () => {
           offset: 0,
         }),
       ),
-      http.post('*/v1/finance/fx/history/import', async ({ request }) => {
-        postedBody = await request.json();
-        return HttpResponse.json({ imported: 1, skipped: 0, rejected: [] });
-      }),
       http.delete('*/v1/finance/fx/history/3', () => {
         deleted = true;
         return new HttpResponse(null, { status: 204 });
@@ -137,19 +106,10 @@ describe('HistoricalDataPanel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Historical FX' }));
     expect(await screen.findByText('USD/INR')).toBeInTheDocument();
 
-    const textarea = screen.getByPlaceholderText('base,quote,rate,date');
-    fireEvent.change(textarea, {
-      target: { value: ['base,quote,rate,date', 'usd,inr,70.5,2020-06-01'].join('\n') },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
-    expect(await screen.findByText(/Imported 1, skipped 0, rejected 0/)).toBeVisible();
-    const body = postedBody as { rows: Record<string, unknown>[] };
-    expect(body.rows[0]).toMatchObject({
-      base_currency_code: 'USD',
-      quote_currency_code: 'INR',
-      rate: 70.5,
-      as_of_date: '2020-06-01',
-    });
+    // Import routes to the shared /imports flow (spec-074); management (list +
+    // delete of existing user rates) stays inline on the panel.
+    const link = screen.getByRole('link', { name: /Import FX Rates CSV/ });
+    expect(link).toHaveAttribute('href', '/imports?module=finance-fx-rates');
 
     fireEvent.click(screen.getByLabelText('Delete rate'));
     await waitFor(() => expect(deleted).toBe(true));

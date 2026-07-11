@@ -53,8 +53,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading || undefined}
         {...props}
       >
-        {!asChild && loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {content}
+        {/* Slot (asChild) runs React.Children.only, so it must receive exactly one
+            child — a bare `{loading && <Loader2/>}` sibling still counts as a second
+            child (even when false) and crashes. Pass only the cloned child when
+            asChild; keep the spinner treatment for the plain <button> path. */}
+        {asChild ? (
+          content
+        ) : (
+          <>
+            {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {content}
+          </>
+        )}
       </Comp>
     );
   },
