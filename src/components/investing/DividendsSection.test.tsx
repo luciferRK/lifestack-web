@@ -160,6 +160,28 @@ describe('DividendsSection', () => {
     await waitFor(() => expect(deleted).toBe(true));
   });
 
+  it('pages the list server-side at 10 per page (spec-009)', async () => {
+    const seen: URL[] = [];
+    server.use(
+      http.get('*/v1/investing/dividends', ({ request }) => {
+        const url = new URL(request.url);
+        seen.push(url);
+        const offset = Number(url.searchParams.get('offset') ?? '0');
+        const items = Array.from({ length: Math.min(10, 15 - offset) }, (_, i) =>
+          dividendRow({ public_id: `div-${offset + i}`, symbol: `SYM${offset + i}` }),
+        );
+        return HttpResponse.json({ items, total: 15, limit: 10, offset });
+      }),
+    );
+    renderSection();
+    expect(await screen.findByText('Showing 1 to 10 of 15 results')).toBeInTheDocument();
+    expect(seen[0].searchParams.get('limit')).toBe('10');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(await screen.findByText('Showing 11 to 15 of 15 results')).toBeInTheDocument();
+    expect(seen[seen.length - 1].searchParams.get('offset')).toBe('10');
+  });
+
   it('opens the record modal with symbol field for dividends', async () => {
     server.use(
       http.get('*/v1/investing/dividends', () =>
