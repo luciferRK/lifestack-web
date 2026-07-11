@@ -43,6 +43,7 @@ Reorder to put actionable content before read-only context:
 - The dividends query drops `limit=200` for `(10, offset)`; same for cash balances and transfers.
 - Transfers: `/finance/transfers` has no server-side `account_id` filter and this spec is web-only, so the section keeps its client-side account filter and pages **client-side** over the fetched window (filter first, then slice) — correct composition, acceptable for a read-only contextual list that links out to full history.
 - Mobile card lists and desktop tables page together (one offset per section).
+- **Rev. 2 (PR review):** the cash section's client-side sort headers and currency filter were **removed** rather than left silently operating on the current 10 rows. The server's `as_of`-desc order is the natural order for a history feed, and the server-side account filter subsumes the currency filter under spec-050's one-currency-per-account rule. Out-of-bounds offsets (shrinking totals) snap back to page 0 in every section.
 
 ## Now vs. Proposed
 

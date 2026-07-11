@@ -92,6 +92,12 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
   });
   const dividends = useMemo(() => dividendsRes.data?.items ?? [], [dividendsRes.data]);
   const dividendsTotal = dividendsRes.data?.total ?? 0;
+  // If the server total shrinks below the current offset (e.g. the last row
+  // of the last page was deleted), snap back to the first page instead of
+  // stranding an empty page with the pagination controls hidden.
+  if (dividendsRes.data && offset > 0 && offset >= dividendsTotal) {
+    setOffset(0);
+  }
 
   const createMutation = useInvalidatingMutation(
     (data: DividendCreate) => investingService.createDividend(data),
