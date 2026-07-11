@@ -24,6 +24,10 @@ const accounts = [
   },
 ] as unknown as Account[];
 
+
+const byParagraphText = (text: string) => (_: string, el: Element | null) =>
+  el?.tagName === 'P' && el.textContent === text;
+
 const dividendRow = (overrides: Record<string, unknown> = {}) => ({
   public_id: 'div-1',
   account_id: 'acc-1',
@@ -174,11 +178,15 @@ describe('DividendsSection', () => {
       }),
     );
     renderSection();
-    expect(await screen.findByText('Showing 1 to 10 of 15 results')).toBeInTheDocument();
+    expect(
+      await screen.findByText(byParagraphText('Showing 1 to 10 of 15 results')),
+    ).toBeInTheDocument();
     expect(seen[0].searchParams.get('limit')).toBe('10');
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    expect(await screen.findByText('Showing 11 to 15 of 15 results')).toBeInTheDocument();
+    expect(
+      await screen.findByText(byParagraphText('Showing 11 to 15 of 15 results')),
+    ).toBeInTheDocument();
     expect(seen[seen.length - 1].searchParams.get('offset')).toBe('10');
   });
 

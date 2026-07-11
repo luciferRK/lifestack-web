@@ -12,6 +12,7 @@ import { DateTimePicker } from '../../components/DateTimePicker';
 import { CompactFilterBar, CompactFilterField } from '../../components/filters/CompactFilterBar';
 import { queryKeys } from '../../lib/queryKeys';
 import { DropdownSelect } from '../../components/DropdownSelect';
+import { Pagination } from '../../components/Pagination';
 import { Combobox } from '../../components/Combobox';
 import { Button } from '../../components/ui/button';
 import { SkeletonList } from '../../components/ui/FeedbackStates';
@@ -33,6 +34,11 @@ import { formatDateTimeLocalInput, type SortDir } from './format';
 
 const refreshKeys = [queryKeys.investing.all, queryKeys.finance.all, queryKeys.dashboard.all];
 
+// Every section on this tab is bounded to one server/client page (spec-009)
+// so the page height stays constant and no section's reachability depends on
+// another section's data volume. Same size as the Orders tab.
+const CASH_PAGE_SIZE = 10;
+
 interface CashTabProps {
   currencyDisplayPreference: 'symbol' | 'code';
 }
@@ -42,6 +48,15 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
   const [cashCurrencyFilter, setCashCurrencyFilter] = useState('');
   const [cashSortCol, setCashSortCol] = useState('account_name');
   const [cashSortDir, setCashSortDir] = useState<SortDir>('asc');
+  const [cashOffset, setCashOffset] = useState(0);
+  const [transfersOffset, setTransfersOffset] = useState(0);
+
+  // A filter change on page 3 must never strand the user on an empty page.
+  const onAccountFilterChange = (value: string) => {
+    setCashAccountFilter(value);
+    setCashOffset(0);
+    setTransfersOffset(0);
+  };
 
   const [isAddCashModalOpen, setIsAddCashModalOpen] = useState(false);
   const [cashForm, setCashForm] = useState({
@@ -60,10 +75,12 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
   const cashRes = useQuery({
     // account_id is a server-side filter (not just client-side), so switching
     // accounts fetches that account's full history instead of relying on
-    // whatever happens to be in the first 200 rows ordered by as_of desc --
+    // whatever happens to be in the current page ordered by as_of desc --
     // an old backfilled snapshot can otherwise be invisible past that window.
-    queryKey: queryKeys.investing.cashBalances(cashAccountFilter),
-    queryFn: () => investingService.getCashBalances(200, 0, cashAccountFilter || undefined),
+    // One server page at a time (spec-009), like the Orders tab.
+    queryKey: queryKeys.investing.cashBalances(cashAccountFilter, cashOffset),
+    queryFn: () =>
+      investingService.getCashBalances(CASH_PAGE_SIZE, cashOffset, cashAccountFilter || undefined),
   });
 
   const currenciesRes = useQuery({
@@ -171,6 +188,10 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
 
   const cashBalances = useMemo(() => cashRes.data?.items ?? [], [cashRes.data]);
 
+  // The currency filter has no server-side counterpart on /cash-balances, so
+  // it applies within the current page only; the account filter (which is
+  // server-side) is the primary scoping tool, and spec-050's one-currency-
+  // per-account rule makes the two nearly equivalent in practice.
   const filteredCashBalances = useMemo(
     () =>
       cashBalances.filter((balance) => {
@@ -215,6 +236,14 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
       ),
     [transfers, cashAccountFilter],
   );
+  // /finance/transfers has no server-side account filter, so this read-only
+  // contextual list filters client-side and pages client-side over the
+  // fetched window (filter first, then slice) — spec-009. Full history
+  // lives in Spending.
+  const pagedTransfers = useMemo(
+    () => visibleTransfers.slice(transfersOffset, transfersOffset + CASH_PAGE_SIZE),
+    [visibleTransfers, transfersOffset],
+  );
 
   const onCreateCash = (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,7 +272,7 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
           <CompactFilterBar
             title="Cash filters"
             onReset={() => {
-              setCashAccountFilter('');
+              onAccountFilterChange('');
               setCashCurrencyFilter('');
             }}
           >
@@ -252,7 +281,7 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
                 testId="investing-cash-account-filter"
                 value={cashAccountFilter}
                 options={accountDropdownOptions}
-                onChange={setCashAccountFilter}
+                onChange={onAccountFilterChange}
                 placeholder="All accounts"
                 clearLabel="All accounts"
               />
@@ -261,7 +290,10 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
               <DropdownSelect
                 value={cashCurrencyFilter}
                 options={currencyDropdownOptions}
-                onChange={setCashCurrencyFilter}
+                onChange={(value) => {
+                  setCashCurrencyFilter(value);
+                  setCashOffset(0);
+                }}
                 placeholder="All currencies"
                 clearLabel="All currencies"
               />
@@ -292,7 +324,9 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
             data-testid="investing-cash-heading"
             className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >
-            <h3 className="font-semibold text-white text-base">Cash Balances</h3>
+            <h3 className="font-semibold text-white text-base">
+              Cash Balances ({cashRes.data?.total ?? 0})
+            </h3>
             <div className="flex w-full sm:w-auto">
               <button
                 type="button"
@@ -450,6 +484,22 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
                 </tbody>
               </table>
             </div>
+            <Pagination
+              total={cashRes.data?.total ?? 0}
+              limit={CASH_PAGE_SIZE}
+              offset={cashOffset}
+              onPageChange={setCashOffset}
+            />
+          </div>
+
+          {/* Dividends / income before the read-only transfers context:
+              actionable sections come first (spec-009 reachability order). */}
+          <div className="rounded-lg border border-border p-4">
+            <DividendsSection
+              accounts={accounts}
+              accountFilter={cashAccountFilter}
+              currencyDisplayPreference={currencyDisplayPreference}
+            />
           </div>
 
           {/* Transfers moving cash in/out of the selected account — this list
@@ -458,7 +508,9 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
               no longer requires leaving Investing (UX-REVIEW Theme 3). */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-white text-base">Transfers</h3>
+              <h3 className="font-semibold text-white text-base">
+                Transfers ({visibleTransfers.length})
+              </h3>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -489,7 +541,7 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
                   No transfers for this account yet.
                 </div>
               ) : (
-                visibleTransfers.map((t) => {
+                pagedTransfers.map((t) => {
                   const isOut =
                     cashAccountFilter !== ''
                       ? t.from_account_public_id === cashAccountFilter
@@ -575,7 +627,7 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
                       </td>
                     </tr>
                   ) : (
-                    visibleTransfers.map((t) => {
+                    pagedTransfers.map((t) => {
                       // With an account selected, direction is relative to that
                       // account; in the all-accounts view, fall back to direction
                       // relative to the investing module.
@@ -629,6 +681,12 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
                 </tbody>
               </table>
             </div>
+            <Pagination
+              total={visibleTransfers.length}
+              limit={CASH_PAGE_SIZE}
+              offset={transfersOffset}
+              onPageChange={setTransfersOffset}
+            />
           </div>
         </div>
       </div>
@@ -771,14 +829,6 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
           )}
         </DialogContent>
       </Dialog>
-
-      <div className="rounded-lg border border-border p-4">
-        <DividendsSection
-          accounts={accounts}
-          accountFilter={cashAccountFilter}
-          currencyDisplayPreference={currencyDisplayPreference}
-        />
-      </div>
 
       <TransferModal
         open={isTransferModalOpen}

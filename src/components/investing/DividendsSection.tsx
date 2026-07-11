@@ -15,6 +15,7 @@ import { formatDate, formatDateInputValue } from '../../utils/dateFormat';
 import { useInvalidatingMutation } from '../../hooks/useInvalidatingMutation';
 import { queryKeys } from '../../lib/queryKeys';
 import { DropdownSelect } from '../DropdownSelect';
+import { Pagination } from '../Pagination';
 import { Button } from '../ui/button';
 import { SkeletonList } from '../ui/FeedbackStates';
 import {
@@ -29,6 +30,9 @@ import {
 const refreshKeys = [queryKeys.investing.all, queryKeys.finance.all, queryKeys.dashboard.all];
 
 const INCOME_TYPE_OPTIONS = DIVIDEND_INCOME_TYPES.map((t) => ({ value: t, label: t }));
+
+// One server page at a time (spec-009), same size as the Orders tab.
+const DIVIDENDS_PAGE_SIZE = 10;
 
 interface DividendsSectionProps {
   accounts: Account[];
@@ -72,11 +76,22 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
     rejected: { row: number; reason: string }[];
   } | null>(null);
 
+  const [offset, setOffset] = useState(0);
+  // A filter change on a later page must never strand the user on an empty
+  // page — reset during render (React's adjust-state-on-prop-change pattern).
+  const [prevAccountFilter, setPrevAccountFilter] = useState(accountFilter);
+  if (prevAccountFilter !== accountFilter) {
+    setPrevAccountFilter(accountFilter);
+    setOffset(0);
+  }
+
   const dividendsRes = useQuery({
-    queryKey: queryKeys.investing.dividends(accountFilter),
-    queryFn: () => investingService.getDividends(200, 0, accountFilter || undefined),
+    queryKey: queryKeys.investing.dividends(accountFilter, offset),
+    queryFn: () =>
+      investingService.getDividends(DIVIDENDS_PAGE_SIZE, offset, accountFilter || undefined),
   });
   const dividends = useMemo(() => dividendsRes.data?.items ?? [], [dividendsRes.data]);
+  const dividendsTotal = dividendsRes.data?.total ?? 0;
 
   const createMutation = useInvalidatingMutation(
     (data: DividendCreate) => investingService.createDividend(data),
@@ -166,7 +181,9 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Dividends / Income</h3>
+        <h3 className="text-sm font-semibold text-foreground">
+          Dividends / Income ({dividendsTotal})
+        </h3>
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -242,6 +259,13 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
           </table>
         </div>
       )}
+
+      <Pagination
+        total={dividendsTotal}
+        limit={DIVIDENDS_PAGE_SIZE}
+        offset={offset}
+        onPageChange={setOffset}
+      />
 
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && setIsModalOpen(false)}>
         <DialogContent>

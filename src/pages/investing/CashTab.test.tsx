@@ -9,6 +9,10 @@ import { server } from '../../test/setup';
 
 const PAGE_SIZE = 10;
 
+const byParagraphText = (text: string) => (_: string, el: Element | null) =>
+  el?.tagName === 'P' && el.textContent === text;
+
+
 const cashRow = (i: number) => ({
   public_id: `cash-${i}`,
   account_id: 'acc-1',
@@ -111,14 +115,14 @@ describe('CashTab pagination (spec-009)', () => {
     renderTab();
 
     // First page requested at PAGE_SIZE, not a 200-row dump.
-    expect(await screen.findByText('Showing 1 to 10 of 25 results')).toBeInTheDocument();
+    expect(await screen.findByText(byParagraphText('Showing 1 to 10 of 25 results'))).toBeInTheDocument();
     expect(requests.cash[0].searchParams.get('limit')).toBe(String(PAGE_SIZE));
     expect(requests.cash[0].searchParams.get('offset')).toBe('0');
 
     // Paging forward refetches with the next offset.
     const nextButtons = screen.getAllByRole('button', { name: 'Next page' });
     fireEvent.click(nextButtons[0]);
-    await screen.findByText('Showing 11 to 20 of 25 results');
+    await screen.findByText(byParagraphText('Showing 11 to 20 of 25 results'));
     const last = requests.cash[requests.cash.length - 1];
     expect(last.searchParams.get('offset')).toBe(String(PAGE_SIZE));
   });
@@ -146,7 +150,7 @@ describe('CashTab pagination (spec-009)', () => {
     baseHandlers({ cashTotal: 0, transferCount: 17 });
     renderTab();
     await screen.findByText('Transfers (17)');
-    expect(screen.getByText('Showing 1 to 10 of 17 results')).toBeInTheDocument();
+    expect(screen.getByText(byParagraphText('Showing 1 to 10 of 17 results'))).toBeInTheDocument();
     // Desktop table renders 10 transfer rows, not all 17.
     await waitFor(() =>
       expect(screen.getAllByTestId(/investing-transfer-row-/)).toHaveLength(10),

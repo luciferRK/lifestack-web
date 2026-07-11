@@ -1,7 +1,7 @@
 # Spec-009: Cash Tab Section Layout (bounded sections, consistent pagination)
 
 **Created:** 2026-07-11
-**Status:** Approved 2026-07-11 (owner: uniform pagination) — in progress
+**Status:** Implemented 2026-07-11 — owner-approved (uniform pagination). Cash balances and dividends page server-side at 10 rows (account filter server-side); transfers page client-side over the fetched window; sections reordered Cash → Dividends → Transfers with counts in headers; Pagination buttons gained aria-labels. tsc -b, vite build, lint (0 errors), full vitest suite green, coverage 75.85% lines vs 70% gate.
 **Scope:** `lifestack-web` only — one web PR. No API changes: cash-balances and dividends are already server-paginated with an account filter; transfers pages client-side (see Details).
 **Depends on:** spec-073 web UI (the Dividends section this fixes the reachability of).
 
