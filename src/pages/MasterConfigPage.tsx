@@ -447,9 +447,12 @@ export const MasterConfigPage: React.FC = () => {
   // on a row far down the page left the form open off-screen — scroll it
   // into view so editing can continue without a manual scroll-up.
   const scrollEditorIntoView = (testId: string) => {
-    requestAnimationFrame(() => {
+    // setTimeout (not requestAnimationFrame) so this runs after React commits
+    // the state change that renders the editor — rAF can fire first and find
+    // no element to scroll to, especially on the null -> id transition.
+    setTimeout(() => {
       document.querySelector(`[data-testid="${testId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    }, 0);
   };
 
   const openCategoryEditor = (category: typeof categories[number]) => {
