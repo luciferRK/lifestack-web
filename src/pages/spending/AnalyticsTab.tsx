@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   BarChart2,
   PieChart,
@@ -72,6 +72,10 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
     queryKey: ['spending-breakdown', analyticsRange.fromDate, analyticsRange.toDate, breakdownType],
     queryFn: () => spendingService.getCategoryBreakdown(analyticsRange.fromDate, analyticsRange.toDate, breakdownType),
     enabled: !!analyticsRange.fromDate,
+    // Toggling Income/Expense changes the query key, which would otherwise
+    // make breakdownData go undefined mid-toggle and mistrigger the
+    // full-page skeleton below (isInitialAnalyticsLoad) on every toggle.
+    placeholderData: keepPreviousData,
   });
 
   const { data: savingsRateData, isLoading: isSavingsRateLoading } = useQuery({
