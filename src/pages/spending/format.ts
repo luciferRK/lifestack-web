@@ -33,11 +33,25 @@ export const getCurrentMonthValue = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 };
 
-const monthLabelFormatter = new Intl.DateTimeFormat(undefined, {
+// spec-075: explicit locale, not the browser's implicit one -- deterministic
+// output regardless of where the browser happens to be set. This is a
+// month/year *label* (not a currency amount), so it stays fixed to en-US
+// rather than following the currency display-profile locale.
+const monthLabelFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   year: 'numeric',
   timeZone: 'UTC',
 });
+
+const MONTH_SHORT_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Short month name (e.g. "Jan") from a `YYYY-MM` value. Falls back to the
+// raw input for anything that doesn't match, so callers can pass it through
+// safely without a separate regex guard.
+export const monthShortLabel = (monthValue: string) => {
+  const [, m] = monthValue.split('-');
+  return MONTH_SHORT_NAMES[Number(m) - 1] ?? monthValue;
+};
 
 export const formatMonthLabel = (monthValue: string) => {
   if (!/^\d{4}-\d{2}$/.test(monthValue)) return monthValue;

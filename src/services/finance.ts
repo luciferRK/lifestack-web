@@ -4,18 +4,24 @@ import { paginatedSchema } from '../types/common';
 import {
   AccountBalanceResponseSchema,
   AccountSchema,
+  AccountStatementSchema,
   CapitalTransferSchema,
   CurrencySchema,
   NetWorthDataSchema,
   NetWorthHistoryItemSchema,
   ReconciliationSummarySchema,
+  ReconciliationViewSchema,
+  StatementLineSchema,
   UserFinanceSettingSchema,
+  UserFxRateSchema,
+  UserNetWorthPointSchema,
   WorkspaceFinanceSettingSchema,
 } from '../types/finance';
 import type {
   Account,
   AccountBalanceResponse,
   AccountCreate,
+  AccountStatement,
   AccountUpdate,
   CapitalTransfer,
   CapitalTransferCreate,
@@ -24,14 +30,19 @@ import type {
   NetWorthData,
   NetWorthHistoryItem,
   ReconciliationSummary,
+  ReconciliationView,
+  StatementLine,
   UserFinanceSetting,
   UserFinanceSettingUpdate,
   WorkspaceFinanceSetting,
   WorkspaceFinanceSettingUpdate,
 } from '../types/finance';
 
+
 const PaginatedAccountsSchema = paginatedSchema(AccountSchema);
 const PaginatedTransfersSchema = paginatedSchema(CapitalTransferSchema);
+const PaginatedUserFxRatesSchema = paginatedSchema(UserFxRateSchema);
+const PaginatedUserNetWorthPointsSchema = paginatedSchema(UserNetWorthPointSchema);
 
 export const financeService = {
   getCurrencies: async (): Promise<Currency[]> => {
@@ -94,7 +105,10 @@ export const financeService = {
     return PaginatedTransfersSchema.parse(response.data);
   },
 
-  updateTransfer: async (publicId: string, data: CapitalTransferUpdate): Promise<CapitalTransfer> => {
+  updateTransfer: async (
+    publicId: string,
+    data: CapitalTransferUpdate,
+  ): Promise<CapitalTransfer> => {
     const response = await api.patch(`/finance/transfers/${publicId}`, data);
     return CapitalTransferSchema.parse(response.data);
   },
@@ -113,6 +127,45 @@ export const financeService = {
     return ReconciliationSummarySchema.parse(response.data);
   },
 
+  getAccountStatements: async (publicId: string): Promise<AccountStatement[]> => {
+    const response = await api.get(`/finance/accounts/${publicId}/statements`);
+    return z.array(AccountStatementSchema).parse(response.data);
+  },
+
+  getStatementReconciliation: async (
+    accountId: string,
+    statementId: string,
+  ): Promise<ReconciliationView> => {
+    const response = await api.get(
+      `/finance/accounts/${accountId}/statements/${statementId}/reconciliation`,
+    );
+    return ReconciliationViewSchema.parse(response.data);
+  },
+
+  confirmStatementLineMatch: async (
+    accountId: string,
+    statementId: string,
+    lineId: string,
+    body: { transaction_id?: string; transfer_id?: string; leg?: 'from' | 'to' },
+  ): Promise<StatementLine> => {
+    const response = await api.post(
+      `/finance/accounts/${accountId}/statements/${statementId}/lines/${lineId}/match`,
+      body,
+    );
+    return StatementLineSchema.parse(response.data);
+  },
+
+  unmatchStatementLine: async (
+    accountId: string,
+    statementId: string,
+    lineId: string,
+  ): Promise<StatementLine> => {
+    const response = await api.post(
+      `/finance/accounts/${accountId}/statements/${statementId}/lines/${lineId}/unmatch`,
+    );
+    return StatementLineSchema.parse(response.data);
+  },
+
   getNetWorth: async (): Promise<NetWorthData> => {
     const response = await api.get('/finance/net-worth');
     return NetWorthDataSchema.parse(response.data);
@@ -126,5 +179,25 @@ export const financeService = {
       params: { from_date: fromDate, to_date: toDate },
     });
     return z.array(NetWorthHistoryItemSchema).parse(response.data);
+  },
+
+  getFxHistory: async (limit: number = 200, offset: number = 0) => {
+    const response = await api.get('/finance/fx/history', { params: { limit, offset } });
+    return PaginatedUserFxRatesSchema.parse(response.data);
+  },
+
+  deleteFxHistoryRow: async (id: number): Promise<void> => {
+    await api.delete(`/finance/fx/history/${id}`);
+  },
+
+  getNetWorthUserPoints: async (limit: number = 200, offset: number = 0) => {
+    const response = await api.get('/finance/net-worth/history/user-points', {
+      params: { limit, offset },
+    });
+    return PaginatedUserNetWorthPointsSchema.parse(response.data);
+  },
+
+  deleteNetWorthUserPoint: async (id: number): Promise<void> => {
+    await api.delete(`/finance/net-worth/history/user-points/${id}`);
   },
 };

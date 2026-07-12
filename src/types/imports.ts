@@ -4,7 +4,19 @@ import { z } from 'zod';
 // 'investing-holdings' is kept for backward-compat rendering of historic import_batches rows.
 // Response schemas below keep `module` as a plain string, not this enum, so
 // a historic row from a module this union doesn't (yet) list still renders.
-export type ImportModule = 'spending-transactions' | 'spending-budgets' | 'investing-holdings' | 'investing-constituents' | 'investing-orders' | 'finance-transfers' | 'investing-cams-cas' | 'investing-demat-cas';
+export type ImportModule =
+  | 'spending-transactions'
+  | 'spending-budgets'
+  | 'investing-holdings'
+  | 'investing-constituents'
+  | 'investing-orders'
+  | 'finance-transfers'
+  | 'investing-cams-cas'
+  | 'investing-demat-cas'
+  | 'investing-dividends'
+  | 'finance-fx-rates'
+  | 'finance-net-worth-history'
+  | 'finance-account-statement';
 
 export const ImportStatusSchema = z.enum([
   'uploaded',
@@ -35,7 +47,9 @@ export const ImportBatchSchema = z.object({
   started_at: z.string().default(''),
   validated_at: z.string().nullable().default(null),
   committed_at: z.string().nullable().default(null),
+  extra_json: z.record(z.string(), z.any()).nullable().optional(),
 });
+
 export type ImportBatch = z.infer<typeof ImportBatchSchema>;
 
 export const ImportErrorItemSchema = z.object({

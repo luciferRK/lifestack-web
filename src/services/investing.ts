@@ -2,6 +2,8 @@ import { z } from 'zod';
 import api from './api';
 import {
   CashBalanceSchema,
+  CorporateActionSchema,
+  DividendSchema,
   ExposureAnalyticsSchema,
   HoldingSchema,
   InstrumentConstituentSchema,
@@ -9,12 +11,21 @@ import {
   InvestingOrderSchema,
   InvestingSummarySchema,
   OverlapAnalyticsSchema,
+  PaginatedCorporateActionsSchema,
+  PaginatedDividendsSchema,
   PerformanceSummarySchema,
+  ReturnMetricsResponseSchema,
 } from '../types/investing';
 import type {
   CashBalance,
   CashBalanceCreate,
   CashBalanceUpdate,
+  CorporateAction,
+  CorporateActionCreate,
+  Dividend,
+  DividendCreate,
+  DividendUpdate,
+
   ExposureAnalytics,
   Holding,
   HoldingUpdate,
@@ -31,6 +42,7 @@ import type {
   OrderType,
   OverlapAnalytics,
   PerformanceSummary,
+  ReturnMetricsResponse,
 } from '../types/investing';
 
 // Schemas and types live in src/types/investing.ts (G4); re-exported here so
@@ -61,7 +73,10 @@ const PaginatedCashBalancesSchema = z.object({
 // ─── Service Implementation ──────────────────────────────────────────────────
 
 export const investingService = {
-  getHoldings: async (limit: number = 50, offset: number = 0): Promise<z.infer<typeof PaginatedHoldingsSchema>> => {
+  getHoldings: async (
+    limit: number = 50,
+    offset: number = 0,
+  ): Promise<z.infer<typeof PaginatedHoldingsSchema>> => {
     const response = await api.get('/investing/holdings', { params: { limit, offset } });
     return PaginatedHoldingsSchema.parse(response.data);
   },
@@ -98,6 +113,51 @@ export const investingService = {
 
   deleteCashBalance: async (publicId: string): Promise<void> => {
     await api.delete(`/investing/cash-balances/${publicId}`);
+  },
+
+  getDividends: async (
+    limit: number = 50,
+    offset: number = 0,
+    accountId?: string,
+  ): Promise<z.infer<typeof PaginatedDividendsSchema>> => {
+    const response = await api.get('/investing/dividends', {
+      params: { limit, offset, account_id: accountId || undefined },
+    });
+    return PaginatedDividendsSchema.parse(response.data);
+  },
+
+  createDividend: async (data: DividendCreate): Promise<Dividend> => {
+    const response = await api.post('/investing/dividends', data);
+    return DividendSchema.parse(response.data);
+  },
+
+  updateDividend: async (publicId: string, data: DividendUpdate): Promise<Dividend> => {
+    const response = await api.patch(`/investing/dividends/${publicId}`, data);
+    return DividendSchema.parse(response.data);
+  },
+
+  deleteDividend: async (publicId: string): Promise<void> => {
+    await api.delete(`/investing/dividends/${publicId}`);
+  },
+
+  getCorporateActions: async (
+    limit: number = 50,
+    offset: number = 0,
+    accountId?: string,
+  ): Promise<z.infer<typeof PaginatedCorporateActionsSchema>> => {
+    const response = await api.get('/investing/corporate-actions', {
+      params: { limit, offset, account_id: accountId || undefined },
+    });
+    return PaginatedCorporateActionsSchema.parse(response.data);
+  },
+
+  createCorporateAction: async (data: CorporateActionCreate): Promise<CorporateAction> => {
+    const response = await api.post('/investing/corporate-actions', data);
+    return CorporateActionSchema.parse(response.data);
+  },
+
+  deleteCorporateAction: async (publicId: string): Promise<void> => {
+    await api.delete(`/investing/corporate-actions/${publicId}`);
   },
 
   getSummary: async (): Promise<InvestingSummary> => {
@@ -141,6 +201,11 @@ export const investingService = {
   getPerformanceSummary: async (): Promise<PerformanceSummary> => {
     const response = await api.get('/investing/performance/summary');
     return PerformanceSummarySchema.parse(response.data);
+  },
+
+  getReturnMetrics: async (): Promise<ReturnMetricsResponse> => {
+    const response = await api.get('/investing/performance/returns');
+    return ReturnMetricsResponseSchema.parse(response.data);
   },
 
   refreshPrices: async (): Promise<{ updated: string[] }> => {

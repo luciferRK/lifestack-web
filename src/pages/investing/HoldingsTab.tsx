@@ -7,6 +7,7 @@ import { useInvalidatingMutation } from '../../hooks/useInvalidatingMutation';
 import { investingService } from '../../services/investing';
 import type { InvestingOrder } from '../../services/investing';
 import { formatCurrency, formatQuantity, toNumber } from '../../utils/numberFormat';
+import { useDisplayProfile } from '../../hooks/useDisplayProfile';
 import { formatDate } from '../../utils/dateFormat';
 import { CompactFilterBar, CompactFilterField } from '../../components/filters/CompactFilterBar';
 import { queryKeys } from '../../lib/queryKeys';
@@ -66,6 +67,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
   deleteOrderPending,
   updateOrderPending,
 }) => {
+  const { locale: displayLocale, decimalPlaces } = useDisplayProfile();
   const [holdingsAccountFilter, setHoldingsAccountFilter] = useState('');
   const [holdingsCurrencyFilter, setHoldingsCurrencyFilter] = useState('');
   const [holdingsTypeFilter, setHoldingsTypeFilter] = useState('');
@@ -120,8 +122,13 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
     queryFn: () => financeService.getAccounts(200, 0),
   });
   const accounts = useMemo(() => accountsRes.data?.items ?? [], [accountsRes.data]);
+  // Holdings only ever belong to brokerage accounts, so the account filter must
+  // not surface bank/wallet/card accounts (they'd only ever match zero rows).
   const accountDropdownOptions = useMemo(
-    () => accounts.map((acc) => ({ value: acc.public_id, label: acc.name })),
+    () =>
+      accounts
+        .filter((acc) => acc.account_type === 'brokerage')
+        .map((acc) => ({ value: acc.public_id, label: acc.name })),
     [accounts]
   );
 
@@ -384,6 +391,51 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
     };
   }, [filteredHoldings, holdingCurrencies, summary.data]);
 
+  // Account-wise profit summary shown at the bottom of the tab. Grouped by
+  // (account, currency) so each row's sums stay in a single currency and need
+  // no FX conversion — a brokerage account is normally single-currency, but if
+  // one holds positions in multiple currencies it yields one row per currency
+  // rather than an unconvertible mixed total. Built from filteredHoldings so it
+  // honours the same filters (and the hide-zero-book-value toggle) as the table.
+  const accountBreakdown = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        accountId: string;
+        accountName: string;
+        currency: string;
+        positions: number;
+        invested: number;
+        marketValue: number;
+      }
+    >();
+    for (const h of filteredHoldings) {
+      const currency = (h.currency ?? 'USD').toUpperCase();
+      const key = `${h.account_id}::${currency}`;
+      const invested = deriveBookValue(h);
+      const price = toNumber(h.current_price ?? h.avg_cost);
+      const marketValue = toNumber(h.quantity) * price;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.positions += 1;
+        existing.invested += invested;
+        existing.marketValue += marketValue;
+      } else {
+        groups.set(key, {
+          accountId: h.account_id,
+          accountName: h.account_name || 'Unknown account',
+          currency,
+          positions: 1,
+          invested,
+          marketValue,
+        });
+      }
+    }
+    return Array.from(groups.values()).sort(
+      (a, b) => a.accountName.localeCompare(b.accountName) || a.currency.localeCompare(b.currency)
+    );
+  }, [filteredHoldings]);
+
   return (
     <>
       <div className="space-y-6">
@@ -447,7 +499,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
               <DropdownSelect
                 testId="investing-holdings-type-filter"
                 value={holdingsTypeFilter}
-                options={[...instrumentTypeOptions]}
+                options={instrumentTypeOptions}
                 onChange={setHoldingsTypeFilter}
                 placeholder="All types"
                 clearLabel="All types"
@@ -530,14 +582,14 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="font-semibold text-white">{formatCurrency(h.current_value ?? deriveBookValue(h), h.currency, currencyDisplayPreference)}</p>
-                        <p className={`text-xs font-medium ${colorClass}`}>{sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference)} ({sign}{gainLossPct.toFixed(2)}%)</p>
+                        <p className="font-semibold text-white">{formatCurrency(h.current_value ?? deriveBookValue(h), h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</p>
+                        <p className={`text-xs font-medium ${colorClass}`}>{sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)} ({sign}{gainLossPct.toFixed(2)}%)</p>
                       </div>
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-700/40 pt-3 text-xs">
                       <div><span className="block text-slate-500">Qty</span><span className="text-slate-200">{formatQuantity(h.quantity)}</span></div>
-                      <div><span className="block text-slate-500">Avg cost</span><span className="text-slate-200">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</span></div>
-                      <div><span className="block text-slate-500">Price</span><span className="text-slate-200">{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference)}</span></div>
+                      <div><span className="block text-slate-500">Avg cost</span><span className="text-slate-200">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span></div>
+                      <div><span className="block text-slate-500">Price</span><span className="text-slate-200">{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span></div>
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
                       <button
@@ -646,8 +698,8 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                           <CurrencyBadge code={h.currency} />
                         </td>
                         <td className="px-4 py-3">{formatQuantity(h.quantity)}</td>
-                        <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference)}</td>
-                        <td className="px-4 py-3">{formatCurrency(deriveBookValue(h), h.currency, currencyDisplayPreference)}</td>
+                        <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</td>
+                        <td className="px-4 py-3">{formatCurrency(deriveBookValue(h), h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</td>
                         <td className="px-4 py-3">
                           {editingPriceHoldingId === h.public_id ? (
                             <div className="flex items-center gap-1.5">
@@ -679,7 +731,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 group">
-                              <span>{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference)}</span>
+                              <span>{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span>
                               <button
                                 data-testid={`investing-edit-price-${h.public_id}`}
                                 onClick={() => handleStartEditPrice(h)}
@@ -691,10 +743,10 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3">{formatCurrency(h.current_value ?? deriveBookValue(h), h.currency, currencyDisplayPreference)}</td>
+                        <td className="px-4 py-3">{formatCurrency(h.current_value ?? deriveBookValue(h), h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</td>
                         <td className="px-4 py-3 font-medium">
                           <span className={colorClass}>
-                            {sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference)} ({sign}{gainLossPct.toFixed(2)}%)
+                            {sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)} ({sign}{gainLossPct.toFixed(2)}%)
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -739,13 +791,13 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                     <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={6}>Total Cost & Value</td>
                     <td className="px-4 py-3 font-semibold text-white">
                       {totalBookCost != null
-                        ? formatCurrency(totalBookCost.amount, totalBookCost.currency, currencyDisplayPreference)
+                        ? formatCurrency(totalBookCost.amount, totalBookCost.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
                         : 'N/A (multi-currency)'}
                     </td>
                     <td />
                     <td className="px-4 py-3 font-semibold text-white">
                       {totalCurrentValue != null
-                        ? formatCurrency(totalCurrentValue.amount, totalCurrentValue.currency, currencyDisplayPreference)
+                        ? formatCurrency(totalCurrentValue.amount, totalCurrentValue.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
                         : 'N/A (multi-currency)'}
                     </td>
                     <td colSpan={2} />
@@ -755,6 +807,58 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
             </table>
           </div>
         </div>
+
+        {/* Account-wise profit summary — one card per brokerage account (split
+            by currency where a single account holds multiple). Mirrors the
+            active filters so it stays in sync with the table above. */}
+        {accountBreakdown.length > 0 ? (
+          <div className="space-y-3" data-testid="investing-account-breakdown">
+            <h3 className="font-semibold text-white text-base">By account</h3>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {accountBreakdown.map((row) => {
+                const pl = row.marketValue - row.invested;
+                const plPct = row.invested !== 0 ? (pl / row.invested) * 100 : null;
+                const positive = pl >= 0;
+                return (
+                  <div
+                    key={`${row.accountId}-${row.currency}`}
+                    data-testid={`investing-account-breakdown-row-${row.accountId}`}
+                    className="rounded-xl border border-slate-700/50 bg-slate-900/30 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate font-semibold text-white">{row.accountName}</span>
+                      <CurrencyBadge code={row.currency} />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {row.positions} position{row.positions === 1 ? '' : 's'}
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-700/40 pt-3 text-xs">
+                      <div>
+                        <span className="block text-slate-500">Invested</span>
+                        <span className="text-slate-200">
+                          {formatCurrency(row.invested, row.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-slate-500">Market value</span>
+                        <span className="font-medium text-white">
+                          {formatCurrency(row.marketValue, row.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="block text-slate-500">Profit / loss</span>
+                        <span className={positive ? 'text-emerald-300' : 'text-rose-300'}>
+                          {formatCurrency(pl, row.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                          {plPct != null ? ` (${positive ? '+' : ''}${plPct.toFixed(2)}%)` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Trade History Modal */}
@@ -802,17 +906,17 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                                 {isBuy ? 'BUY' : 'SELL'}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-right text-slate-300">{toNumber(o.quantity).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right text-slate-300">{formatQuantity(o.quantity)}</td>
                             <td className="px-4 py-3 text-right text-slate-300">
-                              {formatCurrency(toNumber(o.price_per_unit), o.currency, currencyDisplayPreference)}
+                              {formatCurrency(toNumber(o.price_per_unit), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
                             </td>
                             <td className="px-4 py-3 text-right font-medium text-white">
-                              {formatCurrency(toNumber(o.net_amount), o.currency, currencyDisplayPreference)}
+                              {formatCurrency(toNumber(o.net_amount), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
                             </td>
                             <td className="px-4 py-3 text-right">
                               {o.realized_gain_loss != null ? (
                                 <span className={toNumber(o.realized_gain_loss) >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                                  {formatCurrency(toNumber(o.realized_gain_loss), o.currency, currencyDisplayPreference)}
+                                  {formatCurrency(toNumber(o.realized_gain_loss), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
                                 </span>
                               ) : (
                                 <span className="text-slate-500">—</span>
@@ -912,7 +1016,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                   <DropdownSelect
                     testId="investing-edit-holding-instrument-type"
                     value={editHoldingForm.instrument_type}
-                    options={[...instrumentTypeOptions]}
+                    options={instrumentTypeOptions}
                     onChange={(value) =>
                       setEditHoldingForm((s) => ({
                         ...s,

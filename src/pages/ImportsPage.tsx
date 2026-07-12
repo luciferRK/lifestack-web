@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
@@ -28,7 +29,38 @@ const MODULE_OPTIONS: Array<{ value: ImportModule; label: string; testId?: strin
     label: 'Demat CAS (Holdings Verification)',
     testId: 'import-type-investing-demat-cas',
   },
+  {
+    value: 'investing-dividends',
+    label: 'Dividend Income',
+    testId: 'import-type-investing-dividends',
+  },
+  {
+    value: 'finance-fx-rates',
+    label: 'FX Rates History',
+    testId: 'import-type-finance-fx-rates',
+  },
+  {
+    value: 'finance-net-worth-history',
+    label: 'Net Worth History',
+    testId: 'import-type-finance-net-worth-history',
+  },
+  {
+    value: 'finance-account-statement',
+    label: 'Bank Statement (Reconciliation)',
+    testId: 'import-type-finance-account-statement',
+  },
 ];
+
+// Small fixed set, no bank-specific fixtures (owner decision, spec-078) —
+// keep in sync with app/imports/finance_account_statement_import.py::ALLOWED_DATE_FORMATS.
+const DATE_FORMAT_OPTIONS = [
+  { value: 'yyyy-MM-dd', label: 'YYYY-MM-DD (2026-01-05)' },
+  { value: 'dd/MM/yyyy', label: 'DD/MM/YYYY (05/01/2026)' },
+  { value: 'dd-MM-yyyy', label: 'DD-MM-YYYY (05-01-2026)' },
+  { value: 'MM/dd/yyyy', label: 'MM/DD/YYYY (01/05/2026)' },
+  { value: 'dd MMM yyyy', label: 'DD MMM YYYY (05 Jan 2026)' },
+];
+
 
 // PDF-based imports (spec-056, spec-060): no CSV template, a required
 // brokerage target account, and — for Demat CAS only — a statement password.
@@ -55,6 +87,13 @@ const lifecycleCopy = (status: string) => {
       description: 'Delete the validation batch, uploaded artifact, preview rows, and validation errors.',
     };
   }
+  if (status === 'uploaded') {
+    return {
+      action: 'Delete import batch',
+      description:
+        'Validation has not produced a result yet. If this batch is stuck here (no progress after a few minutes), it is safe to delete — nothing has been committed.',
+    };
+  }
   return {
     action: 'Delete import batch',
     description: 'Deletion is available after validation or commit has finished.',
@@ -79,10 +118,22 @@ export const ImportsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [module, setModule] = useState<ImportModule | ''>('');
+  const [searchParams] = useSearchParams();
+  const initialModule = (searchParams.get('module') as ImportModule) || '';
+  const [module, setModule] = useState<ImportModule | ''>(initialModule);
+
+  // Deep-link support: when the ?module= param changes while this page stays
+  // mounted (e.g. navigating between two "Bulk import" links), sync the
+  // selected module. Guarded on a non-empty param so a plain /imports visit
+  // never clobbers a manual dropdown selection.
+  useEffect(() => {
+    if (initialModule) setModule(initialModule);
+  }, [initialModule]);
+
   const [file, setFile] = useState<File | null>(null);
   const [targetAccountId, setTargetAccountId] = useState('');
   const [filePassword, setFilePassword] = useState('');
+  const [dateFormat, setDateFormat] = useState('');
   const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
   const [latestValidation, setLatestValidation] = useState<ImportValidateResponse | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
@@ -112,6 +163,17 @@ export const ImportsPage: React.FC = () => {
       (accountsResponse?.items ?? [])
         .filter((account) => account.is_active && account.account_type === 'brokerage')
         .map((account) => ({ value: account.public_id, label: account.name })),
+    [accountsResponse?.items]
+  );
+  // Statement reconciliation is for ledger-managed accounts only (backend-enforced).
+  const walletAccountOptions = useMemo(
+    () =>
+      (accountsResponse?.items ?? [])
+        .filter((account) => account.is_active && account.account_type !== 'brokerage')
+        .map((account) => ({
+          value: account.public_id,
+          label: `${account.name} (${account.account_type.replace('_', ' ')})`,
+        })),
     [accountsResponse?.items]
   );
 
@@ -164,12 +226,14 @@ export const ImportsPage: React.FC = () => {
       if (!module) {
         throw new Error('Module is required');
       }
-      const needsTargetAccount = module === 'spending-transactions' || isPdfModule(module);
+      const needsTargetAccount =
+        module === 'spending-transactions' || module === 'finance-account-statement' || isPdfModule(module);
       return importsService.uploadAndValidate(
         module,
         file as File,
         needsTargetAccount ? targetAccountId || undefined : undefined,
-        module === 'investing-demat-cas' ? filePassword || undefined : undefined
+        module === 'investing-demat-cas' ? filePassword || undefined : undefined,
+        module === 'finance-account-statement' ? dateFormat || undefined : undefined
       );
     },
     onSuccess: (data) => {
@@ -178,6 +242,7 @@ export const ImportsPage: React.FC = () => {
       setFile(null);
       setTargetAccountId('');
       setFilePassword('');
+      setDateFormat('');
       setUploadError(null);
       setIsUploadModalOpen(false);
       void queryClient.invalidateQueries({ queryKey: ['imports', 'list'] });
@@ -203,6 +268,16 @@ export const ImportsPage: React.FC = () => {
     } else if (!fileExt.endsWith('.csv') && !fileExt.endsWith('.xlsx')) {
       setUploadError('Invalid file format. Please upload a CSV or XLSX file.');
       return;
+    }
+    if (module === 'finance-account-statement') {
+      if (!targetAccountId) {
+        setUploadError('Select the wallet/bank account this statement belongs to.');
+        return;
+      }
+      if (!dateFormat) {
+        setUploadError('Select the date format used in this statement.');
+        return;
+      }
     }
     setUploadError(null);
     uploadMutation.mutate();
@@ -293,6 +368,7 @@ export const ImportsPage: React.FC = () => {
                     setModule(e.target.value as ImportModule);
                     setTargetAccountId('');
                     setFilePassword('');
+                    setDateFormat('');
                     setFile(null);
                     setUploadError(null);
                   }}
@@ -329,6 +405,47 @@ export const ImportsPage: React.FC = () => {
                     workspace default spending account.
                   </p>
                 </div>
+              )}
+
+              {module === 'finance-account-statement' && (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-semibold text-slate-300">
+                      Wallet / bank account
+                    </label>
+                    <DropdownSelect
+                      testId="imports-target-account-statement"
+                      value={targetAccountId}
+                      onChange={setTargetAccountId}
+                      options={walletAccountOptions}
+                      placeholder="Select the account this statement belongs to"
+                      showSearch
+                      sortByLabel
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-semibold text-slate-300">Date format</label>
+                    <select
+                      data-testid="imports-statement-date-format"
+                      value={dateFormat}
+                      onChange={(e) => setDateFormat(e.target.value)}
+                      className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-white text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    >
+                      <option value="" disabled>
+                        Select the date format used in your CSV
+                      </option>
+                      {DATE_FORMAT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500">
+                      Applied to every row in the file — no bank-specific fixtures, adapt your
+                      export to one of these formats.
+                    </p>
+                  </div>
+                </>
               )}
 
               {isPdfModule(module) && (
@@ -413,7 +530,8 @@ export const ImportsPage: React.FC = () => {
                     !module ||
                     !file ||
                     uploadMutation.isPending ||
-                    (isPdfModule(module) && !targetAccountId)
+                    (isPdfModule(module) && !targetAccountId) ||
+                    (module === 'finance-account-statement' && (!targetAccountId || !dateFormat))
                   }
                   className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -470,9 +588,13 @@ export const ImportsPage: React.FC = () => {
             <>
               {(() => {
                 const lifecycle = lifecycleCopy(activeDetail.import_batch.status);
-                const canDelete = ['validated', 'failed_validation', 'completed', 'failed_commit'].includes(
-                  activeDetail.import_batch.status,
-                );
+                const canDelete = [
+                  'uploaded',
+                  'validated',
+                  'failed_validation',
+                  'completed',
+                  'failed_commit',
+                ].includes(activeDetail.import_batch.status);
                 return (
                   <div className="mb-4 rounded-lg border border-slate-700 bg-slate-950/40 p-3 text-sm text-slate-300">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -601,6 +723,36 @@ export const ImportsPage: React.FC = () => {
                               <th className="px-3 py-2 text-left">Currency</th>
                             </>
                           )}
+                          {activeDetail.import_batch.module === 'investing-dividends' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Account</th>
+                              <th className="px-3 py-2 text-left">Symbol</th>
+                              <th className="px-3 py-2 text-left">Type</th>
+                              <th className="px-3 py-2 text-left">Gross</th>
+                              <th className="px-3 py-2 text-left">Tax</th>
+                              <th className="px-3 py-2 text-left">Currency</th>
+                              <th className="px-3 py-2 text-left">Pay Date</th>
+                            </>
+                          )}
+                          {activeDetail.import_batch.module === 'finance-fx-rates' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Base</th>
+                              <th className="px-3 py-2 text-left">Quote</th>
+                              <th className="px-3 py-2 text-left">Rate</th>
+                              <th className="px-3 py-2 text-left">As of</th>
+                            </>
+                          )}
+                          {activeDetail.import_batch.module === 'finance-net-worth-history' && (
+                            <>
+                              <th className="px-3 py-2 text-left">Date</th>
+                              <th className="px-3 py-2 text-left">Currency</th>
+                              <th className="px-3 py-2 text-left">Net Worth</th>
+                              <th className="px-3 py-2 text-left">Holdings</th>
+                              <th className="px-3 py-2 text-left">Inv Cash</th>
+                              <th className="px-3 py-2 text-left">Spd Cash</th>
+                            </>
+                          )}
+
                         </tr>
                       </thead>
                       <tbody>
@@ -700,6 +852,35 @@ export const ImportsPage: React.FC = () => {
                                 </td>
                               </>
                             )}
+                            {activeDetail.import_batch.module === 'investing-dividends' && (
+                              <>
+                                <td className="px-3 py-2">{row.payload_json.account_name ?? '-'}</td>
+                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.symbol}</td>
+                                <td className="px-3 py-2 capitalize">{row.payload_json.income_type}</td>
+                                <td className="px-3 py-2">{row.payload_json.gross_amount}</td>
+                                <td className="px-3 py-2">{row.payload_json.tax_withheld ?? '-'}</td>
+                                <td className="px-3 py-2 uppercase">{row.payload_json.currency}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.pay_date)}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'finance-fx-rates' && (
+                              <>
+                                <td className="px-3 py-2 uppercase font-semibold text-white">{row.payload_json.base_currency_code}</td>
+                                <td className="px-3 py-2 uppercase">{row.payload_json.quote_currency_code}</td>
+                                <td className="px-3 py-2">{row.payload_json.rate}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.as_of_date)}</td>
+                              </>
+                            )}
+                            {activeDetail.import_batch.module === 'finance-net-worth-history' && (
+                              <>
+                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.date)}</td>
+                                <td className="px-3 py-2 uppercase">{row.payload_json.reporting_currency}</td>
+                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.total_net_worth}</td>
+                                <td className="px-3 py-2">{row.payload_json.holdings_value ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.investing_cash ?? '-'}</td>
+                                <td className="px-3 py-2">{row.payload_json.spending_cash ?? '-'}</td>
+                              </>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -715,7 +896,10 @@ export const ImportsPage: React.FC = () => {
                   </p>
                   <p className="mb-2 text-xs text-amber-200/80">
                     A price or quantity jump this large usually means a split, reverse split, or
-                    bonus issue was never recorded. Record it under Investing → Corporate Actions.
+                    bonus issue was never recorded.{' '}
+                    <Link to="/investing?tab=orders" className="underline hover:text-amber-100">
+                      Record it under Investing → Orders → Corporate actions.
+                    </Link>
                   </p>
                   <ul className="space-y-1 text-xs text-amber-100">
                     {activeDetail.corporate_action_suspected.map((entry, idx) => (

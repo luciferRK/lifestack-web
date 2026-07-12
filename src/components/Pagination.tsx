@@ -22,6 +22,7 @@ export const Pagination: React.FC<PaginationProps> = ({ total, limit, offset, on
       </p>
       <div className="flex gap-2">
         <button
+          aria-label="Previous page"
           onClick={() => onPageChange(Math.max(0, offset - limit))}
           disabled={offset === 0}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white disabled:opacity-50 transition-colors"
@@ -29,6 +30,7 @@ export const Pagination: React.FC<PaginationProps> = ({ total, limit, offset, on
           <ChevronLeft className="h-5 w-5" />
         </button>
         <button
+          aria-label="Next page"
           onClick={() => onPageChange(offset + limit)}
           disabled={offset + limit >= total}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white disabled:opacity-50 transition-colors"

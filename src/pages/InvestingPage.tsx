@@ -6,7 +6,7 @@ import { financeService } from '../services/finance';
 import { useInvalidatingMutation } from '../hooks/useInvalidatingMutation';
 import { investingService } from '../services/investing';
 import type { InvestingOrder, InvestingOrderCreate, InvestingOrderUpdate, OrderType } from '../services/investing';
-import { formatCurrency, toNumber } from '../utils/numberFormat';
+import { DEFAULT_DECIMAL_PLACES, DEFAULT_DISPLAY_LOCALE, formatCurrency, formatQuantity, toNumber } from '../utils/numberFormat';
 import { CurrencyBadge } from '../components/finance/Badges';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
@@ -26,6 +26,7 @@ import { OrdersTab } from './investing/OrdersTab';
 import { CashTab } from './investing/CashTab';
 import { AnalyticsTab } from './investing/AnalyticsTab';
 import { SummaryCard } from './investing/components';
+import { ReturnMetricsPanel } from '../components/investing/ReturnMetricsPanel';
 import { formatDateTimeLocalInput, formatPerformanceMetric, statusLabel } from './investing/format';
 import { queryKeys } from '../lib/queryKeys';
 
@@ -75,7 +76,10 @@ export const InvestingPage: React.FC = () => {
     queryKey: queryKeys.finance.currencies(),
     queryFn: () => financeService.getCurrencies(),
   });
-  const currencyOptions = (currenciesRes.data ?? []).map((currency) => currency.code);
+  const currencyOptions = useMemo(
+    () => (currenciesRes.data ?? []).map((currency) => currency.code),
+    [currenciesRes.data],
+  );
 
   const userFinanceSettingsRes = useQuery({
     queryKey: queryKeys.finance.settings('user'),
@@ -84,12 +88,17 @@ export const InvestingPage: React.FC = () => {
   const userFinanceSettings = userFinanceSettingsRes.data;
   const currencyDisplayPreference =
     userFinanceSettings?.effective_currency_display_preference ?? 'symbol';
+  const displayLocale = userFinanceSettings?.effective_locale ?? DEFAULT_DISPLAY_LOCALE;
+  const decimalPlaces = userFinanceSettings?.effective_decimal_places ?? DEFAULT_DECIMAL_PLACES;
   const preferredWorkspaceCurrency =
     (userFinanceSettings?.effective_reporting_currency_code &&
     currencyOptions.includes(userFinanceSettings.effective_reporting_currency_code)
       ? userFinanceSettings.effective_reporting_currency_code
       : null) ?? currencyOptions[0] ?? 'USD';
-  const currencyDropdownOptions = currencyOptions.map((code) => ({ value: code, label: code }));
+  const currencyDropdownOptions = useMemo(
+    () => currencyOptions.map((code) => ({ value: code, label: code })),
+    [currencyOptions],
+  );
 
   const accountsRes = useQuery({
     queryKey: queryKeys.finance.accounts(),
@@ -373,9 +382,9 @@ export const InvestingPage: React.FC = () => {
           value={summary.data?.valuation_status === 'multi_currency_unconverted'
             ? 'N/A'
             : performanceSummary.data
-              ? formatCurrency(performanceSummary.data.portfolio_value ?? performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference)
+              ? formatCurrency(performanceSummary.data.portfolio_value ?? performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
               : (summary.data?.portfolio_value != null
-                ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference)
+                ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference, displayLocale, decimalPlaces)
                 : 'N/A')}
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-portfolio-value"
@@ -383,7 +392,7 @@ export const InvestingPage: React.FC = () => {
         <SummaryCard
           label="Invested"
           value={performanceSummary.data
-            ? formatCurrency(performanceSummary.data.invested_value ?? performanceSummary.data.total_cost, performanceSummary.data.currency, currencyDisplayPreference)
+            ? formatCurrency(performanceSummary.data.invested_value ?? performanceSummary.data.total_cost, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
             : 'N/A'}
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-invested-value"
@@ -391,7 +400,7 @@ export const InvestingPage: React.FC = () => {
         <SummaryCard
           label="Total gain/loss"
           value={performanceSummary.data
-            ? formatPerformanceMetric(performanceSummary.data.total_gain_loss, performanceSummary.data.total_gain_loss_pct, performanceSummary.data.currency, currencyDisplayPreference)
+            ? formatPerformanceMetric(performanceSummary.data.total_gain_loss, performanceSummary.data.total_gain_loss_pct, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
             : 'N/A'}
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-total-gain-loss"
@@ -399,7 +408,7 @@ export const InvestingPage: React.FC = () => {
         <SummaryCard
           label="Daily change"
           value={performanceSummary.data?.daily_change != null
-            ? formatPerformanceMetric(performanceSummary.data.daily_change, performanceSummary.data.daily_change_pct, performanceSummary.data.currency, currencyDisplayPreference)
+            ? formatPerformanceMetric(performanceSummary.data.daily_change, performanceSummary.data.daily_change_pct, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
             : 'N/A'}
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-daily-change"
@@ -407,11 +416,15 @@ export const InvestingPage: React.FC = () => {
         <SummaryCard
           label="Cash total"
           value={performanceSummary.data?.cash_total != null
-            ? formatCurrency(performanceSummary.data.cash_total, performanceSummary.data.currency, currencyDisplayPreference)
+            ? formatCurrency(performanceSummary.data.cash_total, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
             : 'N/A'}
           icon={<WalletCards className="h-5 w-5" />}
           testId="investing-cash-total"
         />
+      </div>
+
+      <div className="mb-6">
+        <ReturnMetricsPanel currencyDisplayPreference={currencyDisplayPreference} />
       </div>
 
       <div className="mb-6 rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3 text-sm text-slate-300">
@@ -425,7 +438,7 @@ export const InvestingPage: React.FC = () => {
             {Object.entries(summary.data.currency_breakdown).map(([code, value]) => (
               <span key={code} className="inline-flex items-center gap-1.5">
                 <CurrencyBadge code={code} title={`Book total in ${code}`} />
-                <span className="text-xs text-slate-300">{formatCurrency(value, code, currencyDisplayPreference)}</span>
+                <span className="text-xs text-slate-300">{formatCurrency(value, code, currencyDisplayPreference, displayLocale, decimalPlaces)}</span>
               </span>
             ))}
           </div>
@@ -457,7 +470,7 @@ export const InvestingPage: React.FC = () => {
           {performanceSummary.isLoading
             ? 'Loading...'
             : performanceSummary.data
-              ? `${formatCurrency(performanceSummary.data.total_gain_loss, performanceSummary.data.currency, currencyDisplayPreference)} (${performancePctLabel})`
+              ? `${formatCurrency(performanceSummary.data.total_gain_loss, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)} (${performancePctLabel})`
               : 'N/A'}
         </p>
       </div>
@@ -670,19 +683,19 @@ export const InvestingPage: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-slate-400">Gross amount</span>
                   <span data-testid="order-gross-amount" className="text-white font-medium">
-                    {formatCurrency(orderGross, orderForm.currency, currencyDisplayPreference)}
+                    {formatCurrency(orderGross, orderForm.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Total fees</span>
                   <span data-testid="order-total-fees" className="text-white">
-                    {formatCurrency(orderFees, orderForm.currency, currencyDisplayPreference)}
+                    {formatCurrency(orderFees, orderForm.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-slate-700/50 pt-2">
                   <span className="font-semibold text-white">Net {orderForm.order_type === 'buy' ? 'cost' : 'proceeds'}</span>
                   <span data-testid="order-net-amount" className="font-semibold text-white">
-                    {formatCurrency(orderNet, orderForm.currency, currencyDisplayPreference)}
+                    {formatCurrency(orderNet, orderForm.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
                   </span>
                 </div>
               </div>
@@ -884,7 +897,7 @@ export const InvestingPage: React.FC = () => {
             <DialogTitle>Delete order?</DialogTitle>
             <DialogDescription>
               {pendingDeleteOrder
-                ? `Delete this ${pendingDeleteOrder.order_type} order for ${toNumber(pendingDeleteOrder.quantity).toLocaleString()} ${pendingDeleteOrder.symbol}? The holding will be recomputed from the remaining orders.`
+                ? `Delete this ${pendingDeleteOrder.order_type} order for ${formatQuantity(pendingDeleteOrder.quantity)} ${pendingDeleteOrder.symbol}? The holding will be recomputed from the remaining orders.`
                 : 'The holding will be recomputed from the remaining orders.'}
             </DialogDescription>
           </DialogHeader>

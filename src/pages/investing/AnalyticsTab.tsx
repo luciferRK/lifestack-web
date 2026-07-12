@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Check, ChevronDown, Edit2, Layers, Plus, Settings2, X } from 'lucide-react';
+import { BarChart3, Check, ChevronDown, Edit2, Layers, PieChart, Plus, Settings2, X } from 'lucide-react';
 import { investingService } from '../../services/investing';
 import { useInvalidatingMutation } from '../../hooks/useInvalidatingMutation';
 import { formatCurrency, toNumber } from '../../utils/numberFormat';
@@ -18,6 +18,14 @@ import type {
 import { formatDateInput, instrumentTypeLabel, instrumentTypeOptions } from './format';
 
 const refreshKeys = [queryKeys.investing.all, queryKeys.finance.all, queryKeys.dashboard.all];
+
+// Fixed-order categorical palette (validated for the app's dark surface —
+// see .agent/skills dataviz reference). "Other" gets the neutral slate tone
+// already used for rollup buckets elsewhere in the app (spending breakdown).
+const CONCENTRATION_COLORS = ['#3987e5', '#199e70', '#c98500', '#008300', '#9085e9', '#e66767'];
+const CONCENTRATION_OTHER_COLOR = '#94a3b8';
+const CONCENTRATION_TOP_N = 6;
+const CONCENTRATION_GAP = 3; // svg units between donut segments
 
 interface AnalyticsTabProps {
   currencyDisplayPreference: 'symbol' | 'code';
@@ -63,6 +71,43 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
   const overlapLoading = overlapRes.isLoading;
 
   const analyticsCurrency = exposureRes.data?.currency;
+
+  const sortedExposureRows = useMemo(
+    () =>
+      [...(exposure?.exposure ?? [])].sort(
+        (a, b) => toNumber(b.lookthrough_exposure) - toNumber(a.lookthrough_exposure)
+      ),
+    [exposure]
+  );
+
+  const concentration = useMemo(() => {
+    const total = toNumber(exposure?.total_lookthrough_exposure ?? 0);
+    if (!sortedExposureRows.length || total <= 0) return { slices: [], total: 0 };
+
+    const top = sortedExposureRows.slice(0, CONCENTRATION_TOP_N);
+    const rest = sortedExposureRows.slice(CONCENTRATION_TOP_N);
+    const slices = top.map((row, index) => {
+      const value = toNumber(row.lookthrough_exposure);
+      return {
+        key: row.company_id,
+        label: row.company_ticker || row.company_name,
+        value,
+        pct: value / total,
+        color: CONCENTRATION_COLORS[index % CONCENTRATION_COLORS.length],
+      };
+    });
+    const restTotal = rest.reduce((sum, row) => sum + toNumber(row.lookthrough_exposure), 0);
+    if (restTotal > 0) {
+      slices.push({
+        key: 'other',
+        label: `Other (${rest.length})`,
+        value: restTotal,
+        pct: restTotal / total,
+        color: CONCENTRATION_OTHER_COLOR,
+      });
+    }
+    return { slices, total };
+  }, [sortedExposureRows, exposure?.total_lookthrough_exposure]);
 
   const pooledInstrumentOptions = useMemo(
     () =>
@@ -282,7 +327,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                               {editingInstrumentId === instrument.public_id ? (
                                 <DropdownSelect
                                   value={instrumentEditForm.instrument_type}
-                                  options={[...instrumentTypeOptions]}
+                                  options={instrumentTypeOptions}
                                   onChange={(value) =>
                                     setInstrumentEditForm((s) => ({
                                       ...s,
@@ -370,6 +415,67 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                       : ''}.
                   </p>
                 )}
+                {concentration.slices.length > 0 && (
+                  <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 p-4">
+                    <h4 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
+                      <PieChart className="h-3.5 w-3.5" />
+                      Concentration
+                    </h4>
+                    <div className="flex flex-col items-center gap-6 sm:flex-row">
+                      <div className="relative h-32 w-32 flex-shrink-0" data-testid="investing-concentration-donut">
+                        <svg className="h-full w-full" viewBox="0 0 200 200">
+                          {(() => {
+                            const circumference = 2 * Math.PI * 60;
+                            // A single slice (100% in one holding) must render as a
+                            // continuous ring — subtracting the inter-segment gap
+                            // would leave a small broken notch.
+                            const gap = concentration.slices.length > 1 ? CONCENTRATION_GAP : 0;
+                            let cumulative = 0;
+                            return concentration.slices.map((slice) => {
+                              const sliceLength = slice.pct * circumference;
+                              const dash = Math.max(sliceLength - gap, 0);
+                              const offset = -cumulative;
+                              cumulative += sliceLength;
+                              return (
+                                <circle
+                                  key={slice.key}
+                                  cx={100}
+                                  cy={100}
+                                  r={60}
+                                  fill="transparent"
+                                  stroke={slice.color}
+                                  strokeWidth="14"
+                                  strokeDasharray={`${dash} ${circumference}`}
+                                  strokeDashoffset={offset}
+                                  transform="rotate(-90 100 100)"
+                                >
+                                  <title>{`${slice.label}: ${(slice.pct * 100).toFixed(1)}%`}</title>
+                                </circle>
+                              );
+                            });
+                          })()}
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Total</span>
+                          <span className="text-xs font-extrabold text-white">
+                            {analyticsCurrency ? formatCurrency(concentration.total, analyticsCurrency, currencyDisplayPreference) : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full flex-1 space-y-1.5">
+                        {concentration.slices.map((slice) => (
+                          <div key={slice.key} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="h-2.5 w-2.5 flex-shrink-0 rounded" style={{ backgroundColor: slice.color }} />
+                              <span className="truncate font-medium text-slate-300">{slice.label}</span>
+                            </div>
+                            <span className="flex-shrink-0 font-semibold text-slate-400">{(slice.pct * 100).toFixed(1)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="max-h-96 overflow-auto rounded-lg border border-slate-700/40">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-800/60 text-slate-400">
@@ -380,7 +486,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                       </tr>
                     </thead>
                     <tbody>
-                      {(exposure?.exposure ?? []).map((row) => (
+                      {sortedExposureRows.map((row) => (
                         <tr key={row.company_id} className="border-t border-slate-700/40">
                           <td className="px-3 py-2">{row.company_ticker ?? row.company_name}</td>
                           <td className="px-3 py-2">{analyticsCurrency ? formatCurrency(row.direct_exposure, analyticsCurrency, currencyDisplayPreference) : 'N/A'}</td>
@@ -451,7 +557,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                 <label className="text-xs font-semibold text-slate-300">Instrument Type</label>
                 <DropdownSelect
                   value={instrumentForm.instrument_type}
-                  options={[...instrumentTypeOptions]}
+                  options={instrumentTypeOptions}
                   onChange={(value) =>
                     setInstrumentForm((s) => ({
                       ...s,

@@ -40,11 +40,18 @@ export interface AccountUpdate {
   is_active?: boolean;
 }
 
+// spec-075: explicit display locales supported in v1 (must match the api
+// allow-list in app/finance/schemas.py::SUPPORTED_DISPLAY_LOCALES).
+export const DISPLAY_LOCALES = ['en-US', 'en-IN', 'en-GB'] as const;
+export type DisplayLocale = (typeof DISPLAY_LOCALES)[number];
+
 export const WorkspaceFinanceSettingSchema = z.object({
   reporting_currency_code: z.string().nullable().default(null),
   currency_display_preference: z.enum(['symbol', 'code']).optional(),
   lookthrough_min_weight_pct: z.union([z.number(), z.string()]).default(0),
   default_spending_account_id: z.string().nullable().optional(),
+  locale: z.string().default('en-US'),
+  decimal_places: z.number().default(2),
   updated_at: z.string().default(''),
 });
 export type WorkspaceFinanceSetting = z.infer<typeof WorkspaceFinanceSettingSchema>;
@@ -54,6 +61,8 @@ export interface WorkspaceFinanceSettingUpdate {
   currency_display_preference?: 'symbol' | 'code' | null;
   lookthrough_min_weight_pct?: number | string;
   default_spending_account_id?: string | null;
+  locale?: DisplayLocale;
+  decimal_places?: number;
 }
 
 export const UserFinanceSettingSchema = z.object({
@@ -63,6 +72,12 @@ export const UserFinanceSettingSchema = z.object({
   workspace_currency_display_preference: z.enum(['symbol', 'code']).default('symbol'),
   effective_reporting_currency_code: z.string().nullable().default(null),
   effective_currency_display_preference: z.enum(['symbol', 'code']).default('symbol'),
+  locale_override: z.string().nullable().default(null),
+  decimal_places_override: z.number().nullable().default(null),
+  workspace_locale: z.string().default('en-US'),
+  workspace_decimal_places: z.number().default(2),
+  effective_locale: z.string().default('en-US'),
+  effective_decimal_places: z.number().default(2),
   updated_at: z.string().default(''),
 });
 export type UserFinanceSetting = z.infer<typeof UserFinanceSettingSchema>;
@@ -70,6 +85,8 @@ export type UserFinanceSetting = z.infer<typeof UserFinanceSettingSchema>;
 export interface UserFinanceSettingUpdate {
   reporting_currency_override_code?: string | null;
   currency_display_preference_override?: 'symbol' | 'code' | null;
+  locale_override?: DisplayLocale | null;
+  decimal_places_override?: number | null;
 }
 
 export interface CapitalTransferCreate {
@@ -159,6 +176,59 @@ export const ReconciliationSummarySchema = z.object({
 });
 export type ReconciliationSummary = z.infer<typeof ReconciliationSummarySchema>;
 
+// ---------------------------------------------------------------------------
+// Statement matching (spec-078 — wallet ledger reconciliation)
+// ---------------------------------------------------------------------------
+
+export const AccountStatementSchema = z.object({
+  public_id: z.string(),
+  account_public_id: z.string(),
+  period_start: z.string(),
+  period_end: z.string(),
+  closing_balance: z.string().nullable().default(null),
+  currency_code: z.string(),
+  reconciled_through: z.string().nullable().default(null),
+  created_at: z.string(),
+});
+export type AccountStatement = z.infer<typeof AccountStatementSchema>;
+
+export const StatementLineSchema = z.object({
+  public_id: z.string(),
+  occurred_at: z.string(),
+  description: z.string(),
+  amount: z.string(), // signed: positive = credit, negative = debit
+  balance: z.string().nullable().default(null),
+  matched_transaction_id: z.string().nullable().default(null),
+  matched_transfer_id: z.string().nullable().default(null),
+  matched_transfer_leg: z.enum(['from', 'to']).nullable().default(null),
+  matched_at: z.string().nullable().default(null),
+});
+export type StatementLine = z.infer<typeof StatementLineSchema>;
+
+export const MatchCandidateSchema = z.object({
+  kind: z.enum(['transaction', 'transfer']),
+  id: z.string(),
+  occurred_at: z.string(),
+  amount: z.string(),
+  description: z.string(),
+  leg: z.enum(['from', 'to']).nullable().default(null),
+});
+export type MatchCandidate = z.infer<typeof MatchCandidateSchema>;
+
+export const UnmatchedStatementLineViewSchema = z.object({
+  line: StatementLineSchema,
+  candidates: z.array(MatchCandidateSchema),
+});
+export type UnmatchedStatementLineView = z.infer<typeof UnmatchedStatementLineViewSchema>;
+
+export const ReconciliationViewSchema = z.object({
+  statement: AccountStatementSchema,
+  matched_lines: z.array(StatementLineSchema),
+  unmatched_lines: z.array(UnmatchedStatementLineViewSchema),
+  unmatched_ledger_rows: z.array(MatchCandidateSchema),
+});
+export type ReconciliationView = z.infer<typeof ReconciliationViewSchema>;
+
 export const SpendingAccountBalanceSchema = z.object({
   account_public_id: z.string().default(''),
   account_name: z.string().default(''),
@@ -197,10 +267,65 @@ export type NetWorthData = z.infer<typeof NetWorthDataSchema>;
 export const NetWorthHistoryItemSchema = z.object({
   snapshot_date: z.string().default(''),
   reporting_currency: z.string().default(''),
-  holdings_value: z.string().default('0'),
-  investing_cash: z.string().default('0'),
-  spending_cash: z.string().default('0'),
+  // Nullable: a user-provided backfill point (spec-072) may carry only a
+  // total with no component split -- null, never zero, so the chart can
+  // tell "no data" apart from "actually zero".
+  holdings_value: z.string().nullable().default(null),
+  investing_cash: z.string().nullable().default(null),
+  spending_cash: z.string().nullable().default(null),
   total_net_worth: z.string().default('0'),
+  source: z.string().default('live'),
 });
 export type NetWorthHistoryItem = z.infer<typeof NetWorthHistoryItemSchema>;
 
+export interface FxRateHistoryImportRow {
+  base_currency_code: string;
+  quote_currency_code: string;
+  rate: number;
+  as_of_date: string;
+}
+
+export const FxRateImportResultSchema = z.object({
+  imported: z.number().default(0),
+  skipped: z.number().default(0),
+  rejected: z.array(z.object({ row: z.number(), reason: z.string() })).default([]),
+});
+export type FxRateImportResult = z.infer<typeof FxRateImportResultSchema>;
+
+export const UserFxRateSchema = z.object({
+  id: z.number(),
+  base_currency_code: z.string().default(''),
+  quote_currency_code: z.string().default(''),
+  rate: z.union([z.number(), z.string()]).default(0),
+  as_of_date: z.string().default(''),
+  created_at: z.string().default(''),
+});
+export type UserFxRate = z.infer<typeof UserFxRateSchema>;
+
+export interface NetWorthHistoryImportRow {
+  date: string;
+  total_net_worth: number;
+  holdings_value?: number | null;
+  investing_cash?: number | null;
+  spending_cash?: number | null;
+  reporting_currency: string;
+}
+
+export const NetWorthImportResultSchema = z.object({
+  imported: z.number().default(0),
+  skipped: z.number().default(0),
+  rejected: z.array(z.object({ row: z.number(), reason: z.string() })).default([]),
+});
+export type NetWorthImportResult = z.infer<typeof NetWorthImportResultSchema>;
+
+export const UserNetWorthPointSchema = z.object({
+  id: z.number(),
+  snapshot_date: z.string().default(''),
+  reporting_currency: z.string().default(''),
+  holdings_value: z.union([z.number(), z.string()]).nullable().default(null),
+  investing_cash: z.union([z.number(), z.string()]).nullable().default(null),
+  spending_cash: z.union([z.number(), z.string()]).nullable().default(null),
+  total_net_worth: z.union([z.number(), z.string()]).default(0),
+  created_at: z.string().default(''),
+});
+export type UserNetWorthPoint = z.infer<typeof UserNetWorthPointSchema>;

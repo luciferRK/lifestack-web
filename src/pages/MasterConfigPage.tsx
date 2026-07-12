@@ -29,6 +29,35 @@ import { accountTypeOptions } from '../utils/accountTypes';
 const SETTINGS_TABS = ['currency', 'accounts', 'categories', 'danger'] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
 
+// Static dropdown option lists — hoisted to module scope so their identity is
+// stable across renders (a fresh array each render defeats DropdownSelect's
+// internal option memoization).
+const currencyDisplayPreferenceOptions = [
+  { value: 'symbol', label: 'Symbol first ($1,250.00)' },
+  { value: 'code', label: 'Code first (USD 1,250.00)' },
+] as const;
+const userDisplayPreferenceOptions = [
+  { value: 'symbol', label: 'Override: Symbol first' },
+  { value: 'code', label: 'Override: Code first' },
+] as const;
+// spec-075: display locale drives digit grouping app-wide (Indian grouping
+// is gated on en-IN, no separate toggle) -- allow-list must match the api's
+// SUPPORTED_DISPLAY_LOCALES.
+const localeOptions = [
+  { value: 'en-US', label: 'US (1,234,567.89)' },
+  { value: 'en-IN', label: 'India (12,34,567.89)' },
+  { value: 'en-GB', label: 'UK (1,234,567.89)' },
+] as const;
+const userLocaleOverrideOptions = [
+  { value: 'en-US', label: 'Override: US (1,234,567.89)' },
+  { value: 'en-IN', label: 'Override: India (12,34,567.89)' },
+  { value: 'en-GB', label: 'Override: UK (1,234,567.89)' },
+] as const;
+const decimalPlacesOptions = [
+  { value: '0', label: '0 decimal places' },
+  { value: '2', label: '2 decimal places' },
+] as const;
+
 export const MasterConfigPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -58,8 +87,12 @@ export const MasterConfigPage: React.FC = () => {
   const [defaultSpendingAccountId, setDefaultSpendingAccountId] = useState('');
   const [lookthroughMinWeightPct, setLookthroughMinWeightPct] = useState('0.5');
   const [currencyDisplayPreference, setCurrencyDisplayPreference] = useState<'symbol' | 'code'>('symbol');
+  const [locale, setLocale] = useState('en-US');
+  const [decimalPlaces, setDecimalPlaces] = useState('2');
   const [userReportingCurrencyOverride, setUserReportingCurrencyOverride] = useState('');
   const [userDisplayPreferenceOverride, setUserDisplayPreferenceOverride] = useState('');
+  const [userLocaleOverride, setUserLocaleOverride] = useState('');
+  const [userDecimalPlacesOverride, setUserDecimalPlacesOverride] = useState('');
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editingAccountName, setEditingAccountName] = useState('');
   const [editingAccountType, setEditingAccountType] = useState<'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'>('wallet');
@@ -188,16 +221,29 @@ export const MasterConfigPage: React.FC = () => {
     setCurrencyDisplayPreference(settings?.currency_display_preference ?? 'symbol');
     setLookthroughMinWeightPct(String(settings?.lookthrough_min_weight_pct ?? '0.5'));
     setDefaultSpendingAccountId(settings?.default_spending_account_id ?? '');
+    setLocale(settings?.locale ?? 'en-US');
+    setDecimalPlaces(String(settings?.decimal_places ?? 2));
   }, [
     settings?.reporting_currency_code,
     settings?.currency_display_preference,
     settings?.lookthrough_min_weight_pct,
     settings?.default_spending_account_id,
+    settings?.locale,
+    settings?.decimal_places,
   ]);
   React.useEffect(() => {
     setUserReportingCurrencyOverride(userSettings?.reporting_currency_override_code ?? '');
     setUserDisplayPreferenceOverride(userSettings?.currency_display_preference_override ?? '');
-  }, [userSettings?.reporting_currency_override_code, userSettings?.currency_display_preference_override]);
+    setUserLocaleOverride(userSettings?.locale_override ?? '');
+    setUserDecimalPlacesOverride(
+      userSettings?.decimal_places_override != null ? String(userSettings.decimal_places_override) : '',
+    );
+  }, [
+    userSettings?.reporting_currency_override_code,
+    userSettings?.currency_display_preference_override,
+    userSettings?.locale_override,
+    userSettings?.decimal_places_override,
+  ]);
 
   const currencyOptions = useMemo(
     () => currencies.map((currency) => ({ value: currency.code, label: `${currency.code} ${currency.symbol ?? ''}`.trim() })),
@@ -219,15 +265,6 @@ export const MasterConfigPage: React.FC = () => {
         })),
     [accountsResponse?.items]
   );
-
-  const currencyDisplayPreferenceOptions = [
-    { value: 'symbol', label: 'Symbol first ($1,250.00)' },
-    { value: 'code', label: 'Code first (USD 1,250.00)' },
-  ] as const;
-  const userDisplayPreferenceOptions = [
-    { value: 'symbol', label: 'Override: Symbol first' },
-    { value: 'code', label: 'Override: Code first' },
-  ] as const;
 
   const createAccountMutation = useMutation({
     mutationFn: () =>
@@ -408,6 +445,8 @@ export const MasterConfigPage: React.FC = () => {
         lookthrough_min_weight_pct: lookthroughMinWeightPct,
         currency_display_preference: currencyDisplayPreference,
         default_spending_account_id: defaultSpendingAccountId || null,
+        locale: locale as 'en-US' | 'en-IN' | 'en-GB',
+        decimal_places: Number(decimalPlaces),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.finance.settings() });
@@ -425,6 +464,10 @@ export const MasterConfigPage: React.FC = () => {
           userDisplayPreferenceOverride === ''
             ? null
             : (userDisplayPreferenceOverride as 'symbol' | 'code'),
+        locale_override:
+          userLocaleOverride === '' ? null : (userLocaleOverride as 'en-US' | 'en-IN' | 'en-GB'),
+        decimal_places_override:
+          userDecimalPlacesOverride === '' ? null : Number(userDecimalPlacesOverride),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.finance.settings('user') });
@@ -555,7 +598,7 @@ export const MasterConfigPage: React.FC = () => {
             testId="master-workspace-display-preference"
             value={currencyDisplayPreference}
             onChange={(value) => setCurrencyDisplayPreference(value as 'symbol' | 'code')}
-            options={[...currencyDisplayPreferenceOptions]}
+            options={currencyDisplayPreferenceOptions}
             placeholder="Display preference"
           />
           <Button
@@ -566,6 +609,36 @@ export const MasterConfigPage: React.FC = () => {
           >
             {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
           </Button>
+        </div>
+        <div className="mt-4 border-t border-slate-800 pt-4">
+          <Label className="text-sm text-slate-300">Number formatting</Label>
+          <p className="mt-1 text-xs text-slate-500">
+            Locale controls digit grouping app-wide (India uses 1,00,000-style grouping).
+          </p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-[1fr,1fr,auto] max-w-lg">
+            <DropdownSelect
+              testId="master-workspace-locale"
+              value={locale}
+              onChange={setLocale}
+              options={localeOptions}
+              placeholder="Locale"
+            />
+            <DropdownSelect
+              testId="master-workspace-decimal-places"
+              value={decimalPlaces}
+              onChange={setDecimalPlaces}
+              options={decimalPlacesOptions}
+              placeholder="Decimal places"
+            />
+            <Button
+              data-testid="master-workspace-save-format"
+              type="button"
+              onClick={() => updateSettingsMutation.mutate()}
+              disabled={updateSettingsMutation.isPending}
+            >
+              {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
         </div>
         <div className="mt-4 border-t border-slate-800 pt-4">
           <Label className="text-sm text-slate-300">Default spending account</Label>
@@ -650,7 +723,7 @@ export const MasterConfigPage: React.FC = () => {
             testId="master-user-display-override"
             value={userDisplayPreferenceOverride}
             onChange={setUserDisplayPreferenceOverride}
-            options={[...userDisplayPreferenceOptions]}
+            options={userDisplayPreferenceOptions}
             placeholder="Inherit workspace display style"
             clearLabel="Inherit workspace display style"
           />
@@ -663,9 +736,35 @@ export const MasterConfigPage: React.FC = () => {
             {updateUserSettingsMutation.isPending ? 'Saving...' : 'Save Override'}
           </Button>
         </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
+          <DropdownSelect
+            testId="master-user-locale-override"
+            value={userLocaleOverride}
+            onChange={setUserLocaleOverride}
+            options={userLocaleOverrideOptions}
+            placeholder="Inherit workspace locale"
+            clearLabel="Inherit workspace locale"
+          />
+          <DropdownSelect
+            testId="master-user-decimal-places-override"
+            value={userDecimalPlacesOverride}
+            onChange={setUserDecimalPlacesOverride}
+            options={decimalPlacesOptions}
+            placeholder="Inherit workspace decimal places"
+            clearLabel="Inherit workspace decimal places"
+          />
+          <Button
+            data-testid="master-user-save-format-override"
+            type="button"
+            onClick={() => updateUserSettingsMutation.mutate()}
+            disabled={updateUserSettingsMutation.isPending}
+          >
+            {updateUserSettingsMutation.isPending ? 'Saving...' : 'Save Override'}
+          </Button>
+        </div>
         {userSettings ? (
           <p className="mt-3 text-xs text-slate-500">
-            Effective now: {(userSettings.effective_reporting_currency_code ?? 'Unconfigured')} / {userSettings.effective_currency_display_preference}
+            Effective now: {(userSettings.effective_reporting_currency_code ?? 'Unconfigured')} / {userSettings.effective_currency_display_preference} / {userSettings.effective_locale} / {userSettings.effective_decimal_places} decimals
           </p>
         ) : null}
       </section>
@@ -689,7 +788,7 @@ export const MasterConfigPage: React.FC = () => {
             testId="master-account-type"
             value={newAccountType}
             onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
-            options={[...accountTypeOptions]}
+            options={accountTypeOptions}
             placeholder="Account type"
           />
           <DropdownSelect
@@ -734,7 +833,7 @@ export const MasterConfigPage: React.FC = () => {
                 testId="master-account-edit-type"
                 value={editingAccountType}
                 onChange={(value) => setEditingAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
-                options={[...accountTypeOptions]}
+                options={accountTypeOptions}
                 placeholder="Account type"
               />
               <DropdownSelect

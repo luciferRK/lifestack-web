@@ -7,19 +7,24 @@ import {
   Percent,
   TrendingUp,
 } from 'lucide-react';
+import { DropdownSelect, type DropdownOption } from '../../components/DropdownSelect';
 import { spendingService } from '../../services/spending';
 import { formatCurrency } from '../../utils/numberFormat';
-import { formatMonthLabel } from './format';
+import { formatMonthLabel, monthShortLabel } from './format';
 
 interface AnalyticsTabProps {
   selectedMonth: string;
+  onMonthChange: (value: string) => void;
+  monthOptions: readonly DropdownOption[];
   displayCurrency: string;
   currencyDisplayPreference: 'symbol' | 'code';
   getCategoryTheme: (catId: string) => { name: string; color: string; icon: string | null };
 }
 
-export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
+const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
   selectedMonth,
+  onMonthChange,
+  monthOptions,
   displayCurrency,
   currencyDisplayPreference,
   getCategoryTheme,
@@ -108,13 +113,9 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
     );
   }
 
-  // Format month names (Jan, Feb, ...)
-  const formatMonthShort = (monthStr: string) => {
-    if (!/^\d{4}-\d{2}$/.test(monthStr)) return monthStr;
-    const [, m] = monthStr.split('-');
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[Number(m) - 1];
-  };
+  // Short month names (Jan, Feb, ...) for chart x-axis labels.
+  const formatMonthShort = (monthStr: string) =>
+    /^\d{4}-\d{2}$/.test(monthStr) ? monthShortLabel(monthStr) : monthStr;
 
   // Period stats summary
   const totalIncome = savingsRateData?.period_totals?.total_income ?? 0;
@@ -154,29 +155,40 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Analytics Header Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-700/50 bg-slate-800/20 p-4">
-        <div>
-          <h4 className="text-base font-semibold text-white">Analysis Window</h4>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Month</label>
+          <div className="min-w-[220px] max-w-[260px]">
+            <DropdownSelect
+              testId="spending-analytics-month"
+              value={selectedMonth}
+              onChange={onMonthChange}
+              options={monthOptions}
+              placeholder="Select month"
+            />
+          </div>
           <p className="text-xs text-slate-400">
             {rangeMonths === 1
               ? `Showing ${formatMonthLabel(selectedMonth)}`
               : `Comparing trends ending in ${formatMonthLabel(selectedMonth)}`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-slate-400">Duration:</span>
-          {[1, 3, 6, 12].map((m) => (
-            <button
-              key={m}
-              onClick={() => setRangeMonths(m)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                rangeMonths === m
-                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                  : 'bg-slate-800/40 text-slate-400 border border-transparent hover:bg-slate-800/80 hover:text-slate-200'
-              }`}
-            >
-              {m === 1 ? 'This Month' : `${m} Months`}
-            </button>
-          ))}
+        <div className="flex flex-col gap-1 sm:items-end">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Duration</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {[1, 3, 6, 12].map((m) => (
+              <button
+                key={m}
+                onClick={() => setRangeMonths(m)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  rangeMonths === m
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                    : 'bg-slate-800/40 text-slate-400 border border-transparent hover:bg-slate-800/80 hover:text-slate-200'
+                }`}
+              >
+                {m === 1 ? 'This Month' : `${m} Months`}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -527,3 +539,6 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({
     </div>
   );
 };
+
+// Memoized presentational tab — see TransactionsTab for rationale.
+export const AnalyticsTab = React.memo(AnalyticsTabImpl);
