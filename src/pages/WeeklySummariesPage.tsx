@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays } from 'lucide-react';
 import { summariesService } from '../services/summaries';
+import { queryKeys } from '../lib/queryKeys';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
 import { Pagination } from '../components/Pagination';
@@ -13,10 +14,34 @@ import type { WeeklySummary } from '../services/summaries';
 export const WeeklySummariesPage: React.FC = () => {
   const [offset, setOffset] = useState(0);
   const limit = 12;
+  const queryClient = useQueryClient();
+  const markedRef = useRef<string | null>(null);
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['summaries', 'weekly', offset],
     queryFn: () => summariesService.listWeekly(limit, offset),
   });
+
+  // Opening this page counts as reading the latest summary (spec-080): mark it
+  // read so the dashboard's "summary is ready" briefing line clears. Only the
+  // newest (first page, top item) is the one the briefing surfaces; guard so we
+  // fire once per summary and never re-mark an already-read one. Depend on the
+  // primitive id/read_at, not the `latest` object, so a query-data refetch that
+  // returns an equal-but-new object reference doesn't re-run the effect.
+  const latest = offset === 0 ? data?.items?.[0] : undefined;
+  const latestId = latest?.public_id;
+  const latestReadAt = latest?.read_at;
+  useEffect(() => {
+    if (!latestId || latestReadAt || markedRef.current === latestId) return;
+    markedRef.current = latestId;
+    void summariesService
+      .markRead(latestId)
+      .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.briefing() }))
+      .catch(() => {
+        // Non-critical: a failed mark-read just leaves the briefing line until
+        // the freshness window lapses. Allow a retry on the next render.
+        markedRef.current = null;
+      });
+  }, [latestId, latestReadAt, queryClient]);
 
   return (
     <PageShell>
