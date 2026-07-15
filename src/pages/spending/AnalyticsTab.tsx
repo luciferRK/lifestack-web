@@ -1,12 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import {
-  BarChart2,
-  PieChart,
-  PiggyBank,
-  Percent,
-  TrendingUp,
-} from 'lucide-react';
+import { BarChart2, PieChart, PiggyBank, Percent, TrendingUp } from 'lucide-react';
 import { DropdownSelect, type DropdownOption } from '../../components/DropdownSelect';
 import { spendingService } from '../../services/spending';
 import { formatCurrency } from '../../utils/numberFormat';
@@ -43,10 +37,14 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
 
     // Calculate starting month of range
     const startMonthDate = new Date(Date.UTC(year, month - 1 - (rangeMonths - 1), 1));
-    const fromMonthVal = `${startMonthDate.getUTCFullYear()}-${String(startMonthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    const fromMonthVal = `${startMonthDate.getUTCFullYear()}-${String(
+      startMonthDate.getUTCMonth() + 1,
+    ).padStart(2, '0')}`;
 
     const endMonthDate = new Date(Date.UTC(year, month - 1, 1));
-    const toMonthVal = `${endMonthDate.getUTCFullYear()}-${String(endMonthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    const toMonthVal = `${endMonthDate.getUTCFullYear()}-${String(
+      endMonthDate.getUTCMonth() + 1,
+    ).padStart(2, '0')}`;
 
     const fromDate = `${fromMonthVal}-01`;
     // Last day of the selected month
@@ -57,7 +55,7 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
       fromMonth: fromMonthVal,
       toMonth: toMonthVal,
       fromDate,
-      toDate
+      toDate,
     };
   }, [selectedMonth, rangeMonths]);
 
@@ -70,7 +68,12 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
 
   const { data: breakdownData, isLoading: isBreakdownLoading } = useQuery({
     queryKey: ['spending-breakdown', analyticsRange.fromDate, analyticsRange.toDate, breakdownType],
-    queryFn: () => spendingService.getCategoryBreakdown(analyticsRange.fromDate, analyticsRange.toDate, breakdownType),
+    queryFn: () =>
+      spendingService.getCategoryBreakdown(
+        analyticsRange.fromDate,
+        analyticsRange.toDate,
+        breakdownType,
+      ),
     enabled: !!analyticsRange.fromDate,
     // Toggling Income/Expense changes the query key, which would otherwise
     // make breakdownData go undefined mid-toggle and mistrigger the
@@ -102,7 +105,10 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl border border-slate-800 bg-slate-800/30" />
+            <div
+              key={i}
+              className="h-28 animate-pulse rounded-2xl border border-slate-800 bg-slate-800/30"
+            />
           ))}
         </div>
         <div className="grid gap-6 md:grid-cols-2">
@@ -127,7 +133,7 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
   const trendsList = trendsData?.months ?? [];
   const maxTrendVal = Math.max(
     ...trendsList.flatMap((m) => [Number(m.total_income), Number(m.total_expense)]),
-    100
+    100,
   );
 
   // --- 2. Savings Rate Area Chart Setup ---
@@ -147,7 +153,7 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
       category_name: 'Other Categories',
       amount: otherItem.amount,
       pct_of_total: otherItem.pct_of_total,
-      transaction_count: 0
+      transaction_count: 0,
     });
   }
 
@@ -156,7 +162,9 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
       {/* Analytics Header Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-700/50 bg-slate-800/20 p-4">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Month</label>
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+            Month
+          </label>
           <div className="min-w-[220px] max-w-[260px]">
             <DropdownSelect
               testId="spending-analytics-month"
@@ -173,7 +181,9 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
           </p>
         </div>
         <div className="flex flex-col gap-1 sm:items-end">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Duration</span>
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+            Duration
+          </span>
           <div className="flex flex-wrap items-center gap-2">
             {[1, 3, 6, 12].map((m) => (
               <button
@@ -289,9 +299,24 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                   const labelVal = maxTrendVal * p;
                   return (
                     <g key={idx}>
-                      <line x1="50" y1={y} x2="480" y2={y} stroke="#334155" strokeWidth="1" strokeDasharray="3 3" />
-                      <text x="42" y={y + 4} textAnchor="end" className="text-[10px] font-medium fill-slate-400">
-                        {labelVal >= 1000 ? `${(labelVal / 1000).toFixed(0)}k` : labelVal.toFixed(0)}
+                      <line
+                        x1="50"
+                        y1={y}
+                        x2="480"
+                        y2={y}
+                        stroke="#334155"
+                        strokeWidth="1"
+                        strokeDasharray="3 3"
+                      />
+                      <text
+                        x="42"
+                        y={y + 4}
+                        textAnchor="end"
+                        className="text-[10px] font-medium fill-slate-400"
+                      >
+                        {labelVal >= 1000
+                          ? `${(labelVal / 1000).toFixed(0)}k`
+                          : labelVal.toFixed(0)}
                       </text>
                     </g>
                   );
@@ -317,7 +342,11 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                           rx="2"
                           className="fill-cyan-500 hover:fill-cyan-400 transition-colors"
                         >
-                          <title>{`Income: ${formatCurrency(Number(m.total_income), displayCurrency, currencyDisplayPreference)}`}</title>
+                          <title>{`Income: ${formatCurrency(
+                            Number(m.total_income),
+                            displayCurrency,
+                            currencyDisplayPreference,
+                          )}`}</title>
                         </rect>
                         {/* Expense Bar */}
                         <rect
@@ -328,10 +357,19 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                           rx="2"
                           className="fill-rose-500 hover:fill-rose-400 transition-colors"
                         >
-                          <title>{`Expense: ${formatCurrency(Number(m.total_expense), displayCurrency, currencyDisplayPreference)}`}</title>
+                          <title>{`Expense: ${formatCurrency(
+                            Number(m.total_expense),
+                            displayCurrency,
+                            currencyDisplayPreference,
+                          )}`}</title>
                         </rect>
                         {/* X Axis Label */}
-                        <text x={xCenter} y="275" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400">
+                        <text
+                          x={xCenter}
+                          y="275"
+                          textAnchor="middle"
+                          className="text-[10px] font-semibold fill-slate-400"
+                        >
                           {formatMonthShort(m.month)}
                         </text>
                       </g>
@@ -373,8 +411,21 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                   const labelVal = minRate + rateRange * p;
                   return (
                     <g key={idx}>
-                      <line x1="50" y1={y} x2="480" y2={y} stroke="#334155" strokeWidth="1" strokeDasharray="3 3" />
-                      <text x="42" y={y + 4} textAnchor="end" className="text-[10px] font-medium fill-slate-400">
+                      <line
+                        x1="50"
+                        y1={y}
+                        x2="480"
+                        y2={y}
+                        stroke="#334155"
+                        strokeWidth="1"
+                        strokeDasharray="3 3"
+                      />
+                      <text
+                        x="42"
+                        y={y + 4}
+                        textAnchor="end"
+                        className="text-[10px] font-medium fill-slate-400"
+                      >
                         {labelVal.toFixed(0)}%
                       </text>
                     </g>
@@ -391,9 +442,13 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                     return { x, y, rate, month: m.month };
                   });
 
-                  const lineD = points.map((p, idx) => (idx === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
+                  const lineD = points
+                    .map((p, idx) => (idx === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+                    .join(' ');
                   const zeroY = 20 + 235 - ((0 - minRate) / rateRange) * 235;
-                  const areaD = `${lineD} L ${points[points.length - 1].x} ${zeroY} L ${points[0].x} ${zeroY} Z`;
+                  const areaD = `${lineD} L ${points[points.length - 1].x} ${zeroY} L ${
+                    points[0].x
+                  } ${zeroY} Z`;
 
                   return (
                     <g>
@@ -403,7 +458,15 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                       <path d={lineD} fill="none" stroke="#10b981" strokeWidth="2.5" />
                       {/* Zero line */}
                       {minRate < 0 && (
-                        <line x1="50" y1={zeroY} x2="480" y2={zeroY} stroke="#f43f5e" strokeWidth="1" strokeDasharray="2 2" />
+                        <line
+                          x1="50"
+                          y1={zeroY}
+                          x2="480"
+                          y2={zeroY}
+                          stroke="#f43f5e"
+                          strokeWidth="1"
+                          strokeDasharray="2 2"
+                        />
                       )}
                       {/* Data Point Circles + X Labels */}
                       {points.map((p, idx) => (
@@ -417,10 +480,20 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                             <title>{`${p.month}: ${p.rate.toFixed(1)}%`}</title>
                           </circle>
                           {/* Value label directly above dot */}
-                          <text x={p.x} y={p.y - 8} textAnchor="middle" className="text-[9px] font-bold fill-emerald-300 bg-slate-900/80 px-1 rounded">
+                          <text
+                            x={p.x}
+                            y={p.y - 8}
+                            textAnchor="middle"
+                            className="text-[9px] font-bold fill-emerald-300 bg-slate-900/80 px-1 rounded"
+                          >
                             {p.rate.toFixed(0)}%
                           </text>
-                          <text x={p.x} y="275" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400">
+                          <text
+                            x={p.x}
+                            y="275"
+                            textAnchor="middle"
+                            className="text-[10px] font-semibold fill-slate-400"
+                          >
                             {formatMonthShort(p.month)}
                           </text>
                         </g>
@@ -479,7 +552,10 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                   {(() => {
                     let currentOffset = 0;
                     return donutItems.map((cat) => {
-                      const theme = cat.category_id === 'other' ? { color: '#94a3b8' } : getCategoryTheme(cat.category_id as string);
+                      const theme =
+                        cat.category_id === 'other'
+                          ? { color: '#94a3b8' }
+                          : getCategoryTheme(cat.category_id as string);
                       const strokeDash = `${(Number(cat.pct_of_total) / 100) * 376.99} 376.99`;
                       const offset = -currentOffset;
                       currentOffset += (Number(cat.pct_of_total) / 100) * 376.99;
@@ -497,7 +573,9 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                           transform="rotate(-90 100 100)"
                           className="transition-all duration-300 hover:stroke-[18px]"
                         >
-                          <title>{`${cat.category_name}: ${Number(cat.pct_of_total).toFixed(1)}%`}</title>
+                          <title>{`${cat.category_name}: ${Number(cat.pct_of_total).toFixed(
+                            1,
+                          )}%`}</title>
                         </circle>
                       );
                     });
@@ -505,9 +583,15 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
                 </svg>
                 {/* Center text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Total
+                  </span>
                   <span className="text-sm font-extrabold text-white">
-                    {formatCurrency(Number(breakdownData?.total ?? 0), displayCurrency, currencyDisplayPreference)}
+                    {formatCurrency(
+                      Number(breakdownData?.total ?? 0),
+                      displayCurrency,
+                      currencyDisplayPreference,
+                    )}
                   </span>
                 </div>
               </div>
@@ -515,17 +599,34 @@ const AnalyticsTabImpl: React.FC<AnalyticsTabProps> = ({
               {/* Items List */}
               <div className="flex-1 w-full max-h-52 overflow-y-auto space-y-2.5 pr-2">
                 {donutItems.map((cat) => {
-                  const theme = cat.category_id === 'other' ? { color: '#94a3b8' } : getCategoryTheme(cat.category_id as string);
+                  const theme =
+                    cat.category_id === 'other'
+                      ? { color: '#94a3b8' }
+                      : getCategoryTheme(cat.category_id as string);
                   return (
-                    <div key={cat.category_id} className="flex items-center justify-between text-xs">
+                    <div
+                      key={cat.category_id}
+                      className="flex items-center justify-between text-xs"
+                    >
                       <div className="flex items-center gap-2 truncate">
-                        <span className="h-2.5 w-2.5 flex-shrink-0 rounded" style={{ backgroundColor: theme.color }} />
-                        <span className="font-medium text-slate-300 truncate">{cat.category_name}</span>
+                        <span
+                          className="h-2.5 w-2.5 flex-shrink-0 rounded"
+                          style={{ backgroundColor: theme.color }}
+                        />
+                        <span className="font-medium text-slate-300 truncate">
+                          {cat.category_name}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-slate-400 font-semibold">{Number(cat.pct_of_total).toFixed(1)}%</span>
+                        <span className="text-slate-400 font-semibold">
+                          {Number(cat.pct_of_total).toFixed(1)}%
+                        </span>
                         <span className="text-slate-100 font-bold">
-                          {formatCurrency(Number(cat.amount), displayCurrency, currencyDisplayPreference)}
+                          {formatCurrency(
+                            Number(cat.amount),
+                            displayCurrency,
+                            currencyDisplayPreference,
+                          )}
                         </span>
                       </div>
                     </div>

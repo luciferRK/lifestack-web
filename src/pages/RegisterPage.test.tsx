@@ -43,9 +43,7 @@ describe('RegisterPage', () => {
   });
 
   it('shows generic error on registration failure', async () => {
-    server.use(
-      http.post('*/auth/register', () => new HttpResponse(null, { status: 500 })),
-    );
+    server.use(http.post('*/auth/register', () => new HttpResponse(null, { status: 500 })));
 
     renderPage();
     fireEvent.change(screen.getByPlaceholderText('Email address'), {
@@ -92,7 +90,9 @@ describe('RegisterPage', () => {
     server.use(
       http.post('*/auth/register', () =>
         HttpResponse.json(
-          { detail: [{ msg: 'Password must be at least 8 characters', loc: ['body', 'password'] }] },
+          {
+            detail: [{ msg: 'Password must be at least 8 characters', loc: ['body', 'password'] }],
+          },
           { status: 422 },
         ),
       ),
@@ -110,18 +110,18 @@ describe('RegisterPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
 
-    expect(
-      await screen.findByText('Password must be at least 8 characters'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Password must be at least 8 characters')).toBeInTheDocument();
   });
 
   it('shows loading state while submitting', async () => {
     let resolveRegister!: () => void;
     server.use(
-      http.post('*/auth/register', () =>
-        new Promise<Response>((resolve) => {
-          resolveRegister = () => resolve(HttpResponse.json({ ok: true }) as unknown as Response);
-        }),
+      http.post(
+        '*/auth/register',
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveRegister = () => resolve(HttpResponse.json({ ok: true }) as unknown as Response);
+          }),
       ),
     );
 

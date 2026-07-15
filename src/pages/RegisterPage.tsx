@@ -54,7 +54,10 @@ export const RegisterPage: React.FC = () => {
         detail = err.response?.data?.detail;
       }
       // Normalize 409 / 422 errors to prevent username/email enumeration
-      if (status === 409 || (typeof detail === 'string' && /already (exists|in use|registered)/i.test(detail))) {
+      if (
+        status === 409 ||
+        (typeof detail === 'string' && /already (exists|in use|registered)/i.test(detail))
+      ) {
         setError('Registration failed. Please check your details and try again.');
       } else if (Array.isArray(detail)) {
         // Expose validation field errors (e.g. pattern mismatch) — safe, not enumeration
@@ -75,7 +78,7 @@ export const RegisterPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-white tracking-tight">Lifestack</h2>
           <p className="mt-2 text-sm text-slate-400">Create a new account</p>
         </div>
-        
+
         {error && (
           <div className="rounded-md bg-red-500/10 p-4">
             <p className="text-sm font-medium text-red-500">{error}</p>
@@ -88,10 +91,10 @@ export const RegisterPage: React.FC = () => {
               <label htmlFor="register-email" className="sr-only">
                 Email address
               </label>
-              <input 
+              <input
                 id="register-email"
-                type="email" 
-                placeholder="Email address" 
+                type="email"
+                placeholder="Email address"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -102,10 +105,10 @@ export const RegisterPage: React.FC = () => {
               <label htmlFor="register-username" className="sr-only">
                 Username
               </label>
-              <input 
+              <input
                 id="register-username"
-                type="text" 
-                placeholder="Username" 
+                type="text"
+                placeholder="Username"
                 required
                 minLength={3}
                 maxLength={50}
@@ -120,10 +123,10 @@ export const RegisterPage: React.FC = () => {
               <label htmlFor="register-password" className="sr-only">
                 Password
               </label>
-              <input 
+              <input
                 id="register-password"
-                type="password" 
-                placeholder="Password" 
+                type="password"
+                placeholder="Password"
                 required
                 minLength={8}
                 value={password}
@@ -132,7 +135,8 @@ export const RegisterPage: React.FC = () => {
               />
               <div className="mt-2 space-y-2">
                 <p className="text-xs text-slate-400">
-                  Use at least 8 characters with upper and lower case letters, a number, and a symbol.
+                  Use at least 8 characters with upper and lower case letters, a number, and a
+                  symbol.
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-700">
@@ -141,14 +145,16 @@ export const RegisterPage: React.FC = () => {
                       style={{ width: `${passwordStrengthWidth}%` }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-slate-300">{password ? passwordStrength.label : 'Required'}</span>
+                  <span className="text-xs font-medium text-slate-300">
+                    {password ? passwordStrength.label : 'Required'}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             disabled={loading}
             className="w-full rounded-lg bg-cyan-600 p-3.5 font-semibold text-white shadow-lg hover:bg-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all disabled:opacity-50"
           >
@@ -158,7 +164,10 @@ export const RegisterPage: React.FC = () => {
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+          <Link
+            to="/login"
+            className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
             Sign In
           </Link>
         </p>

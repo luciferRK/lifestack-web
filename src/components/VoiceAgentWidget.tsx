@@ -3,14 +3,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryKeys';
 import { trackEvent } from '../lib/analytics';
 import { Link } from 'react-router-dom';
-import { 
-  Mic, 
-  MicOff, 
-  Bot, 
-  Plus, 
-  X, 
-  Loader2, 
-  AlertCircle, 
+import {
+  Mic,
+  MicOff,
+  Bot,
+  Plus,
+  X,
+  Loader2,
+  AlertCircle,
   CornerDownLeft,
   Settings,
   HelpCircle,
@@ -37,8 +37,14 @@ interface Message {
 }
 
 type RealtimeAgentMessage = {
-  type: 'transcript' | 'tool_call' | 'tool_response' | 'error' | 'interrupted'
-    | 'session_resumption' | 'session_state';
+  type:
+    | 'transcript'
+    | 'tool_call'
+    | 'tool_response'
+    | 'error'
+    | 'interrupted'
+    | 'session_resumption'
+    | 'session_state';
   content?: string;
   name?: string;
   arguments?: Record<string, unknown>;
@@ -62,12 +68,16 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 
 const CONFIRMATION_CARD_REGISTRY: Record<
   string,
-  { icon: React.ComponentType<{ className?: string }>; label: string; getRoute: (id?: string) => string }
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+    getRoute: (id?: string) => string;
+  }
 > = {
   todo: {
     icon: CheckSquare,
     label: 'Todo',
-    getRoute: (id) => id ? `/todo?id=${id}` : '/todo',
+    getRoute: (id) => (id ? `/todo?id=${id}` : '/todo'),
   },
   recurring_todo: {
     icon: CheckSquare,
@@ -101,19 +111,25 @@ export const VoiceAgentWidget: React.FC = () => {
     return {
       x: Math.min(
         Math.max(viewportMargin, position.x),
-        window.innerWidth - launcherSize - viewportMargin
+        window.innerWidth - launcherSize - viewportMargin,
       ),
       y: Math.min(
         Math.max(viewportMargin, position.y),
-        window.innerHeight - launcherSize - viewportMargin
+        window.innerHeight - launcherSize - viewportMargin,
       ),
     };
   };
 
   const getDefaultLauncherPos = () =>
     clampLauncherPos({
-      x: typeof window === 'undefined' ? viewportMargin : window.innerWidth - launcherSize - viewportMargin,
-      y: typeof window === 'undefined' ? viewportMargin : window.innerHeight - launcherSize - viewportMargin,
+      x:
+        typeof window === 'undefined'
+          ? viewportMargin
+          : window.innerWidth - launcherSize - viewportMargin,
+      y:
+        typeof window === 'undefined'
+          ? viewportMargin
+          : window.innerHeight - launcherSize - viewportMargin,
     });
 
   const snapLauncherPos = (position: { x: number; y: number }) => {
@@ -127,15 +143,18 @@ export const VoiceAgentWidget: React.FC = () => {
 
     const nearest = Math.min(left, right, top, bottom);
     if (nearest === left) return { x: viewportMargin, y: clamped.y };
-    if (nearest === right) return { x: window.innerWidth - launcherSize - viewportMargin, y: clamped.y };
+    if (nearest === right)
+      return { x: window.innerWidth - launcherSize - viewportMargin, y: clamped.y };
     if (nearest === top) return { x: clamped.x, y: viewportMargin };
     return { x: clamped.x, y: window.innerHeight - launcherSize - viewportMargin };
   };
-  
+
   const [isRecording, setIsRecording] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [inputText, setInputText] = useState('');
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'disconnected' | 'connecting' | 'connected' | 'error'
+  >('disconnected');
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -157,7 +176,7 @@ export const VoiceAgentWidget: React.FC = () => {
     }
     return defaultPos;
   });
-  
+
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -279,7 +298,7 @@ export const VoiceAgentWidget: React.FC = () => {
     const AudioContextCtor = window.AudioContext;
     if (!audioCtxRef.current) {
       audioCtxRef.current = new AudioContextCtor({
-        sampleRate: 24000
+        sampleRate: 24000,
       });
       nextPlayTimeRef.current = 0;
     } else if (audioCtxRef.current.state === 'suspended') {
@@ -289,7 +308,7 @@ export const VoiceAgentWidget: React.FC = () => {
 
   // Clear current audio queue (for barge-in/interruption)
   const clearAudioQueue = () => {
-    activeSourcesRef.current.forEach(source => {
+    activeSourcesRef.current.forEach((source) => {
       try {
         source.stop();
       } catch {
@@ -327,57 +346,59 @@ export const VoiceAgentWidget: React.FC = () => {
     // Track active sources to support barge-in
     activeSourcesRef.current.push(source);
     source.onended = () => {
-      activeSourcesRef.current = activeSourcesRef.current.filter(s => s !== source);
+      activeSourcesRef.current = activeSourcesRef.current.filter((s) => s !== source);
     };
   };
 
   // Parse server messages
   const handleServerMessage = (msg: RealtimeAgentMessage) => {
     if (msg.type === 'transcript') {
-      setMessages(prev => {
+      setMessages((prev) => {
         const lastMsg = prev[prev.length - 1];
         if (lastMsg && lastMsg.role === 'agent' && lastMsg.type === 'text') {
           const updated = [...prev];
           updated[updated.length - 1] = {
             ...lastMsg,
-            content: lastMsg.content + (msg.content ?? '')
+            content: lastMsg.content + (msg.content ?? ''),
           };
           return updated;
         } else {
-          return [...prev, {
-            id: Math.random().toString(),
-            role: 'agent',
-            type: 'text',
-            content: msg.content ?? '',
-            timestamp: new Date()
-          }];
+          return [
+            ...prev,
+            {
+              id: Math.random().toString(),
+              role: 'agent',
+              type: 'text',
+              content: msg.content ?? '',
+              timestamp: new Date(),
+            },
+          ];
         }
       });
-    } 
-    
-    else if (msg.type === 'tool_call') {
+    } else if (msg.type === 'tool_call') {
       // Barge-in: interrupt current voice playback
       clearAudioQueue();
 
       const toolCallId = `tool-${Date.now()}-${Math.random()}`;
-      setMessages(prev => [...prev, {
-        id: toolCallId,
-        role: 'event',
-        type: 'tool_call',
-        content: `working…`,
-        timestamp: new Date(),
-        toolName: msg.name,
-        toolCallId,
-      }]);
-    } 
-    
-    else if (msg.type === 'tool_response') {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: toolCallId,
+          role: 'event',
+          type: 'tool_call',
+          content: `working…`,
+          timestamp: new Date(),
+          toolName: msg.name,
+          toolCallId,
+        },
+      ]);
+    } else if (msg.type === 'tool_response') {
       const isSuccess = msg.status === 'success';
       const entityType = msg.result?.entity_type;
       const entityPublicId = msg.result?.entity_public_id;
       const summary = msg.result?.summary;
 
-      setMessages(prev => {
+      setMessages((prev) => {
         let matchedIndex = -1;
         for (let index = prev.length - 1; index >= 0; index -= 1) {
           if (prev[index].type === 'tool_call' && prev[index].toolName === msg.name) {
@@ -385,25 +406,26 @@ export const VoiceAgentWidget: React.FC = () => {
             break;
           }
         }
-        const next = matchedIndex < 0
-          ? prev
-          : prev.filter((_, index) => index !== matchedIndex);
+        const next = matchedIndex < 0 ? prev : prev.filter((_, index) => index !== matchedIndex);
 
         if (!isSuccess || entityType) {
-          return [...next, {
-            id: Math.random().toString(),
-            role: 'event',
-            type: 'tool_response',
-            content: isSuccess
-              ? (summary || 'Saved — view in app')
-              : `Error: ${msg.result?.message || 'Unknown error'}`,
-            timestamp: new Date(),
-            status: msg.status,
-            toolName: msg.name,
-            entityType,
-            entityPublicId,
-            summary,
-          }];
+          return [
+            ...next,
+            {
+              id: Math.random().toString(),
+              role: 'event',
+              type: 'tool_response',
+              content: isSuccess
+                ? summary || 'Saved — view in app'
+                : `Error: ${msg.result?.message || 'Unknown error'}`,
+              timestamp: new Date(),
+              status: msg.status,
+              toolName: msg.name,
+              entityType,
+              entityPublicId,
+              summary,
+            },
+          ];
         }
         return next;
       });
@@ -419,39 +441,37 @@ export const VoiceAgentWidget: React.FC = () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
         void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
       }
-    } 
-    
-    else if (msg.type === 'interrupted') {
+    } else if (msg.type === 'interrupted') {
       clearAudioQueue();
-    }
-
-    else if (msg.type === 'session_resumption') {
+    } else if (msg.type === 'session_resumption') {
       // Store the latest handle so an unexpected drop can resume with context.
       resumptionHandleRef.current = msg.handle ?? null;
-    }
-
-    else if (msg.type === 'session_state') {
+    } else if (msg.type === 'session_state') {
       // Gemini warned it is about to close this session (goAway). Surface it;
       // the impending close event drives the actual reconnect.
       if (msg.state === 'closing') {
-        setMessages(prev => [...prev, {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            role: 'system',
+            type: 'text',
+            content: 'Renewing the live session…',
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    } else if (msg.type === 'error') {
+      setMessages((prev) => [
+        ...prev,
+        {
           id: Math.random().toString(),
           role: 'system',
-          type: 'text',
-          content: 'Renewing the live session…',
-          timestamp: new Date()
-        }]);
-      }
-    }
-
-    else if (msg.type === 'error') {
-      setMessages(prev => [...prev, {
-        id: Math.random().toString(),
-        role: 'system',
-        type: 'error',
-        content: msg.message ?? 'Unknown error',
-        timestamp: new Date()
-      }]);
+          type: 'error',
+          content: msg.message ?? 'Unknown error',
+          timestamp: new Date(),
+        },
+      ]);
     }
   };
 
@@ -475,7 +495,11 @@ export const VoiceAgentWidget: React.FC = () => {
   };
 
   const connectWebSocket = () => {
-    if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) {
+    if (
+      wsRef.current &&
+      (wsRef.current.readyState === WebSocket.CONNECTING ||
+        wsRef.current.readyState === WebSocket.OPEN)
+    ) {
       return;
     }
 
@@ -503,15 +527,18 @@ export const VoiceAgentWidget: React.FC = () => {
         setConnectionStatus('connected');
         setConnectionError(null);
         reconnectAttemptsRef.current = 0;
-        setMessages(prev => [...prev, {
-          id: Math.random().toString(),
-          role: 'system',
-          type: 'text',
-          content: wasReconnect
-            ? 'Reconnected — continuing your session.'
-            : 'Connected. Tap the microphone to talk or type a message.',
-          timestamp: new Date()
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            role: 'system',
+            type: 'text',
+            content: wasReconnect
+              ? 'Reconnected — continuing your session.'
+              : 'Connected. Tap the microphone to talk or type a message.',
+            timestamp: new Date(),
+          },
+        ]);
 
         // Flush any pending text sends
         while (pendingSendRef.current.length > 0) {
@@ -530,7 +557,10 @@ export const VoiceAgentWidget: React.FC = () => {
             const msg = JSON.parse(event.data);
             handleServerMessage(msg);
           } catch (err) {
-            console.error('Failed parsing server message:', err instanceof Error ? err.message : 'Unknown error');
+            console.error(
+              'Failed parsing server message:',
+              err instanceof Error ? err.message : 'Unknown error',
+            );
             setConnectionError('Capture received an unreadable response. Retry the session.');
           }
         }
@@ -559,25 +589,34 @@ export const VoiceAgentWidget: React.FC = () => {
         if (event.code !== 1000 && !intentionalCloseRef.current) {
           setConnectionError(`Capture disconnected unexpectedly (${event.code}).`);
         }
-        setMessages(prev => [...prev, {
-          id: Math.random().toString(),
-          role: 'system',
-          type: 'text',
-          content: `Session closed (${event.code}).`,
-          timestamp: new Date()
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            role: 'system',
+            type: 'text',
+            content: `Session closed (${event.code}).`,
+            timestamp: new Date(),
+          },
+        ]);
       };
     } catch (err) {
-      console.error('Failed to establish WebSocket connection:', err instanceof Error ? err.message : 'Unknown error');
+      console.error(
+        'Failed to establish WebSocket connection:',
+        err instanceof Error ? err.message : 'Unknown error',
+      );
       setConnectionStatus('error');
       setConnectionError('Capture could not start a live session.');
-      setMessages(prev => [...prev, {
-        id: Math.random().toString(),
-        role: 'system',
-        type: 'error',
-        content: 'Failed to connect: ' + (err as Error).message,
-        timestamp: new Date()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          role: 'system',
+          type: 'error',
+          content: 'Failed to connect: ' + (err as Error).message,
+          timestamp: new Date(),
+        },
+      ]);
     }
   };
 
@@ -593,7 +632,7 @@ export const VoiceAgentWidget: React.FC = () => {
       }
 
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       let mimeType = 'audio/webm;codecs=opus';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
         mimeType = 'audio/webm';
@@ -613,26 +652,31 @@ export const VoiceAgentWidget: React.FC = () => {
               wsRef.current.send(buffer);
             }
           } catch (e) {
-            console.error('Failed to send audio chunk:', e instanceof Error ? e.message : 'Unknown error');
+            console.error(
+              'Failed to send audio chunk:',
+              e instanceof Error ? e.message : 'Unknown error',
+            );
           }
         }
       };
 
       mediaRecorder.start(100);
       setIsRecording(true);
-
     } catch (err) {
       console.error('Mic access failed:', err instanceof Error ? err.message : 'Unknown error');
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }
-      setMessages(prev => [...prev, {
-        id: Math.random().toString(),
-        role: 'system',
-        type: 'error',
-        content: 'Could not access mic: ' + (err as Error).message,
-        timestamp: new Date()
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          role: 'system',
+          type: 'error',
+          content: 'Could not access mic: ' + (err as Error).message,
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsStarting(false);
     }
@@ -641,7 +685,7 @@ export const VoiceAgentWidget: React.FC = () => {
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
       mediaRecorderRef.current = null;
     }
     clearAudioQueue();
@@ -663,19 +707,24 @@ export const VoiceAgentWidget: React.FC = () => {
     if (!textVal) return;
     initAudioContext();
 
-    setMessages(prev => [...prev, {
-      id: Math.random().toString(),
-      role: 'user',
-      type: 'text',
-      content: textVal,
-      timestamp: new Date()
-    }]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        role: 'user',
+        type: 'text',
+        content: textVal,
+        timestamp: new Date(),
+      },
+    ]);
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'text',
-        content: textVal
-      }));
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'text',
+          content: textVal,
+        }),
+      );
     } else {
       pendingSendRef.current.push(textVal);
       connectWebSocket();
@@ -750,8 +799,8 @@ export const VoiceAgentWidget: React.FC = () => {
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
           className={`fixed z-50 flex h-14 w-14 cursor-grab items-center justify-center rounded-full bg-slate-900 border transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(30,41,59,0.5)] ${
-            isRecording 
-              ? 'border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]' 
+            isRecording
+              ? 'border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]'
               : 'border-slate-800 hover:border-cyan-500 hover:shadow-[0_0_15px_rgba(6,182,212,0.4)]'
           }`}
           style={{ left: launcherPos.x, top: launcherPos.y }}
@@ -778,25 +827,26 @@ export const VoiceAgentWidget: React.FC = () => {
       <div
         className={`fixed z-50 flex flex-col rounded-2xl border border-slate-800 bg-slate-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-in-out ${
           isMobileViewport ? 'origin-bottom' : 'origin-bottom-right'
-        } ${
-          isOpen ? 'scale-100 opacity-100' : 'scale-75 opacity-0 pointer-events-none'
-        }`}
+        } ${isOpen ? 'scale-100 opacity-100' : 'scale-75 opacity-0 pointer-events-none'}`}
         style={
           isMobileViewport
             ? {
                 left: viewportMargin,
                 width: panelWidth,
                 height: panelHeight,
-                top: Math.max(viewportMargin, viewportHeight - panelHeight - launcherSize - viewportMargin),
+                top: Math.max(
+                  viewportMargin,
+                  viewportHeight - panelHeight - launcherSize - viewportMargin,
+                ),
               }
             : {
                 left: Math.min(
                   Math.max(viewportMargin, launcherPos.x + launcherSize - panelWidth),
-                  viewportWidth - panelWidth - viewportMargin
+                  viewportWidth - panelWidth - viewportMargin,
                 ),
                 top: Math.min(
                   Math.max(viewportMargin, launcherPos.y - panelHeight - 10),
-                  viewportHeight - panelHeight - viewportMargin
+                  viewportHeight - panelHeight - viewportMargin,
                 ),
                 width: panelWidth,
                 height: panelHeight,
@@ -809,11 +859,15 @@ export const VoiceAgentWidget: React.FC = () => {
             <Bot className="h-5 w-5 text-cyan-400" />
             <h2 className="font-semibold text-white tracking-tight">Capture</h2>
             <div className="flex items-center gap-1.5 ml-2">
-              <span className={`h-2 w-2 rounded-full ${
-                connectionStatus === 'connected' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' :
-                connectionStatus === 'connecting' ? 'bg-amber-500 animate-pulse' :
-                'bg-slate-600'
-              }`}></span>
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  connectionStatus === 'connected'
+                    ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]'
+                    : connectionStatus === 'connecting'
+                      ? 'bg-amber-500 animate-pulse'
+                      : 'bg-slate-600'
+                }`}
+              ></span>
               <span className="text-[10px] text-slate-400 capitalize">{connectionStatus}</span>
             </div>
           </div>
@@ -837,9 +891,9 @@ export const VoiceAgentWidget: React.FC = () => {
 
         {connectionError ? (
           <VoiceAgentFailureAlert
-             message={connectionError}
-             onRetry={retryConnection}
-             onDismiss={() => setConnectionError(null)}
+            message={connectionError}
+            onRetry={retryConnection}
+            onDismiss={() => setConnectionError(null)}
           />
         ) : null}
 
@@ -861,14 +915,19 @@ export const VoiceAgentWidget: React.FC = () => {
                 onChange={(checked) => {
                   setShowLauncher(checked);
                   if (activeWorkspaceId) {
-                    window.localStorage.setItem(`lifestack:show-capture-launcher:${activeWorkspaceId}`, String(checked));
+                    window.localStorage.setItem(
+                      `lifestack:show-capture-launcher:${activeWorkspaceId}`,
+                      String(checked),
+                    );
                     window.dispatchEvent(new Event('lifestack:show-capture-launcher-change'));
                   }
                 }}
                 label={
                   <div className="flex flex-col text-left">
                     <span className="font-medium text-slate-200">Floating Launcher</span>
-                    <span className="text-[11px] text-slate-400 leading-tight">Show floating capture launcher button on screen</span>
+                    <span className="text-[11px] text-slate-400 leading-tight">
+                      Show floating capture launcher button on screen
+                    </span>
                   </div>
                 }
               />
@@ -881,7 +940,9 @@ export const VoiceAgentWidget: React.FC = () => {
               {messages.length === 0 && (
                 <div className="flex h-full flex-col items-center justify-center text-center p-6 text-slate-500 space-y-3">
                   <Bot className="h-12 w-12 text-slate-700 animate-bounce" />
-                  <p className="text-sm font-medium">Hello! I am your personal capture assistant.</p>
+                  <p className="text-sm font-medium">
+                    Hello! I am your personal capture assistant.
+                  </p>
                   <p className="text-xs text-slate-600 max-w-[240px]">
                     You can ask me to:
                     <br />• "Add a task to buy groceries"
@@ -917,7 +978,7 @@ export const VoiceAgentWidget: React.FC = () => {
 
                 if (msg.role === 'event') {
                   const isSuccess = msg.status === 'success';
-                  
+
                   if (msg.type === 'tool_call') {
                     return (
                       <div key={msg.id} className="flex justify-center my-2">
@@ -928,7 +989,7 @@ export const VoiceAgentWidget: React.FC = () => {
                       </div>
                     );
                   }
-                  
+
                   if (msg.type === 'tool_response') {
                     if (isSuccess) {
                       const registryEntry = CONFIRMATION_CARD_REGISTRY[msg.entityType || ''] || {
@@ -940,14 +1001,21 @@ export const VoiceAgentWidget: React.FC = () => {
                       const cardText = msg.summary || 'Saved — view in app';
                       return (
                         <div key={msg.id} className="flex justify-center my-2 w-full">
-                          <div className="w-[90%] rounded-xl border border-slate-800 bg-slate-900/60 p-3 shadow-md flex items-center justify-between" data-testid="confirmation-card">
+                          <div
+                            className="w-[90%] rounded-xl border border-slate-800 bg-slate-900/60 p-3 shadow-md flex items-center justify-between"
+                            data-testid="confirmation-card"
+                          >
                             <div className="flex items-center gap-3 min-w-0">
                               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-950 border border-cyan-800 text-cyan-400 shrink-0">
                                 <Icon className="h-4 w-4" />
                               </div>
                               <div className="flex flex-col text-left min-w-0">
-                                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{registryEntry.label}</span>
-                                <span className="text-xs text-slate-200 font-medium truncate">{cardText}</span>
+                                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                                  {registryEntry.label}
+                                </span>
+                                <span className="text-xs text-slate-200 font-medium truncate">
+                                  {cardText}
+                                </span>
                               </div>
                             </div>
                             <Link
@@ -975,9 +1043,13 @@ export const VoiceAgentWidget: React.FC = () => {
                 // System notifications
                 return (
                   <div key={msg.id} className="flex justify-center">
-                    <div className={`rounded-lg px-2.5 py-1 text-[11px] font-medium bg-slate-900/40 border ${
-                      msg.type === 'error' ? 'border-rose-500/10 text-rose-400/80' : 'border-slate-800/40 text-slate-500'
-                    }`}>
+                    <div
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-medium bg-slate-900/40 border ${
+                        msg.type === 'error'
+                          ? 'border-rose-500/10 text-rose-400/80'
+                          : 'border-slate-800/40 text-slate-500'
+                      }`}
+                    >
                       {msg.content}
                     </div>
                   </div>
@@ -989,13 +1061,30 @@ export const VoiceAgentWidget: React.FC = () => {
             {/* CSS-based Voice Activity Waveform */}
             {isRecording && (
               <div className="flex items-center justify-center gap-1 py-2 border-t border-slate-900 bg-slate-950/50">
-                <span className="text-[10px] text-slate-400 mr-2 uppercase tracking-wider animate-pulse">Listening</span>
+                <span className="text-[10px] text-slate-400 mr-2 uppercase tracking-wider animate-pulse">
+                  Listening
+                </span>
                 <div className="flex items-end gap-0.5 h-4">
-                  <span className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.6s_infinite_alternate]" style={{ height: '30%' }}></span>
-                  <span className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.4s_infinite_alternate_0.1s]" style={{ height: '70%' }}></span>
-                  <span className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.7s_infinite_alternate_0.2s]" style={{ height: '100%' }}></span>
-                  <span className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.5s_infinite_alternate_0.3s]" style={{ height: '50%' }}></span>
-                  <span className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.6s_infinite_alternate_0.4s]" style={{ height: '20%' }}></span>
+                  <span
+                    className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.6s_infinite_alternate]"
+                    style={{ height: '30%' }}
+                  ></span>
+                  <span
+                    className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.4s_infinite_alternate_0.1s]"
+                    style={{ height: '70%' }}
+                  ></span>
+                  <span
+                    className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.7s_infinite_alternate_0.2s]"
+                    style={{ height: '100%' }}
+                  ></span>
+                  <span
+                    className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.5s_infinite_alternate_0.3s]"
+                    style={{ height: '50%' }}
+                  ></span>
+                  <span
+                    className="w-0.5 bg-cyan-400 rounded-full animate-[pulse_0.6s_infinite_alternate_0.4s]"
+                    style={{ height: '20%' }}
+                  ></span>
                 </div>
               </div>
             )}
@@ -1009,8 +1098,8 @@ export const VoiceAgentWidget: React.FC = () => {
                   disabled={isStarting}
                   aria-label={isRecording ? 'Stop listening' : 'Start listening'}
                   className={`flex h-16 w-16 items-center justify-center rounded-full border transition-all duration-300 active:scale-95 ${
-                    isRecording 
-                      ? 'bg-rose-500/10 border-rose-500 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]' 
+                    isRecording
+                      ? 'bg-rose-500/10 border-rose-500 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]'
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-cyan-500 hover:text-cyan-400'
                   }`}
                 >

@@ -75,8 +75,14 @@ export const todoService = {
     await api.delete(`/todo/${publicId}`);
   },
 
-  getRecurringRules: async (isActive: boolean = true, limit: number = 50, offset: number = 0): Promise<z.infer<typeof PaginatedRecurringRulesSchema>> => {
-    const response = await api.get('/todo/recurring/', { params: { is_active: isActive, limit, offset } });
+  getRecurringRules: async (
+    isActive: boolean = true,
+    limit: number = 50,
+    offset: number = 0,
+  ): Promise<z.infer<typeof PaginatedRecurringRulesSchema>> => {
+    const response = await api.get('/todo/recurring/', {
+      params: { is_active: isActive, limit, offset },
+    });
     return PaginatedRecurringRulesSchema.parse(response.data);
   },
 
@@ -85,7 +91,10 @@ export const todoService = {
     return RecurringTodoRuleSchema.parse(response.data);
   },
 
-  updateRecurringRule: async (publicId: string, rule: RecurringTodoUpdate): Promise<RecurringTodoRule> => {
+  updateRecurringRule: async (
+    publicId: string,
+    rule: RecurringTodoUpdate,
+  ): Promise<RecurringTodoRule> => {
     const response = await api.patch(`/todo/recurring/${publicId}`, rule);
     return RecurringTodoRuleSchema.parse(response.data);
   },

@@ -40,7 +40,10 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   minuteStep = 30,
 }) => {
   const { date, time } = splitLocalDateTime(value);
-  const timeOptions = useMemo(() => buildTimeOptions(Math.max(1, Math.min(30, minuteStep))), [minuteStep]);
+  const timeOptions = useMemo(
+    () => buildTimeOptions(Math.max(1, Math.min(30, minuteStep))),
+    [minuteStep],
+  );
 
   const update = (nextDate: string, nextTime: string) => {
     if (!nextDate && !nextTime) {

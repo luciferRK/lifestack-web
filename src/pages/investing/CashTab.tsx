@@ -281,9 +281,7 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
             data-testid="investing-cash-heading"
             className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >
-            <h3 className="font-semibold text-white text-base">
-              Cash Balances ({cashTotal})
-            </h3>
+            <h3 className="font-semibold text-white text-base">Cash Balances ({cashTotal})</h3>
             <div className="flex w-full sm:w-auto">
               <button
                 type="button"
@@ -725,7 +723,11 @@ export const CashTab: React.FC<CashTabProps> = ({ currencyDisplayPreference }) =
             <DialogTitle>Delete cash balance entry?</DialogTitle>
             <DialogDescription>
               {pendingDeleteCash
-                ? `Delete this ${formatCurrency(toNumber(pendingDeleteCash.balance), pendingDeleteCash.currency, currencyDisplayPreference)} cash balance entry for ${pendingDeleteCash.account_name}?`
+                ? `Delete this ${formatCurrency(
+                    toNumber(pendingDeleteCash.balance),
+                    pendingDeleteCash.currency,
+                    currencyDisplayPreference,
+                  )} cash balance entry for ${pendingDeleteCash.account_name}?`
                 : 'This action cannot be undone.'}
             </DialogDescription>
           </DialogHeader>

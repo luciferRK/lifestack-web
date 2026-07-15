@@ -5,8 +5,19 @@ import { Landmark, Plus, WalletCards } from 'lucide-react';
 import { financeService } from '../services/finance';
 import { useInvalidatingMutation } from '../hooks/useInvalidatingMutation';
 import { investingService } from '../services/investing';
-import type { InvestingOrder, InvestingOrderCreate, InvestingOrderUpdate, OrderType } from '../services/investing';
-import { DEFAULT_DECIMAL_PLACES, DEFAULT_DISPLAY_LOCALE, formatCurrency, formatQuantity, toNumber } from '../utils/numberFormat';
+import type {
+  InvestingOrder,
+  InvestingOrderCreate,
+  InvestingOrderUpdate,
+  OrderType,
+} from '../services/investing';
+import {
+  DEFAULT_DECIMAL_PLACES,
+  DEFAULT_DISPLAY_LOCALE,
+  formatCurrency,
+  formatQuantity,
+  toNumber,
+} from '../utils/numberFormat';
 import { CurrencyBadge } from '../components/finance/Badges';
 import { PageHero } from '../components/layout/PageHero';
 import { PageShell } from '../components/layout/PageShell';
@@ -38,7 +49,9 @@ export const InvestingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
   const [tab, setTab] = useState<'holdings' | 'orders' | 'cash' | 'analytics'>(
-    (VALID_TABS as readonly string[]).includes(requestedTab ?? '') ? (requestedTab as typeof VALID_TABS[number]) : 'holdings',
+    (VALID_TABS as readonly string[]).includes(requestedTab ?? '')
+      ? (requestedTab as (typeof VALID_TABS)[number])
+      : 'holdings',
   );
 
   // The Holdings empty state deep-links here as ?tab=orders&order=1 to open
@@ -50,16 +63,19 @@ export const InvestingPage: React.FC = () => {
   React.useEffect(() => {
     if (requestedTab || shouldAutoOpenOrder) {
       if (requestedTab && (VALID_TABS as readonly string[]).includes(requestedTab)) {
-        setTab(requestedTab as typeof VALID_TABS[number]);
+        setTab(requestedTab as (typeof VALID_TABS)[number]);
       }
       if (shouldAutoOpenOrder) {
         setIsPlaceOrderModalOpen(true);
       }
-      setSearchParams((params) => {
-        params.delete('tab');
-        params.delete('order');
-        return params;
-      }, { replace: true });
+      setSearchParams(
+        (params) => {
+          params.delete('tab');
+          params.delete('order');
+          return params;
+        },
+        { replace: true },
+      );
     }
   }, [requestedTab, shouldAutoOpenOrder, setSearchParams]);
 
@@ -94,7 +110,9 @@ export const InvestingPage: React.FC = () => {
     (userFinanceSettings?.effective_reporting_currency_code &&
     currencyOptions.includes(userFinanceSettings.effective_reporting_currency_code)
       ? userFinanceSettings.effective_reporting_currency_code
-      : null) ?? currencyOptions[0] ?? 'USD';
+      : null) ??
+    currencyOptions[0] ??
+    'USD';
   const currencyDropdownOptions = useMemo(
     () => currencyOptions.map((code) => ({ value: code, label: code })),
     [currencyOptions],
@@ -187,7 +205,8 @@ export const InvestingPage: React.FC = () => {
 
   const orderQty = Number(orderForm.quantity);
   const orderPrice = Number(orderForm.price_per_unit);
-  const orderGross = Number.isFinite(orderQty) && Number.isFinite(orderPrice) ? orderQty * orderPrice : 0;
+  const orderGross =
+    Number.isFinite(orderQty) && Number.isFinite(orderPrice) ? orderQty * orderPrice : 0;
   const orderFees =
     Number(orderForm.brokerage_fee || 0) +
     Number(orderForm.tax_amount || 0) +
@@ -203,13 +222,19 @@ export const InvestingPage: React.FC = () => {
     if (
       !orderForm.account_id ||
       !orderForm.symbol ||
-      !Number.isFinite(orderQty) || orderQty <= 0 ||
-      !Number.isFinite(orderPrice) || orderPrice <= 0 ||
-      (orderForm.brokerage_fee && !Number.isFinite(brokerageFee)) || brokerageFee < 0 ||
-      (orderForm.tax_amount && !Number.isFinite(taxAmount)) || taxAmount < 0 ||
-      (orderForm.other_fees && !Number.isFinite(otherFees)) || otherFees < 0 ||
+      !Number.isFinite(orderQty) ||
+      orderQty <= 0 ||
+      !Number.isFinite(orderPrice) ||
+      orderPrice <= 0 ||
+      (orderForm.brokerage_fee && !Number.isFinite(brokerageFee)) ||
+      brokerageFee < 0 ||
+      (orderForm.tax_amount && !Number.isFinite(taxAmount)) ||
+      taxAmount < 0 ||
+      (orderForm.other_fees && !Number.isFinite(otherFees)) ||
+      otherFees < 0 ||
       Number.isNaN(occurredAtDate.getTime())
-    ) return;
+    )
+      return;
     placeOrderMutation.mutate({
       account_id: orderForm.account_id,
       order_type: orderForm.order_type,
@@ -273,7 +298,11 @@ export const InvestingPage: React.FC = () => {
   const deleteOrderMutation = useInvalidatingMutation(
     (publicId: string) => investingService.deleteOrder(publicId),
     refreshKeys,
-    { successMessage: 'Order deleted', errorMessage: false, onSuccess: () => setPendingDeleteOrder(null) },
+    {
+      successMessage: 'Order deleted',
+      errorMessage: false,
+      onSuccess: () => setPendingDeleteOrder(null),
+    },
   );
 
   const handleStartEditOrder = (order: InvestingOrder) => {
@@ -363,7 +392,7 @@ export const InvestingPage: React.FC = () => {
       <PageHero
         title="Investing"
         subtitle="Manage holdings and cash balances for your workspace."
-        actions={(
+        actions={
           <Button
             type="button"
             data-testid="investing-hero-place-order"
@@ -373,51 +402,103 @@ export const InvestingPage: React.FC = () => {
             <Plus className="h-5 w-5" />
             Place Order
           </Button>
-        )}
+        }
       />
 
       <div className="mb-6 grid gap-6 md:grid-cols-2 xl:grid-cols-5">
         <SummaryCard
-          label={`Portfolio value${performanceSummary.data?.snapshot_date ? ` (as of ${performanceSummary.data.snapshot_date})` : ''}`}
-          value={summary.data?.valuation_status === 'multi_currency_unconverted'
-            ? 'N/A'
-            : performanceSummary.data
-              ? formatCurrency(performanceSummary.data.portfolio_value ?? performanceSummary.data.total_value, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
-              : (summary.data?.portfolio_value != null
-                ? formatCurrency(summary.data.portfolio_value, summary.data.reporting_currency ?? preferredWorkspaceCurrency, currencyDisplayPreference, displayLocale, decimalPlaces)
-                : 'N/A')}
+          label={`Portfolio value${
+            performanceSummary.data?.snapshot_date
+              ? ` (as of ${performanceSummary.data.snapshot_date})`
+              : ''
+          }`}
+          value={
+            summary.data?.valuation_status === 'multi_currency_unconverted'
+              ? 'N/A'
+              : performanceSummary.data
+                ? formatCurrency(
+                    performanceSummary.data.portfolio_value ?? performanceSummary.data.total_value,
+                    performanceSummary.data.currency,
+                    currencyDisplayPreference,
+                    displayLocale,
+                    decimalPlaces,
+                  )
+                : summary.data?.portfolio_value != null
+                  ? formatCurrency(
+                      summary.data.portfolio_value,
+                      summary.data.reporting_currency ?? preferredWorkspaceCurrency,
+                      currencyDisplayPreference,
+                      displayLocale,
+                      decimalPlaces,
+                    )
+                  : 'N/A'
+          }
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-portfolio-value"
         />
         <SummaryCard
           label="Invested"
-          value={performanceSummary.data
-            ? formatCurrency(performanceSummary.data.invested_value ?? performanceSummary.data.total_cost, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
-            : 'N/A'}
+          value={
+            performanceSummary.data
+              ? formatCurrency(
+                  performanceSummary.data.invested_value ?? performanceSummary.data.total_cost,
+                  performanceSummary.data.currency,
+                  currencyDisplayPreference,
+                  displayLocale,
+                  decimalPlaces,
+                )
+              : 'N/A'
+          }
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-invested-value"
         />
         <SummaryCard
           label="Total gain/loss"
-          value={performanceSummary.data
-            ? formatPerformanceMetric(performanceSummary.data.total_gain_loss, performanceSummary.data.total_gain_loss_pct, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
-            : 'N/A'}
+          value={
+            performanceSummary.data
+              ? formatPerformanceMetric(
+                  performanceSummary.data.total_gain_loss,
+                  performanceSummary.data.total_gain_loss_pct,
+                  performanceSummary.data.currency,
+                  currencyDisplayPreference,
+                  displayLocale,
+                  decimalPlaces,
+                )
+              : 'N/A'
+          }
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-total-gain-loss"
         />
         <SummaryCard
           label="Daily change"
-          value={performanceSummary.data?.daily_change != null
-            ? formatPerformanceMetric(performanceSummary.data.daily_change, performanceSummary.data.daily_change_pct, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
-            : 'N/A'}
+          value={
+            performanceSummary.data?.daily_change != null
+              ? formatPerformanceMetric(
+                  performanceSummary.data.daily_change,
+                  performanceSummary.data.daily_change_pct,
+                  performanceSummary.data.currency,
+                  currencyDisplayPreference,
+                  displayLocale,
+                  decimalPlaces,
+                )
+              : 'N/A'
+          }
           icon={<Landmark className="h-5 w-5" />}
           testId="investing-daily-change"
         />
         <SummaryCard
           label="Cash total"
-          value={performanceSummary.data?.cash_total != null
-            ? formatCurrency(performanceSummary.data.cash_total, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
-            : 'N/A'}
+          value={
+            performanceSummary.data?.cash_total != null
+              ? formatCurrency(
+                  performanceSummary.data.cash_total,
+                  performanceSummary.data.currency,
+                  currencyDisplayPreference,
+                  displayLocale,
+                  decimalPlaces,
+                )
+              : 'N/A'
+          }
           icon={<WalletCards className="h-5 w-5" />}
           testId="investing-cash-total"
         />
@@ -432,13 +513,22 @@ export const InvestingPage: React.FC = () => {
           <span className="font-semibold text-slate-100">Reporting currency:</span>{' '}
           {summary.data?.reporting_currency ?? 'Not configured'}
         </p>
-        {summary.data?.currency_breakdown && Object.keys(summary.data.currency_breakdown).length > 0 ? (
+        {summary.data?.currency_breakdown &&
+        Object.keys(summary.data.currency_breakdown).length > 0 ? (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-400">Original currency mix:</span>
             {Object.entries(summary.data.currency_breakdown).map(([code, value]) => (
               <span key={code} className="inline-flex items-center gap-1.5">
                 <CurrencyBadge code={code} title={`Book total in ${code}`} />
-                <span className="text-xs text-slate-300">{formatCurrency(value, code, currencyDisplayPreference, displayLocale, decimalPlaces)}</span>
+                <span className="text-xs text-slate-300">
+                  {formatCurrency(
+                    value,
+                    code,
+                    currencyDisplayPreference,
+                    displayLocale,
+                    decimalPlaces,
+                  )}
+                </span>
               </span>
             ))}
           </div>
@@ -452,8 +542,13 @@ export const InvestingPage: React.FC = () => {
             ? `Valuation as of ${performanceSummary.data.snapshot_date} · ${performanceSummary.data.valuation_status}`
             : 'Valuation date unavailable'}
         </p>
-        {summary.data?.valuation_status === 'converted_available' && summary.data?.fx_rates_used && Object.keys(summary.data.fx_rates_used).length > 0 ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="investing-fx-rates-used">
+        {summary.data?.valuation_status === 'converted_available' &&
+        summary.data?.fx_rates_used &&
+        Object.keys(summary.data.fx_rates_used).length > 0 ? (
+          <div
+            className="mt-2 flex flex-wrap items-center gap-2"
+            data-testid="investing-fx-rates-used"
+          >
             <span className="text-xs text-slate-400">FX conversion rates used:</span>
             {Object.entries(summary.data.fx_rates_used).map(([base, rate]) => (
               <span key={base} className="inline-flex items-center gap-1 text-xs text-slate-300">
@@ -470,18 +565,51 @@ export const InvestingPage: React.FC = () => {
           {performanceSummary.isLoading
             ? 'Loading...'
             : performanceSummary.data
-              ? `${formatCurrency(performanceSummary.data.total_gain_loss, performanceSummary.data.currency, currencyDisplayPreference, displayLocale, decimalPlaces)} (${performancePctLabel})`
+              ? `${formatCurrency(
+                  performanceSummary.data.total_gain_loss,
+                  performanceSummary.data.currency,
+                  currencyDisplayPreference,
+                  displayLocale,
+                  decimalPlaces,
+                )} (${performancePctLabel})`
               : 'N/A'}
         </p>
       </div>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as 'holdings' | 'orders' | 'cash' | 'analytics')}>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as 'holdings' | 'orders' | 'cash' | 'analytics')}
+      >
         <div className="-mx-1 mb-6 overflow-x-auto px-1 pb-1">
           <TabsList className="min-w-max">
-            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-holdings" value="holdings">Holdings</TabsTrigger>
-            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-orders" value="orders">Orders</TabsTrigger>
-            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-cash" value="cash">Cash</TabsTrigger>
-            <TabsTrigger className="min-w-fit sm:min-w-[8rem]" data-testid="investing-tab-analytics" value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger
+              className="min-w-fit sm:min-w-[8rem]"
+              data-testid="investing-tab-holdings"
+              value="holdings"
+            >
+              Holdings
+            </TabsTrigger>
+            <TabsTrigger
+              className="min-w-fit sm:min-w-[8rem]"
+              data-testid="investing-tab-orders"
+              value="orders"
+            >
+              Orders
+            </TabsTrigger>
+            <TabsTrigger
+              className="min-w-fit sm:min-w-[8rem]"
+              data-testid="investing-tab-cash"
+              value="cash"
+            >
+              Cash
+            </TabsTrigger>
+            <TabsTrigger
+              className="min-w-fit sm:min-w-[8rem]"
+              data-testid="investing-tab-analytics"
+              value="analytics"
+            >
+              Analytics
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -518,14 +646,20 @@ export const InvestingPage: React.FC = () => {
       {/* Place Order Modal — hoisted to the page (not the Cash tab) so it's
           reachable via the hero button from every tab, not just Cash
           (UX-REVIEW P2 item 13: "Investing's core action is buried"). */}
-      <Dialog open={isPlaceOrderModalOpen} onOpenChange={(open) => !open && setIsPlaceOrderModalOpen(false)}>
+      <Dialog
+        open={isPlaceOrderModalOpen}
+        onOpenChange={(open) => !open && setIsPlaceOrderModalOpen(false)}
+      >
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader className="mb-5">
             <DialogTitle>Place Order</DialogTitle>
           </DialogHeader>
           {isPlaceOrderModalOpen && (
             <form onSubmit={onPlaceOrder} className="space-y-4">
-              <div data-testid="order-type-toggle" className="flex rounded-lg border border-slate-700/60 overflow-hidden">
+              <div
+                data-testid="order-type-toggle"
+                className="flex rounded-lg border border-slate-700/60 overflow-hidden"
+              >
                 {(['buy', 'sell'] as const).map((t) => (
                   <button
                     key={t}
@@ -569,7 +703,9 @@ export const InvestingPage: React.FC = () => {
                     type="text"
                     required
                     value={orderForm.symbol}
-                    onChange={(e) => setOrderForm((prev) => ({ ...prev, symbol: e.target.value.toUpperCase() }))}
+                    onChange={(e) =>
+                      setOrderForm((prev) => ({ ...prev, symbol: e.target.value.toUpperCase() }))
+                    }
                     placeholder="AAPL"
                     className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500"
                   />
@@ -593,7 +729,9 @@ export const InvestingPage: React.FC = () => {
                     min="0.00000001"
                     step="any"
                     value={orderForm.quantity}
-                    onChange={(e) => setOrderForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                    onChange={(e) =>
+                      setOrderForm((prev) => ({ ...prev, quantity: e.target.value }))
+                    }
                     className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
                   />
                 </div>
@@ -606,7 +744,9 @@ export const InvestingPage: React.FC = () => {
                     min="0.000001"
                     step="any"
                     value={orderForm.price_per_unit}
-                    onChange={(e) => setOrderForm((prev) => ({ ...prev, price_per_unit: e.target.value }))}
+                    onChange={(e) =>
+                      setOrderForm((prev) => ({ ...prev, price_per_unit: e.target.value }))
+                    }
                     className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
                   />
                 </div>
@@ -618,7 +758,9 @@ export const InvestingPage: React.FC = () => {
                     min="0"
                     step="any"
                     value={orderForm.brokerage_fee}
-                    onChange={(e) => setOrderForm((prev) => ({ ...prev, brokerage_fee: e.target.value }))}
+                    onChange={(e) =>
+                      setOrderForm((prev) => ({ ...prev, brokerage_fee: e.target.value }))
+                    }
                     className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
                   />
                 </div>
@@ -630,7 +772,9 @@ export const InvestingPage: React.FC = () => {
                     min="0"
                     step="any"
                     value={orderForm.tax_amount}
-                    onChange={(e) => setOrderForm((prev) => ({ ...prev, tax_amount: e.target.value }))}
+                    onChange={(e) =>
+                      setOrderForm((prev) => ({ ...prev, tax_amount: e.target.value }))
+                    }
                     className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
                   />
                 </div>
@@ -642,7 +786,9 @@ export const InvestingPage: React.FC = () => {
                     min="0"
                     step="any"
                     value={orderForm.other_fees}
-                    onChange={(e) => setOrderForm((prev) => ({ ...prev, other_fees: e.target.value }))}
+                    onChange={(e) =>
+                      setOrderForm((prev) => ({ ...prev, other_fees: e.target.value }))
+                    }
                     className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
                   />
                 </div>
@@ -652,7 +798,9 @@ export const InvestingPage: React.FC = () => {
                     data-testid="order-exchange"
                     type="text"
                     value={orderForm.exchange_name}
-                    onChange={(e) => setOrderForm((prev) => ({ ...prev, exchange_name: e.target.value }))}
+                    onChange={(e) =>
+                      setOrderForm((prev) => ({ ...prev, exchange_name: e.target.value }))
+                    }
                     placeholder="NSE / NASDAQ"
                     className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500"
                   />
@@ -663,7 +811,9 @@ export const InvestingPage: React.FC = () => {
                     data-testid="order-date"
                     type="datetime-local"
                     value={orderForm.occurred_at}
-                    onChange={(e) => setOrderForm((prev) => ({ ...prev, occurred_at: e.target.value }))}
+                    onChange={(e) =>
+                      setOrderForm((prev) => ({ ...prev, occurred_at: e.target.value }))
+                    }
                     className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
                   />
                 </div>
@@ -683,19 +833,39 @@ export const InvestingPage: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-slate-400">Gross amount</span>
                   <span data-testid="order-gross-amount" className="text-white font-medium">
-                    {formatCurrency(orderGross, orderForm.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                    {formatCurrency(
+                      orderGross,
+                      orderForm.currency,
+                      currencyDisplayPreference,
+                      displayLocale,
+                      decimalPlaces,
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Total fees</span>
                   <span data-testid="order-total-fees" className="text-white">
-                    {formatCurrency(orderFees, orderForm.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                    {formatCurrency(
+                      orderFees,
+                      orderForm.currency,
+                      currencyDisplayPreference,
+                      displayLocale,
+                      decimalPlaces,
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-slate-700/50 pt-2">
-                  <span className="font-semibold text-white">Net {orderForm.order_type === 'buy' ? 'cost' : 'proceeds'}</span>
+                  <span className="font-semibold text-white">
+                    Net {orderForm.order_type === 'buy' ? 'cost' : 'proceeds'}
+                  </span>
                   <span data-testid="order-net-amount" className="font-semibold text-white">
-                    {formatCurrency(orderNet, orderForm.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                    {formatCurrency(
+                      orderNet,
+                      orderForm.currency,
+                      currencyDisplayPreference,
+                      displayLocale,
+                      decimalPlaces,
+                    )}
                   </span>
                 </div>
               </div>
@@ -715,7 +885,9 @@ export const InvestingPage: React.FC = () => {
                   loading={placeOrderMutation.isPending}
                   className="flex-1 rounded-lg py-2"
                 >
-                  {placeOrderMutation.isPending ? 'Placing' : `Place ${orderForm.order_type === 'buy' ? 'Buy' : 'Sell'} Order`}
+                  {placeOrderMutation.isPending
+                    ? 'Placing'
+                    : `Place ${orderForm.order_type === 'buy' ? 'Buy' : 'Sell'} Order`}
                 </Button>
               </div>
 
@@ -748,141 +920,165 @@ export const InvestingPage: React.FC = () => {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {isEditOrderModalOpen && selectedOrder && (
             <>
-            <DialogHeader className="mb-5">
-              <DialogTitle>Edit Order — {selectedOrder.symbol}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={onUpdateOrder} className="space-y-4">
-              {/* Buy / Sell toggle */}
-              <div className="flex rounded-lg border border-slate-700/60 overflow-hidden">
-                {(['buy', 'sell'] as const).map((t) => (
+              <DialogHeader className="mb-5">
+                <DialogTitle>Edit Order — {selectedOrder.symbol}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={onUpdateOrder} className="space-y-4">
+                {/* Buy / Sell toggle */}
+                <div className="flex rounded-lg border border-slate-700/60 overflow-hidden">
+                  {(['buy', 'sell'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setEditOrderForm((prev) => ({ ...prev, order_type: t }))}
+                      className={`flex-1 py-2 text-sm font-semibold transition-colors ${
+                        editOrderForm.order_type === t
+                          ? t === 'buy'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-rose-600 text-white'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {t.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Quantity</label>
+                    <input
+                      type="number"
+                      required
+                      min="0.00000001"
+                      step="any"
+                      value={editOrderForm.quantity}
+                      onChange={(e) =>
+                        setEditOrderForm((prev) => ({ ...prev, quantity: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Price per unit</label>
+                    <input
+                      type="number"
+                      required
+                      min="0.000001"
+                      step="any"
+                      value={editOrderForm.price_per_unit}
+                      onChange={(e) =>
+                        setEditOrderForm((prev) => ({ ...prev, price_per_unit: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Brokerage fee</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={editOrderForm.brokerage_fee}
+                      onChange={(e) =>
+                        setEditOrderForm((prev) => ({ ...prev, brokerage_fee: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Tax / STT</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={editOrderForm.tax_amount}
+                      onChange={(e) =>
+                        setEditOrderForm((prev) => ({ ...prev, tax_amount: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Other fees</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={editOrderForm.other_fees}
+                      onChange={(e) =>
+                        setEditOrderForm((prev) => ({ ...prev, other_fees: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-400">Exchange (optional)</label>
+                    <input
+                      type="text"
+                      value={editOrderForm.exchange_name}
+                      onChange={(e) =>
+                        setEditOrderForm((prev) => ({ ...prev, exchange_name: e.target.value }))
+                      }
+                      placeholder="NSE / NASDAQ"
+                      className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="mb-1 block text-xs text-slate-400">Trade date & time</label>
+                    <input
+                      type="datetime-local"
+                      value={editOrderForm.occurred_at}
+                      onChange={(e) =>
+                        setEditOrderForm((prev) => ({ ...prev, occurred_at: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="mb-1 block text-xs text-slate-400">Notes (optional)</label>
+                    <input
+                      type="text"
+                      value={editOrderForm.notes}
+                      onChange={(e) =>
+                        setEditOrderForm((prev) => ({ ...prev, notes: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                </div>
+
+                {editOrderFormError ? (
+                  <p className="text-xs text-rose-300">{editOrderFormError}</p>
+                ) : null}
+
+                <div className="flex gap-3 pt-2">
                   <button
-                    key={t}
                     type="button"
-                    onClick={() => setEditOrderForm((prev) => ({ ...prev, order_type: t }))}
-                    className={`flex-1 py-2 text-sm font-semibold transition-colors ${
-                      editOrderForm.order_type === t
-                        ? t === 'buy' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
-                    }`}
+                    onClick={() => {
+                      setIsEditOrderModalOpen(false);
+                      setSelectedOrder(null);
+                      setEditOrderFormError('');
+                    }}
+                    className="flex-1 rounded-lg border border-slate-600/70 py-2 text-sm text-slate-300 hover:bg-slate-800"
                   >
-                    {t.toUpperCase()}
+                    Cancel
                   </button>
-                ))}
-              </div>
+                  <Button
+                    type="submit"
+                    loading={updateOrderMutation.isPending}
+                    className="flex-1 rounded-lg py-2"
+                  >
+                    {updateOrderMutation.isPending ? 'Saving' : 'Save Changes'}
+                  </Button>
+                </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs text-slate-400">Quantity</label>
-                  <input
-                    type="number"
-                    required
-                    min="0.00000001"
-                    step="any"
-                    value={editOrderForm.quantity}
-                    onChange={(e) => setEditOrderForm((prev) => ({ ...prev, quantity: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-400">Price per unit</label>
-                  <input
-                    type="number"
-                    required
-                    min="0.000001"
-                    step="any"
-                    value={editOrderForm.price_per_unit}
-                    onChange={(e) => setEditOrderForm((prev) => ({ ...prev, price_per_unit: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-400">Brokerage fee</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={editOrderForm.brokerage_fee}
-                    onChange={(e) => setEditOrderForm((prev) => ({ ...prev, brokerage_fee: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-400">Tax / STT</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={editOrderForm.tax_amount}
-                    onChange={(e) => setEditOrderForm((prev) => ({ ...prev, tax_amount: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-400">Other fees</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={editOrderForm.other_fees}
-                    onChange={(e) => setEditOrderForm((prev) => ({ ...prev, other_fees: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-400">Exchange (optional)</label>
-                  <input
-                    type="text"
-                    value={editOrderForm.exchange_name}
-                    onChange={(e) => setEditOrderForm((prev) => ({ ...prev, exchange_name: e.target.value }))}
-                    placeholder="NSE / NASDAQ"
-                    className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="mb-1 block text-xs text-slate-400">Trade date & time</label>
-                  <input
-                    type="datetime-local"
-                    value={editOrderForm.occurred_at}
-                    onChange={(e) => setEditOrderForm((prev) => ({ ...prev, occurred_at: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="mb-1 block text-xs text-slate-400">Notes (optional)</label>
-                  <input
-                    type="text"
-                    value={editOrderForm.notes}
-                    onChange={(e) => setEditOrderForm((prev) => ({ ...prev, notes: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 py-2 text-sm text-white"
-                  />
-                </div>
-              </div>
-
-              {editOrderFormError ? <p className="text-xs text-rose-300">{editOrderFormError}</p> : null}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setIsEditOrderModalOpen(false); setSelectedOrder(null); setEditOrderFormError(''); }}
-                  className="flex-1 rounded-lg border border-slate-600/70 py-2 text-sm text-slate-300 hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <Button
-                  type="submit"
-                  loading={updateOrderMutation.isPending}
-                  className="flex-1 rounded-lg py-2"
-                >
-                  {updateOrderMutation.isPending ? 'Saving' : 'Save Changes'}
-                </Button>
-              </div>
-
-              {updateOrderMutation.isError && (
-                <p className="text-sm text-rose-400">
-                  {(updateOrderMutation.error as Error)?.message ?? 'Failed to update order'}
-                </p>
-              )}
-            </form>
+                {updateOrderMutation.isError && (
+                  <p className="text-sm text-rose-400">
+                    {(updateOrderMutation.error as Error)?.message ?? 'Failed to update order'}
+                  </p>
+                )}
+              </form>
             </>
           )}
         </DialogContent>
@@ -890,14 +1086,20 @@ export const InvestingPage: React.FC = () => {
 
       <Dialog
         open={!!pendingDeleteOrder}
-        onOpenChange={(open) => !open && !deleteOrderMutation.isPending && setPendingDeleteOrder(null)}
+        onOpenChange={(open) =>
+          !open && !deleteOrderMutation.isPending && setPendingDeleteOrder(null)
+        }
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete order?</DialogTitle>
             <DialogDescription>
               {pendingDeleteOrder
-                ? `Delete this ${pendingDeleteOrder.order_type} order for ${formatQuantity(pendingDeleteOrder.quantity)} ${pendingDeleteOrder.symbol}? The holding will be recomputed from the remaining orders.`
+                ? `Delete this ${pendingDeleteOrder.order_type} order for ${formatQuantity(
+                    pendingDeleteOrder.quantity,
+                  )} ${
+                    pendingDeleteOrder.symbol
+                  }? The holding will be recomputed from the remaining orders.`
                 : 'The holding will be recomputed from the remaining orders.'}
             </DialogDescription>
           </DialogHeader>

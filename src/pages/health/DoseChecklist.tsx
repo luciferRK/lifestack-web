@@ -52,7 +52,10 @@ export const DoseChecklist: React.FC<DoseChecklistProps> = ({
             key={`${slot.medication_public_id}-${slot.scheduled_for}`}
             data-testid={`dose-slot-${slot.medication_public_id}-${slot.scheduled_for}`}
             data-status={slot.status}
-            className={cn('flex items-center justify-between gap-3 rounded-xl border px-4 py-3', STATUS_STYLES[slot.status])}
+            className={cn(
+              'flex items-center justify-between gap-3 rounded-xl border px-4 py-3',
+              STATUS_STYLES[slot.status],
+            )}
           >
             <div className="min-w-0">
               <p className="truncate font-medium text-white">{slot.medication_name}</p>

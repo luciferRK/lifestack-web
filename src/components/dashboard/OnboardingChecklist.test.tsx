@@ -12,7 +12,12 @@ const renderChecklist = (workspaceId: string | null, steps: OnboardingChecklistS
   );
 
 const baseSteps: OnboardingChecklistStep[] = [
-  { id: 'currency', label: 'Set your reporting currency', done: false, to: '/settings?tab=currency' },
+  {
+    id: 'currency',
+    label: 'Set your reporting currency',
+    done: false,
+    to: '/settings?tab=currency',
+  },
   { id: 'account', label: 'Add your first account', done: false, to: '/settings?tab=accounts' },
   {
     id: 'activity',
@@ -49,9 +54,7 @@ describe('OnboardingChecklist', () => {
   });
 
   it('hides itself once all required (non-optional) steps are done, even if the optional step is not', () => {
-    const steps = baseSteps.map((step) =>
-      step.optional ? step : { ...step, done: true },
-    );
+    const steps = baseSteps.map((step) => (step.optional ? step : { ...step, done: true }));
     renderChecklist('ws-1', steps);
 
     expect(screen.queryByText('Get started')).not.toBeInTheDocument();

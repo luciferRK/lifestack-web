@@ -99,7 +99,11 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
     if (open) {
       reset(
         restartCourse
-          ? { ...defaultsFor(medication), anchor_date: formatDateInputValue(new Date()), end_date: '' }
+          ? {
+              ...defaultsFor(medication),
+              anchor_date: formatDateInputValue(new Date()),
+              end_date: '',
+            }
           : defaultsFor(medication),
       );
       setAdvancedOpen(false);
@@ -143,7 +147,9 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
               className="h-10 w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white"
               placeholder="e.g. Metformin"
             />
-            {errors.name ? <p className="mt-1 text-sm text-rose-400">{errors.name.message}</p> : null}
+            {errors.name ? (
+              <p className="mt-1 text-sm text-rose-400">{errors.name.message}</p>
+            ) : null}
           </div>
 
           <div>
@@ -174,7 +180,9 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-300">Every N {watched.frequency}(s)</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-300">
+                Every N {watched.frequency}(s)
+              </label>
               <input
                 type="number"
                 min={1}
@@ -182,18 +190,26 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
                 data-testid="medication-interval-input"
                 className="h-10 w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white"
               />
-              {errors.interval ? <p className="mt-1 text-sm text-rose-400">{errors.interval.message}</p> : null}
+              {errors.interval ? (
+                <p className="mt-1 text-sm text-rose-400">{errors.interval.message}</p>
+              ) : null}
             </div>
           </div>
 
           {watched.frequency === 'weekly' ? (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-300">Days of week</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-300">
+                Days of week
+              </label>
               <Controller
                 control={control}
                 name="days_of_week"
                 render={({ field }) => (
-                  <WeekdayToggleGroup testId="medication-weekday" value={field.value} onChange={field.onChange} />
+                  <WeekdayToggleGroup
+                    testId="medication-weekday"
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
                 )}
               />
               {errors.days_of_week ? (
@@ -268,17 +284,25 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
             <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-300">Start date</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-300">
+                    Start date
+                  </label>
                   <Controller
                     control={control}
                     name="anchor_date"
                     render={({ field }) => (
-                      <DatePicker testId="medication-anchor-date" value={field.value} onChange={field.onChange} />
+                      <DatePicker
+                        testId="medication-anchor-date"
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
                     )}
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-300">End date (optional)</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-300">
+                    End date (optional)
+                  </label>
                   <Controller
                     control={control}
                     name="end_date"
@@ -290,7 +314,9 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
                       />
                     )}
                   />
-                  {errors.end_date ? <p className="mt-1 text-sm text-rose-400">{errors.end_date.message}</p> : null}
+                  {errors.end_date ? (
+                    <p className="mt-1 text-sm text-rose-400">{errors.end_date.message}</p>
+                  ) : null}
                 </div>
               </div>
               <div>
@@ -302,7 +328,9 @@ export const MedicationFormDialog: React.FC<MedicationFormDialogProps> = ({
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-300">Refill note</label>
+                <label className="mb-1.5 block text-sm font-medium text-slate-300">
+                  Refill note
+                </label>
                 <input
                   {...register('refill_note')}
                   data-testid="medication-refill-note-input"

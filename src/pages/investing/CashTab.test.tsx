@@ -12,7 +12,6 @@ const PAGE_SIZE = 10;
 const byParagraphText = (text: string) => (_: string, el: Element | null) =>
   el?.tagName === 'P' && el.textContent === text;
 
-
 const cashRow = (i: number) => ({
   public_id: `cash-${i}`,
   account_id: 'acc-1',
@@ -115,7 +114,9 @@ describe('CashTab pagination (spec-009)', () => {
     renderTab();
 
     // First page requested at PAGE_SIZE, not a 200-row dump.
-    expect(await screen.findByText(byParagraphText('Showing 1 to 10 of 25 results'))).toBeInTheDocument();
+    expect(
+      await screen.findByText(byParagraphText('Showing 1 to 10 of 25 results')),
+    ).toBeInTheDocument();
     expect(requests.cash[0].searchParams.get('limit')).toBe(String(PAGE_SIZE));
     expect(requests.cash[0].searchParams.get('offset')).toBe('0');
 
@@ -152,8 +153,6 @@ describe('CashTab pagination (spec-009)', () => {
     await screen.findByText('Transfers (17)');
     expect(screen.getByText(byParagraphText('Showing 1 to 10 of 17 results'))).toBeInTheDocument();
     // Desktop table renders 10 transfer rows, not all 17.
-    await waitFor(() =>
-      expect(screen.getAllByTestId(/investing-transfer-row-/)).toHaveLength(10),
-    );
+    await waitFor(() => expect(screen.getAllByTestId(/investing-transfer-row-/)).toHaveLength(10));
   });
 });

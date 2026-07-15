@@ -1,6 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, Check, ChevronDown, Edit2, Layers, PieChart, Plus, Settings2, X } from 'lucide-react';
+import {
+  BarChart3,
+  ChevronDown,
+  Edit2,
+  Layers,
+  PieChart,
+  Plus,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
 import { investingService } from '../../services/investing';
 import { useInvalidatingMutation } from '../../hooks/useInvalidatingMutation';
 import { formatCurrency, toNumber } from '../../utils/numberFormat';
@@ -9,6 +18,8 @@ import { queryKeys } from '../../lib/queryKeys';
 import { DropdownSelect } from '../../components/DropdownSelect';
 import { Combobox } from '../../components/Combobox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { IdentifierFields, type IdentifierFieldsValue } from './IdentifierFields';
+import { useIdentifierHint } from './useIdentifierHint';
 import type {
   Instrument,
   InstrumentConstituentUpsert,
@@ -16,6 +27,25 @@ import type {
   InstrumentType,
 } from '../../types/investing';
 import { formatDateInput, instrumentTypeLabel, instrumentTypeOptions } from './format';
+
+const EMPTY_IDENTITY: IdentifierFieldsValue = { ticker: '', isin: '', exchange: '' };
+
+interface ConstituentRow {
+  company_name: string;
+  company_ticker: string;
+  company_isin: string;
+  weight: string;
+}
+
+const EMPTY_CONSTITUENT_ROWS: ConstituentRow[] = [
+  { company_name: 'Apple Inc', company_ticker: 'AAPL', company_isin: '', weight: '0.60' },
+  { company_name: 'Microsoft Corp', company_ticker: 'MSFT', company_isin: '', weight: '0.40' },
+];
+
+const extractApiErrorDetail = (error: unknown, fallback: string): string =>
+  (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+  (error as Error)?.message ??
+  fallback;
 
 const refreshKeys = [queryKeys.investing.all, queryKeys.finance.all, queryKeys.dashboard.all];
 
@@ -40,14 +70,22 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
     name: '',
     instrument_type: 'etf',
   });
+  const [createInstrumentIdentity, setCreateInstrumentIdentity] =
+    useState<IdentifierFieldsValue>(EMPTY_IDENTITY);
   const [selectedInstrumentId, setSelectedInstrumentId] = useState('');
-  const [constituentRowsText, setConstituentRowsText] = useState('AAPL,0.60\nMSFT,0.40');
+  const [constituentRows, setConstituentRows] = useState<ConstituentRow[]>(EMPTY_CONSTITUENT_ROWS);
+  const [constituentPasteText, setConstituentPasteText] = useState('');
   const [constituentError, setConstituentError] = useState('');
-  const [editingInstrumentId, setEditingInstrumentId] = useState<string | null>(null);
+  // Analytics Advanced instrument edit (spec-010 §3.2): a modal, not inline
+  // cells, so it carries the same ticker/isin/exchange fields + hint as
+  // Holdings — the two surfaces edit the same Instrument entity.
+  const [editingInstrument, setEditingInstrument] = useState<Instrument | null>(null);
   const [instrumentEditForm, setInstrumentEditForm] = useState({
     name: '',
     instrument_type: 'stock' as InstrumentType,
   });
+  const [instrumentEditIdentity, setInstrumentEditIdentity] =
+    useState<IdentifierFieldsValue>(EMPTY_IDENTITY);
 
   const instrumentsRes = useQuery({
     queryKey: queryKeys.investing.instruments(),
@@ -75,9 +113,9 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
   const sortedExposureRows = useMemo(
     () =>
       [...(exposure?.exposure ?? [])].sort(
-        (a, b) => toNumber(b.lookthrough_exposure) - toNumber(a.lookthrough_exposure)
+        (a, b) => toNumber(b.lookthrough_exposure) - toNumber(a.lookthrough_exposure),
       ),
-    [exposure]
+    [exposure],
   );
 
   const concentration = useMemo(() => {
@@ -109,6 +147,11 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
     return { slices, total };
   }, [sortedExposureRows, exposure?.total_lookthrough_exposure]);
 
+  // Seed Constituents has no per-row instrument_type selector — constituent
+  // companies are typically underlying stocks, so the shared hint (spec-010
+  // §4) is computed for 'stock' and shown once above the rows table.
+  const constituentIdentifierHint = useIdentifierHint('stock');
+
   const pooledInstrumentOptions = useMemo(
     () =>
       (instruments ?? [])
@@ -117,7 +160,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
           value: item.public_id,
           label: `${item.symbol} (${item.instrument_type})`,
         })),
-    [instruments]
+    [instruments],
   );
 
   const createInstrumentMutation = useInvalidatingMutation(
@@ -132,6 +175,7 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
           name: '',
           instrument_type: created.instrument_type,
         });
+        setCreateInstrumentIdentity(EMPTY_IDENTITY);
         setSelectedInstrumentId(created.public_id);
         setIsCreateInstrumentModalOpen(false);
       },
@@ -139,13 +183,27 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
   );
 
   const updateInstrumentMutation = useInvalidatingMutation(
-    (payload: { publicId: string; name: string; instrument_type: InstrumentType }) =>
+    (payload: {
+      publicId: string;
+      name: string;
+      instrument_type: InstrumentType;
+      ticker?: string;
+      isin?: string;
+      exchange?: string;
+    }) =>
       investingService.updateInstrument(payload.publicId, {
         name: payload.name,
         instrument_type: payload.instrument_type,
+        ticker: payload.ticker,
+        isin: payload.isin,
+        exchange: payload.exchange,
       }),
     refreshKeys,
-    { successMessage: 'Instrument updated', onSuccess: () => setEditingInstrumentId(null) },
+    {
+      successMessage: 'Instrument updated',
+      errorMessage: false,
+      onSuccess: () => setEditingInstrument(null),
+    },
   );
 
   const upsertConstituentsMutation = useInvalidatingMutation(
@@ -156,23 +214,36 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
       return investingService.upsertInstrumentConstituents(selectedInstrumentId, payload);
     },
     refreshKeys,
-    { successMessage: 'Breakdown saved', errorMessage: false, onSuccess: () => setIsSeedConstituentsModalOpen(false) },
+    {
+      successMessage: 'Breakdown saved',
+      errorMessage: false,
+      onSuccess: () => setIsSeedConstituentsModalOpen(false),
+    },
   );
 
   const handleStartEditInstrument = (instrument: Instrument) => {
-    setEditingInstrumentId(instrument.public_id);
+    setEditingInstrument(instrument);
     setInstrumentEditForm({
       name: instrument.name,
       instrument_type: instrument.instrument_type,
     });
+    setInstrumentEditIdentity({
+      ticker: instrument.ticker ?? '',
+      isin: instrument.isin ?? '',
+      exchange: instrument.exchange ?? '',
+    });
   };
 
-  const handleSaveInstrument = (instrument: Instrument) => {
-    if (!instrumentEditForm.name.trim()) return;
+  const handleSaveInstrument = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingInstrument || !instrumentEditForm.name.trim()) return;
     updateInstrumentMutation.mutate({
-      publicId: instrument.public_id,
+      publicId: editingInstrument.public_id,
       name: instrumentEditForm.name.trim(),
       instrument_type: instrumentEditForm.instrument_type,
+      ticker: instrumentEditIdentity.ticker.trim() || undefined,
+      isin: instrumentEditIdentity.isin.trim() || undefined,
+      exchange: instrumentEditIdentity.exchange.trim() || undefined,
     });
   };
 
@@ -183,37 +254,81 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
       symbol: instrumentForm.symbol.trim().toUpperCase(),
       name: instrumentForm.name.trim(),
       instrument_type: instrumentForm.instrument_type,
+      ticker: createInstrumentIdentity.ticker.trim() || undefined,
+      isin: createInstrumentIdentity.isin.trim() || undefined,
+      exchange: createInstrumentIdentity.exchange.trim() || undefined,
     });
+  };
+
+  const addConstituentRow = () => {
+    setConstituentRows((rows) => [
+      ...rows,
+      { company_name: '', company_ticker: '', company_isin: '', weight: '' },
+    ]);
+  };
+
+  const removeConstituentRow = (index: number) => {
+    setConstituentRows((rows) => rows.filter((_, i) => i !== index));
+  };
+
+  const updateConstituentRow = (index: number, patch: Partial<ConstituentRow>) => {
+    setConstituentRows((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
+
+  // Convenience paste path (spec-010 §3.3): "Name,Ticker,ISIN,Weight" per
+  // line — still parses into the same four structured fields, never
+  // collapsing ticker into name or conflating ticker with ISIN.
+  const importConstituentPaste = () => {
+    const lines = constituentPasteText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!lines.length) return;
+    const parsedRows: ConstituentRow[] = lines.map((line) => {
+      const [name, ticker, isin, weight] = line.split(',').map((v) => (v ?? '').trim());
+      return {
+        company_name: name || '',
+        company_ticker: (ticker || '').toUpperCase(),
+        company_isin: (isin || '').toUpperCase(),
+        weight: weight || '',
+      };
+    });
+    setConstituentRows(parsedRows);
+    setConstituentPasteText('');
   };
 
   const onUpsertConstituents = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedInstrumentId) return;
     setConstituentError('');
-    const parsed: Array<{ company_name: string; company_ticker: string; weight: string }> = [];
-    const lines = constituentRowsText
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    if (!lines.length) {
-      setConstituentError('Add at least one constituent row in format: TICKER,0.25');
+    const parsed: Array<{
+      company_name: string;
+      company_ticker?: string;
+      company_isin?: string;
+      weight: string;
+    }> = [];
+    if (!constituentRows.length) {
+      setConstituentError('Add at least one constituent row.');
       return;
     }
-    for (const line of lines) {
-      const [tickerRaw, weightRaw] = line.split(',').map((v) => v.trim());
-      const ticker = (tickerRaw || '').toUpperCase();
-      const weightNumber = Number(weightRaw);
-      const tickerOk = /^[A-Z0-9.-]{1,20}$/.test(ticker);
+    for (const row of constituentRows) {
+      const name = row.company_name.trim();
+      const ticker = row.company_ticker.trim().toUpperCase();
+      const isin = row.company_isin.trim().toUpperCase();
+      const weightNumber = Number(row.weight);
       const weightOk = Number.isFinite(weightNumber) && weightNumber > 0 && weightNumber <= 1;
-      if (!tickerOk || !weightOk) {
+      if (!name || (!ticker && !isin) || !weightOk) {
         setConstituentError(
-          `Invalid row "${line}". Use TICKER,WEIGHT with weight between 0 and 1.`,
+          `Invalid row for "${
+            name || 'unnamed'
+          }". Company name, a ticker or ISIN, and a weight between 0 and 1 are required.`,
         );
         return;
       }
       parsed.push({
-        company_name: ticker,
-        company_ticker: ticker,
+        company_name: name,
+        company_ticker: ticker || undefined,
+        company_isin: isin || undefined,
         weight: weightNumber.toFixed(8),
       });
     }
@@ -305,72 +420,29 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                     <tbody>
                       {instruments.length === 0 ? (
                         <tr>
-                          <td className="px-2 py-2 text-slate-500" colSpan={3}>No instruments yet.</td>
+                          <td className="px-2 py-2 text-slate-500" colSpan={3}>
+                            No instruments yet.
+                          </td>
                         </tr>
                       ) : (
                         instruments.map((instrument) => (
                           <tr key={instrument.public_id} className="border-t border-slate-700/40">
                             <td className="px-2 py-1.5 font-medium text-slate-100">
-                              {editingInstrumentId === instrument.public_id ? (
-                                <input
-                                  className="w-28 rounded border border-slate-600 bg-slate-950 px-1.5 py-1 text-xs text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                                  value={instrumentEditForm.name}
-                                  onChange={(e) =>
-                                    setInstrumentEditForm((s) => ({ ...s, name: e.target.value }))
-                                  }
-                                />
-                              ) : (
-                                instrument.symbol
-                              )}
+                              {instrument.symbol}
                             </td>
                             <td className="px-2 py-1.5">
-                              {editingInstrumentId === instrument.public_id ? (
-                                <DropdownSelect
-                                  value={instrumentEditForm.instrument_type}
-                                  options={instrumentTypeOptions}
-                                  onChange={(value) =>
-                                    setInstrumentEditForm((s) => ({
-                                      ...s,
-                                      instrument_type: value as InstrumentType,
-                                    }))
-                                  }
-                                  placeholder="Type"
-                                />
-                              ) : (
-                                instrumentTypeLabel(instrument.instrument_type)
-                              )}
+                              {instrumentTypeLabel(instrument.instrument_type)}
                             </td>
                             <td className="px-2 py-1.5 text-right">
-                              {editingInstrumentId === instrument.public_id ? (
-                                <div className="inline-flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveInstrument(instrument)}
-                                    disabled={updateInstrumentMutation.isPending}
-                                    className="rounded p-1 text-green-300 hover:bg-green-500/10 disabled:opacity-60"
-                                    title="Save instrument"
-                                  >
-                                    <Check className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingInstrumentId(null)}
-                                    className="rounded p-1 text-rose-300 hover:bg-rose-500/10"
-                                    title="Cancel"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStartEditInstrument(instrument)}
-                                  className="rounded p-1 text-slate-400 hover:bg-slate-700/60 hover:text-white"
-                                  title="Edit instrument"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                data-testid={`investing-edit-instrument-${instrument.public_id}`}
+                                onClick={() => handleStartEditInstrument(instrument)}
+                                className="rounded p-1 text-slate-400 hover:bg-slate-700/60 hover:text-white"
+                                title="Edit instrument"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -394,17 +466,27 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                 <p data-testid="investing-total-direct">
                   Total direct:{' '}
                   {exposure?.total_direct_exposure != null && analyticsCurrency
-                    ? formatCurrency(exposure.total_direct_exposure, analyticsCurrency, currencyDisplayPreference)
+                    ? formatCurrency(
+                        exposure.total_direct_exposure,
+                        analyticsCurrency,
+                        currencyDisplayPreference,
+                      )
                     : 'N/A'}
                 </p>
                 <p data-testid="investing-total-lookthrough">
                   Total look-through:{' '}
                   {exposure?.total_lookthrough_exposure != null && analyticsCurrency
-                    ? formatCurrency(exposure.total_lookthrough_exposure, analyticsCurrency, currencyDisplayPreference)
+                    ? formatCurrency(
+                        exposure.total_lookthrough_exposure,
+                        analyticsCurrency,
+                        currencyDisplayPreference,
+                      )
                     : 'N/A'}
                 </p>
                 {(exposure?.warnings ?? []).map((warning, index) => (
-                  <p key={`${warning}-${index}`} className="text-xs text-amber-300">{warning}</p>
+                  <p key={`${warning}-${index}`} className="text-xs text-amber-300">
+                    {warning}
+                  </p>
                 ))}
                 {exposure && (
                   <p className="text-xs text-slate-500">
@@ -412,7 +494,8 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                     portfolio
                     {exposure.hidden_exposure_count > 0
                       ? ` (${exposure.hidden_exposure_count} smaller constituents hidden)`
-                      : ''}.
+                      : ''}
+                    .
                   </p>
                 )}
                 {concentration.slices.length > 0 && (
@@ -422,7 +505,10 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                       Concentration
                     </h4>
                     <div className="flex flex-col items-center gap-6 sm:flex-row">
-                      <div className="relative h-32 w-32 flex-shrink-0" data-testid="investing-concentration-donut">
+                      <div
+                        className="relative h-32 w-32 flex-shrink-0"
+                        data-testid="investing-concentration-donut"
+                      >
                         <svg className="h-full w-full" viewBox="0 0 200 200">
                           {(() => {
                             const circumference = 2 * Math.PI * 60;
@@ -449,27 +535,47 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                                   strokeDashoffset={offset}
                                   transform="rotate(-90 100 100)"
                                 >
-                                  <title>{`${slice.label}: ${(slice.pct * 100).toFixed(1)}%`}</title>
+                                  <title>{`${slice.label}: ${(slice.pct * 100).toFixed(
+                                    1,
+                                  )}%`}</title>
                                 </circle>
                               );
                             });
                           })()}
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Total</span>
+                          <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">
+                            Total
+                          </span>
                           <span className="text-xs font-extrabold text-white">
-                            {analyticsCurrency ? formatCurrency(concentration.total, analyticsCurrency, currencyDisplayPreference) : 'N/A'}
+                            {analyticsCurrency
+                              ? formatCurrency(
+                                  concentration.total,
+                                  analyticsCurrency,
+                                  currencyDisplayPreference,
+                                )
+                              : 'N/A'}
                           </span>
                         </div>
                       </div>
                       <div className="w-full flex-1 space-y-1.5">
                         {concentration.slices.map((slice) => (
-                          <div key={slice.key} className="flex items-center justify-between text-xs">
+                          <div
+                            key={slice.key}
+                            className="flex items-center justify-between text-xs"
+                          >
                             <div className="flex items-center gap-2 truncate">
-                              <span className="h-2.5 w-2.5 flex-shrink-0 rounded" style={{ backgroundColor: slice.color }} />
-                              <span className="truncate font-medium text-slate-300">{slice.label}</span>
+                              <span
+                                className="h-2.5 w-2.5 flex-shrink-0 rounded"
+                                style={{ backgroundColor: slice.color }}
+                              />
+                              <span className="truncate font-medium text-slate-300">
+                                {slice.label}
+                              </span>
                             </div>
-                            <span className="flex-shrink-0 font-semibold text-slate-400">{(slice.pct * 100).toFixed(1)}%</span>
+                            <span className="flex-shrink-0 font-semibold text-slate-400">
+                              {(slice.pct * 100).toFixed(1)}%
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -489,8 +595,24 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                       {sortedExposureRows.map((row) => (
                         <tr key={row.company_id} className="border-t border-slate-700/40">
                           <td className="px-3 py-2">{row.company_ticker ?? row.company_name}</td>
-                          <td className="px-3 py-2">{analyticsCurrency ? formatCurrency(row.direct_exposure, analyticsCurrency, currencyDisplayPreference) : 'N/A'}</td>
-                          <td className="px-3 py-2">{analyticsCurrency ? formatCurrency(row.lookthrough_exposure, analyticsCurrency, currencyDisplayPreference) : 'N/A'}</td>
+                          <td className="px-3 py-2">
+                            {analyticsCurrency
+                              ? formatCurrency(
+                                  row.direct_exposure,
+                                  analyticsCurrency,
+                                  currencyDisplayPreference,
+                                )
+                              : 'N/A'}
+                          </td>
+                          <td className="px-3 py-2">
+                            {analyticsCurrency
+                              ? formatCurrency(
+                                  row.lookthrough_exposure,
+                                  analyticsCurrency,
+                                  currencyDisplayPreference,
+                                )
+                              : 'N/A'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -509,11 +631,20 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
               <p className="text-sm text-slate-400">Loading overlap…</p>
             ) : (
               <div className="space-y-2 text-sm text-slate-300">
-                <p>Top 5 concentration: {(toNumber(overlap?.top_5_concentration_pct ?? 0) * 100).toFixed(2)}%</p>
-                <p>Duplicate exposure index: {(toNumber(overlap?.duplicate_exposure_index ?? 0) * 100).toFixed(2)}%</p>
+                <p>
+                  Top 5 concentration:{' '}
+                  {(toNumber(overlap?.top_5_concentration_pct ?? 0) * 100).toFixed(2)}%
+                </p>
+                <p>
+                  Duplicate exposure index:{' '}
+                  {(toNumber(overlap?.duplicate_exposure_index ?? 0) * 100).toFixed(2)}%
+                </p>
                 <ol className="space-y-1 text-xs">
                   {(overlap?.overlaps ?? []).slice(0, 8).map((row) => (
-                    <li key={row.company_id} className="flex items-center justify-between rounded border border-slate-700/50 px-2 py-1">
+                    <li
+                      key={row.company_id}
+                      className="flex items-center justify-between rounded border border-slate-700/50 px-2 py-1"
+                    >
                       <span>{row.company_ticker ?? row.company_name}</span>
                       <span>{(toNumber(row.portfolio_share) * 100).toFixed(2)}%</span>
                     </li>
@@ -526,7 +657,10 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
       </div>
 
       {/* Create Instrument Modal */}
-      <Dialog open={isCreateInstrumentModalOpen} onOpenChange={(open) => !open && setIsCreateInstrumentModalOpen(false)}>
+      <Dialog
+        open={isCreateInstrumentModalOpen}
+        onOpenChange={(open) => !open && setIsCreateInstrumentModalOpen(false)}
+      >
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-4 mb-4 border-b border-slate-800">
             <DialogTitle>Create Instrument</DialogTitle>
@@ -568,6 +702,13 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                 />
               </div>
 
+              <IdentifierFields
+                idPrefix="investing-create-instrument"
+                value={createInstrumentIdentity}
+                onChange={setCreateInstrumentIdentity}
+                instrumentType={instrumentForm.instrument_type}
+              />
+
               <div className="flex gap-3 pt-3">
                 <button
                   type="button"
@@ -589,7 +730,88 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
               </p>
               {createInstrumentMutation.isError && (
                 <p className="text-xs text-rose-300 text-center">
-                  {(createInstrumentMutation.error as Error)?.message ?? 'Failed to create instrument'}
+                  {extractApiErrorDetail(
+                    createInstrumentMutation.error,
+                    'Failed to create instrument',
+                  )}
+                </p>
+              )}
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Instrument Modal (spec-010 §3.2) — demoted correction path for
+          pooled instruments with no Holding row; primary path is Holdings. */}
+      <Dialog
+        open={!!editingInstrument}
+        onOpenChange={(open) => !open && setEditingInstrument(null)}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-4 mb-4 border-b border-slate-800">
+            <DialogTitle>Edit Instrument</DialogTitle>
+          </DialogHeader>
+          {editingInstrument && (
+            <form onSubmit={handleSaveInstrument} className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">Name</label>
+                <input
+                  data-testid="investing-edit-instrument-name"
+                  className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  value={instrumentEditForm.name}
+                  onChange={(e) => setInstrumentEditForm((s) => ({ ...s, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-300">Instrument Type</label>
+                <DropdownSelect
+                  testId="investing-edit-instrument-type"
+                  value={instrumentEditForm.instrument_type}
+                  options={instrumentTypeOptions}
+                  onChange={(value) =>
+                    setInstrumentEditForm((s) => ({
+                      ...s,
+                      instrument_type: value as InstrumentType,
+                    }))
+                  }
+                  placeholder="Type"
+                />
+              </div>
+
+              <IdentifierFields
+                idPrefix="investing-edit-instrument"
+                value={instrumentEditIdentity}
+                onChange={setInstrumentEditIdentity}
+                instrumentType={instrumentEditForm.instrument_type}
+              />
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingInstrument(null)}
+                  className="flex-1 h-10 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  data-testid="investing-edit-instrument-submit"
+                  disabled={updateInstrumentMutation.isPending}
+                  type="submit"
+                  className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+                >
+                  {updateInstrumentMutation.isPending ? 'Saving...' : 'Save instrument'}
+                </button>
+              </div>
+              {updateInstrumentMutation.isError && (
+                <p
+                  className="text-xs text-rose-300 text-center"
+                  data-testid="investing-edit-instrument-error"
+                >
+                  {extractApiErrorDetail(
+                    updateInstrumentMutation.error,
+                    'Failed to update instrument',
+                  )}
                 </p>
               )}
             </form>
@@ -598,15 +820,20 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
       </Dialog>
 
       {/* Seed Constituents Modal */}
-      <Dialog open={isSeedConstituentsModalOpen} onOpenChange={(open) => !open && setIsSeedConstituentsModalOpen(false)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <Dialog
+        open={isSeedConstituentsModalOpen}
+        onOpenChange={(open) => !open && setIsSeedConstituentsModalOpen(false)}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-4 mb-4 border-b border-slate-800">
             <DialogTitle>Seed Constituents</DialogTitle>
           </DialogHeader>
           {isSeedConstituentsModalOpen && (
             <form onSubmit={onUpsertConstituents} className="space-y-4">
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-300">Select Pooled Instrument</label>
+                <label className="text-xs font-semibold text-slate-300">
+                  Select Pooled Instrument
+                </label>
                 <Combobox
                   value={selectedInstrumentId}
                   options={pooledInstrumentOptions}
@@ -618,16 +845,104 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
                 />
               </div>
 
+              {/* Company name and ticker/ISIN are captured as separate fields
+                  — never overloading name with the ticker (this was the
+                  api spec-083 §1.2 bug: company_name = ticker). */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-300">Constituents (TICKER,WEIGHT)</label>
-                <textarea
-                  className="h-28 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
-                  value={constituentRowsText}
-                  onChange={(e) => setConstituentRowsText(e.target.value)}
-                  placeholder="AAPL,0.60&#10;MSFT,0.40"
-                />
-                {constituentError ? <p className="text-xs text-rose-300">{constituentError}</p> : null}
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-300">Constituents</label>
+                  <button
+                    type="button"
+                    onClick={addConstituentRow}
+                    className="inline-flex items-center gap-1 rounded p-1 text-xs text-cyan-300 hover:bg-cyan-500/10"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add row
+                  </button>
+                </div>
+                <p
+                  className="text-xs text-slate-400"
+                  data-testid="investing-seed-constituents-hint"
+                >
+                  {constituentIdentifierHint.helperText} ISIN is always accepted and preferred when
+                  known.
+                </p>
+                <div className="space-y-2">
+                  {constituentRows.map((row, index) => (
+                    <div key={index} className="grid grid-cols-[2fr_1fr_1.2fr_0.8fr_auto] gap-2">
+                      <input
+                        data-testid={`investing-constituent-name-${index}`}
+                        className="h-9 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                        placeholder="Company name"
+                        value={row.company_name}
+                        onChange={(e) =>
+                          updateConstituentRow(index, { company_name: e.target.value })
+                        }
+                      />
+                      <input
+                        data-testid={`investing-constituent-ticker-${index}`}
+                        className="h-9 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                        placeholder="Ticker"
+                        value={row.company_ticker}
+                        onChange={(e) =>
+                          updateConstituentRow(index, {
+                            company_ticker: e.target.value.toUpperCase(),
+                          })
+                        }
+                      />
+                      <input
+                        data-testid={`investing-constituent-isin-${index}`}
+                        className="h-9 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                        placeholder="ISIN"
+                        value={row.company_isin}
+                        onChange={(e) =>
+                          updateConstituentRow(index, {
+                            company_isin: e.target.value.toUpperCase(),
+                          })
+                        }
+                      />
+                      <input
+                        data-testid={`investing-constituent-weight-${index}`}
+                        className="h-9 rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                        placeholder="Weight"
+                        value={row.weight}
+                        onChange={(e) => updateConstituentRow(index, { weight: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeConstituentRow(index)}
+                        className="rounded p-1.5 text-rose-300 hover:bg-rose-500/10"
+                        title="Remove row"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {constituentError ? (
+                  <p className="text-xs text-rose-300">{constituentError}</p>
+                ) : null}
               </div>
+
+              <details className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-300">
+                  Paste as CSV (name,ticker,isin,weight)
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <textarea
+                    className="h-20 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white focus:border-cyan-500 focus:outline-none font-mono"
+                    value={constituentPasteText}
+                    onChange={(e) => setConstituentPasteText(e.target.value)}
+                    placeholder="Apple Inc,AAPL,,0.60&#10;Microsoft Corp,MSFT,,0.40"
+                  />
+                  <button
+                    type="button"
+                    onClick={importConstituentPaste}
+                    className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-700"
+                  >
+                    Import into rows
+                  </button>
+                </div>
+              </details>
 
               <div className="flex gap-3 pt-3">
                 <button
@@ -647,7 +962,10 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ currencyDisplayPrefe
               </div>
               {upsertConstituentsMutation.isError && (
                 <p className="text-xs text-rose-300 text-center">
-                  {(upsertConstituentsMutation.error as Error)?.message ?? 'Failed to save breakdown'}
+                  {extractApiErrorDetail(
+                    upsertConstituentsMutation.error,
+                    'Failed to save breakdown',
+                  )}
                 </p>
               )}
             </form>

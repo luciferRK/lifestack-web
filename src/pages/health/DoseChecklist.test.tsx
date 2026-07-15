@@ -16,7 +16,9 @@ const makeSlot = (overrides: Partial<DoseSlot>): DoseSlot => ({
 
 describe('DoseChecklist', () => {
   it('shows the empty state when there are no slots', () => {
-    render(<DoseChecklist slots={[]} isLoading={false} onMarkTaken={vi.fn()} onMarkSkipped={vi.fn()} />);
+    render(
+      <DoseChecklist slots={[]} isLoading={false} onMarkTaken={vi.fn()} onMarkSkipped={vi.fn()} />,
+    );
     expect(screen.getByText('No medications scheduled today')).toBeInTheDocument();
   });
 
@@ -24,7 +26,14 @@ describe('DoseChecklist', () => {
     const onMarkTaken = vi.fn();
     const onMarkSkipped = vi.fn();
     const slot = makeSlot({});
-    render(<DoseChecklist slots={[slot]} isLoading={false} onMarkTaken={onMarkTaken} onMarkSkipped={onMarkSkipped} />);
+    render(
+      <DoseChecklist
+        slots={[slot]}
+        isLoading={false}
+        onMarkTaken={onMarkTaken}
+        onMarkSkipped={onMarkSkipped}
+      />,
+    );
 
     expect(screen.getByText('Metformin')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /mark metformin taken/i }));
@@ -36,7 +45,14 @@ describe('DoseChecklist', () => {
 
   it('renders a missed slot distinctly without action buttons', () => {
     const slot = makeSlot({ status: 'missed' });
-    render(<DoseChecklist slots={[slot]} isLoading={false} onMarkTaken={vi.fn()} onMarkSkipped={vi.fn()} />);
+    render(
+      <DoseChecklist
+        slots={[slot]}
+        isLoading={false}
+        onMarkTaken={vi.fn()}
+        onMarkSkipped={vi.fn()}
+      />,
+    );
 
     const row = screen.getByTestId(`dose-slot-${slot.medication_public_id}-${slot.scheduled_for}`);
     expect(row).toHaveAttribute('data-status', 'missed');
@@ -45,7 +61,14 @@ describe('DoseChecklist', () => {
 
   it('renders a taken slot with a status label instead of buttons', () => {
     const slot = makeSlot({ status: 'taken' });
-    render(<DoseChecklist slots={[slot]} isLoading={false} onMarkTaken={vi.fn()} onMarkSkipped={vi.fn()} />);
+    render(
+      <DoseChecklist
+        slots={[slot]}
+        isLoading={false}
+        onMarkTaken={vi.fn()}
+        onMarkSkipped={vi.fn()}
+      />,
+    );
 
     expect(screen.queryByRole('button', { name: /mark metformin taken/i })).not.toBeInTheDocument();
     expect(screen.getByText('taken')).toBeInTheDocument();

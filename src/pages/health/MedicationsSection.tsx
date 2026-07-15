@@ -87,7 +87,9 @@ export const MedicationsSection: React.FC<MedicationsSectionProps> = ({
                 <p className="truncate font-medium text-white">
                   {medication.name}
                   {!medication.is_active ? (
-                    <span className="ml-2 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">Inactive</span>
+                    <span className="ml-2 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
+                      Inactive
+                    </span>
                   ) : null}
                 </p>
                 <p className="truncate text-xs text-slate-400">
@@ -169,9 +171,9 @@ export const MedicationsSection: React.FC<MedicationsSectionProps> = ({
         title="Delete medication?"
         description={
           deleteTarget
-            ? `This will permanently delete "${deleteTarget.name}" and its ${deleteTarget.event_count} logged dose${
-                deleteTarget.event_count === 1 ? '' : 's'
-              }. This cannot be undone.`
+            ? `This will permanently delete "${deleteTarget.name}" and its ${
+                deleteTarget.event_count
+              } logged dose${deleteTarget.event_count === 1 ? '' : 's'}. This cannot be undone.`
             : ''
         }
         confirmLabel="Delete"

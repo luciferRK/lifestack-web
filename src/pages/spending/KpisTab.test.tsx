@@ -158,7 +158,9 @@ describe('KpisTab (spec-077)', () => {
     fireEvent.change(screen.getByTestId('kpi-target-value'), { target: { value: '-5' } });
     fireEvent.click(screen.getByTestId('kpi-save-button'));
 
-    expect(await screen.findByText('Target value must be a valid non-negative number')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Target value must be a valid non-negative number'),
+    ).toBeInTheDocument();
     expect(createCalled).toBe(false);
   });
 

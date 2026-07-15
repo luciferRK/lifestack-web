@@ -14,7 +14,7 @@ Api spec-051 made splits, reverse splits, and bonus issues first-class backend e
 Two consequences:
 
 1. **The feature is invisible.** A real split/bonus in the user's portfolio silently distorts quantities until someone hand-crafts a POST — in practice it just doesn't get recorded.
-2. **The UI already points at the missing screen.** The imports advisory (`ImportsPage.tsx`, "Possible un-applied corporate action") tells the user: *"Record it under Investing → Corporate Actions."* That destination was never built — a dead instruction shipped with api spec-056.
+2. **The UI already points at the missing screen.** The imports advisory (`ImportsPage.tsx`, "Possible un-applied corporate action") tells the user: _"Record it under Investing → Corporate Actions."_ That destination was never built — a dead instruction shipped with api spec-056.
 
 ## Goal
 
@@ -30,7 +30,7 @@ A thin web UI over the existing endpoints: **list**, **record**, and **delete** 
 
 ### Placement
 
-A **"Corporate actions" section on the Orders tab** (`src/pages/investing/OrdersTab.tsx`) — actions replay chronologically *with* orders and belong in the same mental space. Collapsible section below the orders list, mirroring existing section patterns. (Alternative considered: own tab — rejected for v1; expected row count is tiny.)
+A **"Corporate actions" section on the Orders tab** (`src/pages/investing/OrdersTab.tsx`) — actions replay chronologically _with_ orders and belong in the same mental space. Collapsible section below the orders list, mirroring existing section patterns. (Alternative considered: own tab — rejected for v1; expected row count is tiny.)
 
 ### List
 
@@ -46,7 +46,7 @@ A **"Corporate actions" section on the Orders tab** (`src/pages/investing/Orders
 
 ### Delete
 
-- Per-row delete with a confirm dialog that states the consequence plainly: *"Deleting recomputes this symbol's holdings and realized gains from scratch (full replay)."* No undo; re-record to restore.
+- Per-row delete with a confirm dialog that states the consequence plainly: _"Deleting recomputes this symbol's holdings and realized gains from scratch (full replay)."_ No undo; re-record to restore.
 
 ### Imports-advisory link
 
@@ -60,12 +60,12 @@ A **"Corporate actions" section on the Orders tab** (`src/pages/investing/Orders
 
 ## Now vs. Proposed
 
-| Aspect | Now | Proposed |
-|---|---|---|
-| Recording a split/bonus | raw API call only | Orders-tab section + modal |
-| Visibility of recorded actions | none | list with ratios, ex-dates, notes |
-| Imports advisory ("record it under…") | points at nonexistent screen | working link, optional prefill |
-| Deleting a mis-entered action | raw API call | confirm dialog explaining full replay |
+| Aspect                                | Now                          | Proposed                              |
+| ------------------------------------- | ---------------------------- | ------------------------------------- |
+| Recording a split/bonus               | raw API call only            | Orders-tab section + modal            |
+| Visibility of recorded actions        | none                         | list with ratios, ex-dates, notes     |
+| Imports advisory ("record it under…") | points at nonexistent screen | working link, optional prefill        |
+| Deleting a mis-entered action         | raw API call                 | confirm dialog explaining full replay |
 
 ## Testing & evidence
 
@@ -77,5 +77,5 @@ A **"Corporate actions" section on the Orders tab** (`src/pages/investing/Orders
 
 ## Open questions (for approval)
 
-1. **Confirm Orders-tab placement** (vs a dedicated tab)? *Recommendation: Orders tab, collapsible section — actions are order-timeline events and volume is tiny.*
-2. **Advisory prefill** (symbol carried from the CAMS advisory into the modal) in v1 or follow-up? *Recommendation: v1 if trivial once deep-link exists; never blocks the PR.*
+1. **Confirm Orders-tab placement** (vs a dedicated tab)? _Recommendation: Orders tab, collapsible section — actions are order-timeline events and volume is tiny._
+2. **Advisory prefill** (symbol carried from the CAMS advisory into the modal) in v1 or follow-up? _Recommendation: v1 if trivial once deep-link exists; never blocks the PR._

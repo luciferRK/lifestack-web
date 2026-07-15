@@ -7,7 +7,13 @@ export interface TransferFeeInputs {
 }
 
 /** Shared by the create and edit transfer forms so the live preview and the submitted net always agree. */
-export const computeTransferNet = ({ gross, fxRate, fxFee = 0, platformFee = 0, tax = 0 }: TransferFeeInputs): number => {
+export const computeTransferNet = ({
+  gross,
+  fxRate,
+  fxFee = 0,
+  platformFee = 0,
+  tax = 0,
+}: TransferFeeInputs): number => {
   const g = Number.isFinite(gross) ? gross : 0;
   const rate = fxRate && Number.isFinite(fxRate) && fxRate > 0 ? fxRate : 1;
   const f = Number.isFinite(fxFee) && fxFee > 0 ? fxFee : 0;

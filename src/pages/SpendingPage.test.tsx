@@ -311,7 +311,10 @@ describe('SpendingPage', () => {
   it('pre-selects the workspace default spending account on a new transaction', async () => {
     server.use(
       http.get('*/v1/finance/settings', () =>
-        HttpResponse.json({ ...WORKSPACE_SETTINGS, default_spending_account_id: ACCOUNT.public_id }),
+        HttpResponse.json({
+          ...WORKSPACE_SETTINGS,
+          default_spending_account_id: ACCOUNT.public_id,
+        }),
       ),
       ...baseHandlers,
     );
@@ -557,7 +560,9 @@ describe('SpendingPage', () => {
 
     await screen.findByText('Spending Overview');
     fireEvent.click(screen.getByTestId('spending-tab-ledger'));
-    fireEvent.change(screen.getByTestId('ledger-account-select'), { target: { value: ACCOUNT.public_id } });
+    fireEvent.change(screen.getByTestId('ledger-account-select'), {
+      target: { value: ACCOUNT.public_id },
+    });
 
     expect(await screen.findByText('No transactions for this account yet.')).toBeInTheDocument();
   });
@@ -622,7 +627,9 @@ describe('SpendingPage', () => {
     renderWithQuery(<SpendingPage />);
     await screen.findByText('Spending Overview');
     fireEvent.click(screen.getByTestId('spending-tab-ledger'));
-    fireEvent.change(screen.getByTestId('ledger-account-select'), { target: { value: ACCOUNT.public_id } });
+    fireEvent.change(screen.getByTestId('ledger-account-select'), {
+      target: { value: ACCOUNT.public_id },
+    });
 
     // Transfer rows render in two responsive layouts (mobile cards + desktop table).
     expect((await screen.findAllByText('Transfer → Monthly top-up')).length).toBeGreaterThan(0);
@@ -704,7 +711,9 @@ describe('SpendingPage', () => {
     renderWithQuery(<SpendingPage />);
     await screen.findByText('Spending Overview');
     fireEvent.click(screen.getByTestId('spending-tab-ledger'));
-    fireEvent.change(screen.getByTestId('ledger-account-select'), { target: { value: ACCOUNT.public_id } });
+    fireEvent.change(screen.getByTestId('ledger-account-select'), {
+      target: { value: ACCOUNT.public_id },
+    });
     await screen.findAllByText('Transfer → Monthly top-up');
 
     fireEvent.click(screen.getAllByTitle('Edit transfer')[0]);
@@ -719,7 +728,9 @@ describe('SpendingPage', () => {
     fireEvent.change(fxFeeInput, { target: { value: '-1' } });
     fireEvent.submit(form);
 
-    expect(await within(modal).findByText('FX fee must be a valid non-negative number')).toBeInTheDocument();
+    expect(
+      await within(modal).findByText('FX fee must be a valid non-negative number'),
+    ).toBeInTheDocument();
   });
 
   it('disables Save Changes on the edit-transfer form when source and destination accounts are the same', async () => {
@@ -778,7 +789,9 @@ describe('SpendingPage', () => {
     renderWithQuery(<SpendingPage />);
     await screen.findByText('Spending Overview');
     fireEvent.click(screen.getByTestId('spending-tab-ledger'));
-    fireEvent.change(screen.getByTestId('ledger-account-select'), { target: { value: ACCOUNT.public_id } });
+    fireEvent.change(screen.getByTestId('ledger-account-select'), {
+      target: { value: ACCOUNT.public_id },
+    });
     await screen.findAllByText('Transfer → Self transfer edge case');
 
     fireEvent.click(screen.getAllByTitle('Edit transfer')[0]);
@@ -789,14 +802,20 @@ describe('SpendingPage', () => {
 
   it('switches to analytics tab without showing budget performance (that now lives only on the Budgets tab)', async () => {
     server.use(
-      http.get('*/v1/spending/analytics/trends', () =>
-        HttpResponse.json({ months: [] })
-      ),
+      http.get('*/v1/spending/analytics/trends', () => HttpResponse.json({ months: [] })),
       http.get('*/v1/spending/analytics/breakdown', () =>
-        HttpResponse.json({ categories: [], total: 0 })
+        HttpResponse.json({ categories: [], total: 0 }),
       ),
       http.get('*/v1/spending/analytics/savings-rate', () =>
-        HttpResponse.json({ months: [], period_totals: { total_income: 0, total_expense: 0, total_savings: 0, average_savings_rate_pct: 0 } })
+        HttpResponse.json({
+          months: [],
+          period_totals: {
+            total_income: 0,
+            total_expense: 0,
+            total_savings: 0,
+            average_savings_rate_pct: 0,
+          },
+        }),
       ),
       ...baseHandlers,
     );
@@ -816,11 +835,22 @@ describe('SpendingPage', () => {
       http.get('*/v1/spending/analytics/trends', () => HttpResponse.json({ months: [] })),
       http.get('*/v1/spending/analytics/breakdown', ({ request }) => {
         const url = new URL(request.url);
-        breakdownRanges.push({ from: url.searchParams.get('from'), to: url.searchParams.get('to') });
+        breakdownRanges.push({
+          from: url.searchParams.get('from'),
+          to: url.searchParams.get('to'),
+        });
         return HttpResponse.json({ categories: [], total: 0 });
       }),
       http.get('*/v1/spending/analytics/savings-rate', () =>
-        HttpResponse.json({ months: [], period_totals: { total_income: 0, total_expense: 0, total_savings: 0, average_savings_rate_pct: 0 } })
+        HttpResponse.json({
+          months: [],
+          period_totals: {
+            total_income: 0,
+            total_expense: 0,
+            total_savings: 0,
+            average_savings_rate_pct: 0,
+          },
+        }),
       ),
       ...baseHandlers,
     );
@@ -843,8 +873,15 @@ describe('SpendingPage', () => {
     // in the dropdown, and always present given buildMonthOptions' 24-month lookback.
     const now = new Date();
     const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 3, 1));
-    const targetValue = `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, '0')}`;
-    const targetLabel = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(target);
+    const targetValue = `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(
+      2,
+      '0',
+    )}`;
+    const targetLabel = new Intl.DateTimeFormat(undefined, {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(target);
 
     fireEvent.click(await screen.findByTestId('spending-analytics-month'));
     const targetOption = await screen.findByRole('option', { name: targetLabel });
@@ -870,11 +907,11 @@ describe('SpendingPage', () => {
               actual_amount: '600',
               utilization_pct: 40.0,
               remaining: '900',
-              status: 'on_track'
-            }
+              status: 'on_track',
+            },
           ],
-          groups: []
-        })
+          groups: [],
+        }),
       ),
       ...baseHandlers,
     );

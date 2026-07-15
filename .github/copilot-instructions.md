@@ -1,4 +1,5 @@
 <!-- AUTO-SYNCED from .agent/context.md — do not edit directly. Run: make sync-agent-docs -->
+
 # Lifestack Web — Agent Context
 
 > This file is the canonical source of project conventions for AI coding agents.

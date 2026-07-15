@@ -87,8 +87,8 @@ export const PushSubscriptionSettings: React.FC = () => {
   if (isIOS && !isStandalone) {
     return (
       <div className="rounded-lg border border-amber-700/40 bg-amber-950/20 p-3 text-sm text-amber-200">
-        Push notifications on iPhone/iPad require adding Lifestack to your Home Screen first
-        (Share → Add to Home Screen), then opening it from there.
+        Push notifications on iPhone/iPad require adding Lifestack to your Home Screen first (Share
+        → Add to Home Screen), then opening it from there.
       </div>
     );
   }

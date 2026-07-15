@@ -19,10 +19,22 @@ const DISCREPANCY_TOLERANCE_FLOOR = 100;
 type ReconciliationStatus = 'balanced' | 'minor' | 'discrepancy' | 'no-snapshot';
 
 const STATUS_META: Record<ReconciliationStatus, { label: string; badge: string; value: string }> = {
-  balanced: { label: 'Balanced', badge: 'bg-emerald-500/15 text-emerald-400', value: 'text-emerald-400' },
+  balanced: {
+    label: 'Balanced',
+    badge: 'bg-emerald-500/15 text-emerald-400',
+    value: 'text-emerald-400',
+  },
   minor: { label: 'Minor gap', badge: 'bg-amber-500/15 text-amber-400', value: 'text-amber-400' },
-  discrepancy: { label: 'Discrepancy', badge: 'bg-rose-500/15 text-rose-400', value: 'text-rose-400' },
-  'no-snapshot': { label: 'No Snapshot', badge: 'bg-slate-700/50 text-slate-400', value: 'text-slate-400' },
+  discrepancy: {
+    label: 'Discrepancy',
+    badge: 'bg-rose-500/15 text-rose-400',
+    value: 'text-rose-400',
+  },
+  'no-snapshot': {
+    label: 'No Snapshot',
+    badge: 'bg-slate-700/50 text-slate-400',
+    value: 'text-slate-400',
+  },
 };
 
 /**
@@ -39,16 +51,19 @@ export const ReconciliationCard: React.FC<ReconciliationCardProps> = ({
   const snapshot = r.snapshot_balance !== null ? Number(r.snapshot_balance) : null;
   const disc = r.discrepancy !== null ? Number(r.discrepancy) : null;
   const discAbs = disc !== null ? Math.abs(disc) : 0;
-  const threshold = projected !== 0 ? Math.abs(projected) * DISCREPANCY_TOLERANCE_RATIO : DISCREPANCY_TOLERANCE_FLOOR;
+  const threshold =
+    projected !== 0
+      ? Math.abs(projected) * DISCREPANCY_TOLERANCE_RATIO
+      : DISCREPANCY_TOLERANCE_FLOOR;
 
   const status: ReconciliationStatus =
     disc === null
       ? 'no-snapshot'
       : discAbs < DISCREPANCY_NEGLIGIBLE
-      ? 'balanced'
-      : discAbs >= threshold
-      ? 'discrepancy'
-      : 'minor';
+        ? 'balanced'
+        : discAbs >= threshold
+          ? 'discrepancy'
+          : 'minor';
   const meta = STATUS_META[status];
 
   const fmt = (v: number) => formatCurrency(v, r.currency_code, currencyDisplayPreference);
@@ -60,7 +75,9 @@ export const ReconciliationCard: React.FC<ReconciliationCardProps> = ({
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             Reconciliation{r.account_name ? ` — ${r.account_name}` : ''}
           </span>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.badge}`}>{meta.label}</span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.badge}`}>
+            {meta.label}
+          </span>
         </div>
         <span className="text-[11px] text-slate-500">
           {r.transaction_count} txns · {r.transfer_count} transfers · {r.order_count} trades
@@ -79,17 +96,28 @@ export const ReconciliationCard: React.FC<ReconciliationCardProps> = ({
         <div>
           <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Snapshot</p>
           {snapshot !== null ? (
-            <p className={`text-base font-bold ${snapshot >= 0 ? 'text-slate-200' : 'text-rose-400'}`}>{fmt(snapshot)}</p>
+            <p
+              className={`text-base font-bold ${
+                snapshot >= 0 ? 'text-slate-200' : 'text-rose-400'
+              }`}
+            >
+              {fmt(snapshot)}
+            </p>
           ) : (
             <p className="text-base font-bold text-slate-500">—</p>
           )}
           {r.snapshot_as_of && (
-            <p className="text-[10px] text-slate-500 mt-0.5">as of {formatDate(r.snapshot_as_of)}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              as of {formatDate(r.snapshot_as_of)}
+            </p>
           )}
         </div>
         <div>
           <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Gap</p>
-          <p data-testid={`${testIdPrefix}-discrepancy`} className={`text-base font-bold ${meta.value}`}>
+          <p
+            data-testid={`${testIdPrefix}-discrepancy`}
+            className={`text-base font-bold ${meta.value}`}
+          >
             {disc !== null ? (disc > 0 ? '+' : '') + fmt(disc) : '—'}
           </p>
         </div>

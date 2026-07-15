@@ -39,7 +39,9 @@ export const instrumentTypeLabel = (type: InstrumentType | undefined): string =>
 // guards a possible deploy-ordering window where the frontend ships
 // before the backend that populates it — remove once that's no
 // longer a concern.
-export const deriveBookValue = (h: Pick<Holding, 'quantity' | 'avg_cost' | 'book_value'>): number =>
+export const deriveBookValue = (
+  h: Pick<Holding, 'quantity' | 'avg_cost' | 'book_value'>,
+): number =>
   h.book_value != null ? toNumber(h.book_value) : toNumber(h.quantity) * toNumber(h.avg_cost);
 
 export const formatPerformanceMetric = (
@@ -52,10 +54,17 @@ export const formatPerformanceMetric = (
 ) => {
   const numericAmount = toNumber(amount);
   const sign = numericAmount > 0 ? '+' : '';
-  const percentageLabel = percentage == null
-    ? ''
-    : ` (${toNumber(percentage) > 0 ? '+' : ''}${toNumber(percentage).toFixed(2)}%)`;
-  return `${sign}${formatCurrency(numericAmount, currency, preference, locale, decimalPlaces)}${percentageLabel}`;
+  const percentageLabel =
+    percentage == null
+      ? ''
+      : ` (${toNumber(percentage) > 0 ? '+' : ''}${toNumber(percentage).toFixed(2)}%)`;
+  return `${sign}${formatCurrency(
+    numericAmount,
+    currency,
+    preference,
+    locale,
+    decimalPlaces,
+  )}${percentageLabel}`;
 };
 
 export { accountTypeOptions } from '../../utils/accountTypes';

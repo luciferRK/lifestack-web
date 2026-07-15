@@ -52,7 +52,7 @@ export const LoginPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-white tracking-tight">Lifestack</h2>
           <p className="mt-2 text-sm text-slate-400">Sign in to your account</p>
         </div>
-        
+
         {stateMessage && !error && (
           <div className="rounded-md bg-emerald-500/10 p-4">
             <p className="text-sm font-medium text-emerald-500">{stateMessage}</p>
@@ -71,10 +71,10 @@ export const LoginPage: React.FC = () => {
               <label htmlFor="login-email" className="sr-only">
                 Email address
               </label>
-              <input 
+              <input
                 id="login-email"
-                type="email" 
-                placeholder="Email address" 
+                type="email"
+                placeholder="Email address"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -85,10 +85,10 @@ export const LoginPage: React.FC = () => {
               <label htmlFor="login-password" className="sr-only">
                 Password
               </label>
-              <input 
+              <input
                 id="login-password"
-                type="password" 
-                placeholder="Password" 
+                type="password"
+                placeholder="Password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -96,14 +96,17 @@ export const LoginPage: React.FC = () => {
               />
             </div>
             <div className="flex justify-end text-xs">
-              <Link to="/forgot-password" className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+              <Link
+                to="/forgot-password"
+                className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+              >
                 Forgot password?
               </Link>
             </div>
           </div>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             disabled={loading}
             className="w-full rounded-lg bg-cyan-600 p-3.5 font-semibold text-white shadow-lg hover:bg-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all disabled:opacity-50"
           >
@@ -113,7 +116,10 @@ export const LoginPage: React.FC = () => {
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Don't have an account?{' '}
-          <Link to="/register" className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+          <Link
+            to="/register"
+            className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
             Create one
           </Link>
         </p>

@@ -59,7 +59,9 @@ const commonHandlers = (workspaceId: string, workspaceName: string) => [
     }),
   ),
   http.get('*/v1/finance/currencies', () =>
-    HttpResponse.json([{ code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true }]),
+    HttpResponse.json([
+      { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
+    ]),
   ),
   http.get('*/v1/finance/accounts', () =>
     HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
@@ -414,7 +416,13 @@ describe('MasterConfigPage', () => {
       http.get('*/v1/platform/workspaces/', () =>
         HttpResponse.json({
           items: [
-            { public_id: workspaceId, name: 'Epsilon Workspace', description: null, is_active: true, role: 'owner' },
+            {
+              public_id: workspaceId,
+              name: 'Epsilon Workspace',
+              description: null,
+              is_active: true,
+              role: 'owner',
+            },
           ],
         }),
       ),
@@ -503,7 +511,13 @@ describe('MasterConfigPage', () => {
       http.get('*/v1/platform/workspaces/', () =>
         HttpResponse.json({
           items: [
-            { public_id: workspaceId, name: 'Delta Workspace', description: null, is_active: true, role: 'owner' },
+            {
+              public_id: workspaceId,
+              name: 'Delta Workspace',
+              description: null,
+              is_active: true,
+              role: 'owner',
+            },
           ],
         }),
       ),
@@ -537,7 +551,11 @@ describe('MasterConfigPage', () => {
         }),
       ),
       http.get('*/v1/finance/settings', () =>
-        HttpResponse.json({ reporting_currency_code: null, currency_display_preference: 'symbol', updated_at: '2026-06-10T00:00:00Z' }),
+        HttpResponse.json({
+          reporting_currency_code: null,
+          currency_display_preference: 'symbol',
+          updated_at: '2026-06-10T00:00:00Z',
+        }),
       ),
       http.get('*/v1/finance/settings/user', () =>
         HttpResponse.json({
@@ -550,8 +568,12 @@ describe('MasterConfigPage', () => {
           updated_at: '2026-06-10T00:00:00Z',
         }),
       ),
-      http.get('*/v1/spending/categories', () => HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 })),
-      http.get('*/v1/spending/category-groups', () => HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 })),
+      http.get('*/v1/spending/categories', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
+      http.get('*/v1/spending/category-groups', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
     );
 
     renderWithQuery(<MasterConfigPage />);
@@ -563,7 +585,9 @@ describe('MasterConfigPage', () => {
     accountsTab.focus();
     fireEvent.keyDown(accountsTab, { key: 'Enter', code: 'Enter' });
 
-    expect(await screen.findByTestId('master-account-row-acc-active')).toHaveTextContent('Deactivate');
+    expect(await screen.findByTestId('master-account-row-acc-active')).toHaveTextContent(
+      'Deactivate',
+    );
     expect(screen.queryByText('Toggle')).not.toBeInTheDocument();
   });
 
@@ -586,7 +610,12 @@ describe('MasterConfigPage', () => {
     server.use(
       ...commonHandlers(workspaceId, 'Delta Workspace'),
       http.get('*/v1/spending/categories', () =>
-        HttpResponse.json({ items: categoryItems, total: categoryItems.length, limit: 200, offset: 0 }),
+        HttpResponse.json({
+          items: categoryItems,
+          total: categoryItems.length,
+          limit: 200,
+          offset: 0,
+        }),
       ),
       http.delete('*/v1/spending/categories/cat-groceries', () => {
         deleteCalled = true;
@@ -638,7 +667,10 @@ describe('MasterConfigPage', () => {
       ),
       http.delete('*/v1/spending/categories/cat-rent', () =>
         HttpResponse.json(
-          { detail: 'Cannot delete a category that is in use by transactions, budgets, or recurring rules' },
+          {
+            detail:
+              'Cannot delete a category that is in use by transactions, budgets, or recurring rules',
+          },
           { status: 409 },
         ),
       ),

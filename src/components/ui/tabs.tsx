@@ -11,7 +11,10 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn('inline-flex h-11 items-center rounded-xl border border-slate-700/70 bg-slate-900/60 p-1', className)}
+    className={cn(
+      'inline-flex h-11 items-center rounded-xl border border-slate-700/70 bg-slate-900/60 p-1',
+      className,
+    )}
     {...props}
   />
 ));
@@ -38,7 +41,10 @@ const TabsContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content
     ref={ref}
-    className={cn('mt-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500', className)}
+    className={cn(
+      'mt-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+      className,
+    )}
     {...props}
   />
 ));

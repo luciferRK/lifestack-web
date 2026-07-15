@@ -1,7 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowDownUp, ArrowUp, Check, Edit2, Info, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowDown,
+  ArrowDownUp,
+  ArrowUp,
+  Check,
+  Edit2,
+  Info,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { financeService } from '../../services/finance';
 import { useInvalidatingMutation } from '../../hooks/useInvalidatingMutation';
 import { investingService } from '../../services/investing';
@@ -16,6 +27,7 @@ import { CurrencyBadge } from '../../components/finance/Badges';
 import { Button } from '../../components/ui/button';
 import { ToggleSwitch } from '../../components/ui/toggle-switch';
 import { SkeletonList } from '../../components/ui/FeedbackStates';
+import { useToast } from '../../components/ui/toast';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +38,7 @@ import {
 } from '../../components/ui/dialog';
 import type { Holding, InstrumentType } from '../../types/investing';
 import { SortableHeader } from './components';
+import { IdentifierFields, type IdentifierFieldsValue } from './IdentifierFields';
 import {
   deriveBookValue,
   formatLocalDateInput,
@@ -33,6 +46,18 @@ import {
   instrumentTypeOptions,
   type SortDir,
 } from './format';
+
+const EMPTY_IDENTITY: IdentifierFieldsValue = { ticker: '', isin: '', exchange: '' };
+
+const identityChanged = (a: IdentifierFieldsValue, b: IdentifierFieldsValue): boolean =>
+  a.ticker.trim().toUpperCase() !== b.ticker.trim().toUpperCase() ||
+  a.isin.trim().toUpperCase() !== b.isin.trim().toUpperCase() ||
+  a.exchange.trim().toUpperCase() !== b.exchange.trim().toUpperCase();
+
+const extractApiErrorDetail = (error: unknown, fallback: string): string =>
+  (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+  (error as Error)?.message ??
+  fallback;
 
 const refreshKeys = [queryKeys.investing.all, queryKeys.finance.all, queryKeys.dashboard.all];
 
@@ -68,6 +93,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
   updateOrderPending,
 }) => {
   const { locale: displayLocale, decimalPlaces } = useDisplayProfile();
+  const { showToast } = useToast();
   const [holdingsAccountFilter, setHoldingsAccountFilter] = useState('');
   const [holdingsCurrencyFilter, setHoldingsCurrencyFilter] = useState('');
   const [holdingsTypeFilter, setHoldingsTypeFilter] = useState('');
@@ -85,6 +111,15 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
     currency: 'USD',
     instrument_type: 'stock' as InstrumentType,
   });
+  const [editIdentity, setEditIdentity] = useState<IdentifierFieldsValue>(EMPTY_IDENTITY);
+  const [initialIdentity, setInitialIdentity] = useState<IdentifierFieldsValue>(EMPTY_IDENTITY);
+  const [editingHoldingInstrumentId, setEditingHoldingInstrumentId] = useState<string | null>(null);
+  // Set once the Holding PATCH has succeeded but the linked Instrument's
+  // identity PATCH has failed — the "single save" retries only the failed
+  // half rather than resubmitting the already-succeeded holding update.
+  const [holdingSaveSucceeded, setHoldingSaveSucceeded] = useState(false);
+  const [identitySaveError, setIdentitySaveError] = useState<string | null>(null);
+  const [isSavingIdentity, setIsSavingIdentity] = useState(false);
   const [pendingDeleteHolding, setPendingDeleteHolding] = useState<Holding | null>(null);
   const [editingPriceHoldingId, setEditingPriceHoldingId] = useState<string | null>(null);
   const [editPriceValue, setEditPriceValue] = useState<string>('');
@@ -114,7 +149,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
   const currencyOptions = useMemo(() => currencies.map((currency) => currency.code), [currencies]);
   const currencyDropdownOptions = useMemo(
     () => currencyOptions.map((code) => ({ value: code, label: code })),
-    [currencyOptions]
+    [currencyOptions],
   );
 
   const accountsRes = useQuery({
@@ -129,16 +164,19 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
       accounts
         .filter((acc) => acc.account_type === 'brokerage')
         .map((acc) => ({ value: acc.public_id, label: acc.name })),
-    [accounts]
+    [accounts],
   );
 
   const tradeHistoryRes = useQuery({
-    queryKey: queryKeys.investing.ordersByHolding(tradeHistoryHolding?.symbol, tradeHistoryHolding?.account_id),
+    queryKey: queryKeys.investing.ordersByHolding(
+      tradeHistoryHolding?.symbol,
+      tradeHistoryHolding?.account_id,
+    ),
     queryFn: () => {
       if (!tradeHistoryHolding) return Promise.resolve([]);
       return investingService.getOrdersForHolding(
         tradeHistoryHolding.symbol,
-        tradeHistoryHolding.account_id
+        tradeHistoryHolding.account_id,
       );
     },
     enabled: tradeHistoryHolding != null,
@@ -152,6 +190,8 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
       return (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0);
     });
   }, [tradeHistoryRes.data]);
+
+  const queryClient = useQueryClient();
 
   const updateHoldingMutation = useInvalidatingMutation(
     async (payload: {
@@ -172,20 +212,45 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
       return updatedHolding;
     },
     refreshKeys,
-    {
-      successMessage: 'Holding updated',
-      errorMessage: false,
-      onSuccess: () => {
-        setSelectedHolding(null);
-        setIsEditHoldingModalOpen(false);
-      },
-    },
+    { successMessage: false, errorMessage: false },
   );
+
+  // Saves the linked Instrument's ticker/isin/exchange. Not routed through
+  // useInvalidatingMutation because it must be independently retriable after
+  // the holding half of the save already succeeded (spec-010 §3.1).
+  const saveInstrumentIdentity = async (instrumentPublicId: string) => {
+    setIsSavingIdentity(true);
+    setIdentitySaveError(null);
+    try {
+      await investingService.updateInstrument(instrumentPublicId, {
+        ticker: editIdentity.ticker.trim() || undefined,
+        isin: editIdentity.isin.trim() || undefined,
+        exchange: editIdentity.exchange.trim() || undefined,
+      });
+      for (const key of refreshKeys) {
+        queryClient.invalidateQueries({ queryKey: [...key] });
+      }
+      setHoldingSaveSucceeded(false);
+      setSelectedHolding(null);
+      setIsEditHoldingModalOpen(false);
+      return true;
+    } catch (error) {
+      setIdentitySaveError(extractApiErrorDetail(error, 'Failed to save identifier fields'));
+      setHoldingSaveSucceeded(true);
+      return false;
+    } finally {
+      setIsSavingIdentity(false);
+    }
+  };
 
   const deleteHoldingMutation = useInvalidatingMutation(
     (publicId: string) => investingService.deleteHolding(publicId),
     refreshKeys,
-    { successMessage: 'Holding deleted', errorMessage: false, onSuccess: () => setPendingDeleteHolding(null) },
+    {
+      successMessage: 'Holding deleted',
+      errorMessage: false,
+      onSuccess: () => setPendingDeleteHolding(null),
+    },
   );
 
   const refreshPricesMutation = useInvalidatingMutation(
@@ -224,6 +289,12 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
   };
 
   const handleStartEditHolding = (holding: Holding) => {
+    const instrument = instrumentBySymbol.get(holding.symbol);
+    const identity: IdentifierFieldsValue = {
+      ticker: instrument?.ticker ?? '',
+      isin: instrument?.isin ?? '',
+      exchange: instrument?.exchange ?? '',
+    };
     setSelectedHolding(holding);
     setEditHoldingForm({
       symbol: holding.symbol || '',
@@ -232,12 +303,26 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
       currency: holding.currency || 'USD',
       instrument_type: holding.instrument_type ?? 'stock',
     });
+    setEditIdentity(identity);
+    setInitialIdentity(identity);
+    setEditingHoldingInstrumentId(instrument?.public_id ?? null);
+    setHoldingSaveSucceeded(false);
+    setIdentitySaveError(null);
     setIsEditHoldingModalOpen(true);
   };
 
-  const onUpdateHolding = (e: React.FormEvent) => {
+  const onUpdateHolding = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedHolding) return;
+
+    // Identity PATCH already succeeded once and the holding PATCH already
+    // succeeded before it — this submit is a retry of only the failed half.
+    if (holdingSaveSucceeded) {
+      if (!editingHoldingInstrumentId) return;
+      const ok = await saveInstrumentIdentity(editingHoldingInstrumentId);
+      if (ok) showToast('Holding updated', 'success');
+      return;
+    }
 
     const isOrderDerived = selectedHolding.source_type === 'order';
     const symbol = editHoldingForm.symbol.trim().toUpperCase();
@@ -252,14 +337,29 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
       if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(cost) || cost < 0) return;
     }
 
-    updateHoldingMutation.mutate({
-      holding: selectedHolding,
-      symbol,
-      quantity: qty,
-      avg_cost: cost,
-      currency,
-      instrument_type: editHoldingForm.instrument_type,
-    });
+    try {
+      await updateHoldingMutation.mutateAsync({
+        holding: selectedHolding,
+        symbol,
+        quantity: qty,
+        avg_cost: cost,
+        currency,
+        instrument_type: editHoldingForm.instrument_type,
+      });
+    } catch {
+      // updateHoldingMutation surfaces its own error via isError/error below.
+      return;
+    }
+
+    if (editingHoldingInstrumentId && identityChanged(editIdentity, initialIdentity)) {
+      const ok = await saveInstrumentIdentity(editingHoldingInstrumentId);
+      if (ok) showToast('Holding updated', 'success');
+      return;
+    }
+
+    showToast('Holding updated', 'success');
+    setSelectedHolding(null);
+    setIsEditHoldingModalOpen(false);
   };
 
   const confirmDeleteHolding = () => {
@@ -271,7 +371,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
 
   const instrumentBySymbol = useMemo(
     () => new Map(instruments.map((i) => [i.symbol, i])),
-    [instruments]
+    [instruments],
   );
 
   const filteredHoldings = useMemo(() => {
@@ -279,8 +379,10 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
     return holdings.filter((holding) => {
       const accountMatch = !holdingsAccountFilter || holding.account_id === holdingsAccountFilter;
       const currencyMatch =
-        !holdingsCurrencyFilter || (holding.currency ?? 'USD').toUpperCase() === holdingsCurrencyFilter.toUpperCase();
-      const typeMatch = !holdingsTypeFilter || (holding.instrument_type ?? 'stock') === holdingsTypeFilter;
+        !holdingsCurrencyFilter ||
+        (holding.currency ?? 'USD').toUpperCase() === holdingsCurrencyFilter.toUpperCase();
+      const typeMatch =
+        !holdingsTypeFilter || (holding.instrument_type ?? 'stock') === holdingsTypeFilter;
       const bookValueMatch = !hideZeroBookValue || deriveBookValue(holding) !== 0;
       // Substring match on symbol or the resolved instrument name (so a
       // mutual fund with a numeric folio symbol is searchable by name).
@@ -303,17 +405,31 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
     const dir = holdingsSortDir === 'asc' ? 1 : -1;
     return [...filteredHoldings].sort((a, b) => {
       switch (holdingsSortCol) {
-        case 'symbol': return dir * a.symbol.localeCompare(b.symbol);
-        case 'instrument_type': return dir * (a.instrument_type ?? 'stock').localeCompare(b.instrument_type ?? 'stock');
-        case 'account_name': return dir * a.account_name.localeCompare(b.account_name);
-        case 'currency': return dir * (a.currency ?? 'USD').localeCompare(b.currency ?? 'USD');
-        case 'quantity': return dir * (toNumber(a.quantity) - toNumber(b.quantity));
-        case 'avg_cost': return dir * (toNumber(a.avg_cost) - toNumber(b.avg_cost));
-        case 'book_value': return dir * (deriveBookValue(a) - deriveBookValue(b));
-        case 'current_price': return dir * (toNumber(a.current_price ?? a.avg_cost) - toNumber(b.current_price ?? b.avg_cost));
-        case 'current_value': return dir * (toNumber(a.current_value ?? 0) - toNumber(b.current_value ?? 0));
-        case 'gain_loss': return dir * (toNumber(a.gain_loss ?? 0) - toNumber(b.gain_loss ?? 0));
-        default: return 0;
+        case 'symbol':
+          return dir * a.symbol.localeCompare(b.symbol);
+        case 'instrument_type':
+          return dir * (a.instrument_type ?? 'stock').localeCompare(b.instrument_type ?? 'stock');
+        case 'account_name':
+          return dir * a.account_name.localeCompare(b.account_name);
+        case 'currency':
+          return dir * (a.currency ?? 'USD').localeCompare(b.currency ?? 'USD');
+        case 'quantity':
+          return dir * (toNumber(a.quantity) - toNumber(b.quantity));
+        case 'avg_cost':
+          return dir * (toNumber(a.avg_cost) - toNumber(b.avg_cost));
+        case 'book_value':
+          return dir * (deriveBookValue(a) - deriveBookValue(b));
+        case 'current_price':
+          return (
+            dir *
+            (toNumber(a.current_price ?? a.avg_cost) - toNumber(b.current_price ?? b.avg_cost))
+          );
+        case 'current_value':
+          return dir * (toNumber(a.current_value ?? 0) - toNumber(b.current_value ?? 0));
+        case 'gain_loss':
+          return dir * (toNumber(a.gain_loss ?? 0) - toNumber(b.gain_loss ?? 0));
+        default:
+          return 0;
       }
     });
   }, [filteredHoldings, holdingsSortCol, holdingsSortDir]);
@@ -432,7 +548,7 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
       }
     }
     return Array.from(groups.values()).sort(
-      (a, b) => a.accountName.localeCompare(b.accountName) || a.currency.localeCompare(b.currency)
+      (a, b) => a.accountName.localeCompare(b.accountName) || a.currency.localeCompare(b.currency),
     );
   }, [filteredHoldings]);
 
@@ -440,7 +556,10 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
     <>
       <div className="space-y-6">
         <div className="space-y-3">
-          <div data-testid="investing-holdings-heading" className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            data-testid="investing-holdings-heading"
+            className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          >
             <h3 className="font-semibold text-white text-base">Active Holdings</h3>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <button
@@ -450,7 +569,9 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                 onClick={() => refreshPricesMutation.mutate()}
                 className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-700/80 px-3 py-2 text-xs font-semibold text-slate-100 transition-colors hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${refreshPricesMutation.isPending ? 'animate-spin' : ''}`}
+                />
                 {refreshPricesMutation.isPending ? 'Syncing close...' : 'Sync Latest Close'}
               </button>
             </div>
@@ -535,94 +656,151 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
               </div>
             ) : (
               <>
-              {/* Mobile sort control — the desktop equivalent is clicking a
+                {/* Mobile sort control — the desktop equivalent is clicking a
                   column header, which the card layout has no room for. Drives
                   the same holdingsSortCol / holdingsSortDir state. */}
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <p className="mb-1 text-xs text-slate-400">Sort by</p>
-                  <DropdownSelect
-                    testId="investing-holdings-sort-mobile"
-                    value={holdingsSortCol}
-                    options={HOLDINGS_SORT_OPTIONS}
-                    onChange={setHoldingsSortCol}
-                    placeholder="Sort by"
-                  />
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <p className="mb-1 text-xs text-slate-400">Sort by</p>
+                    <DropdownSelect
+                      testId="investing-holdings-sort-mobile"
+                      value={holdingsSortCol}
+                      options={HOLDINGS_SORT_OPTIONS}
+                      onChange={setHoldingsSortCol}
+                      placeholder="Sort by"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="investing-holdings-sort-dir-mobile"
+                    onClick={() => setHoldingsSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                    className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 text-sm text-slate-200 hover:bg-slate-700/60"
+                    title={holdingsSortDir === 'asc' ? 'Ascending' : 'Descending'}
+                  >
+                    {holdingsSortDir === 'asc' ? (
+                      <ArrowUp className="h-4 w-4" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4" />
+                    )}
+                    {holdingsSortDir === 'asc' ? 'Asc' : 'Desc'}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  data-testid="investing-holdings-sort-dir-mobile"
-                  onClick={() => setHoldingsSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                  className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/60 px-3 text-sm text-slate-200 hover:bg-slate-700/60"
-                  title={holdingsSortDir === 'asc' ? 'Ascending' : 'Descending'}
-                >
-                  {holdingsSortDir === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-                  {holdingsSortDir === 'asc' ? 'Asc' : 'Desc'}
-                </button>
-              </div>
-              {sortedHoldings.map((h) => {
-                const gainLoss = toNumber(h.gain_loss ?? 0);
-                const gainLossPct = toNumber(h.gain_loss_pct ?? 0);
-                const isPositive = gainLoss > 0;
-                const isNegative = gainLoss < 0;
-                const colorClass = isPositive ? 'text-green-400' : isNegative ? 'text-red-400' : 'text-slate-400';
-                const sign = isPositive ? '+' : '';
-                const isMF = h.instrument_type === 'mutual_fund';
-                const matchedInstrument = isMF ? instrumentBySymbol.get(h.symbol) : undefined;
-                const displayName = matchedInstrument?.name ?? h.symbol;
-                return (
-                  <div key={h.public_id} className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-white">{displayName}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex rounded border border-slate-600/70 px-2 py-0.5 text-[11px] text-slate-200">{instrumentTypeLabel(h.instrument_type)}</span>
-                          <CurrencyBadge code={h.currency} />
-                          <span className="text-[11px] text-slate-500">{h.account_name}</span>
+                {sortedHoldings.map((h) => {
+                  const gainLoss = toNumber(h.gain_loss ?? 0);
+                  const gainLossPct = toNumber(h.gain_loss_pct ?? 0);
+                  const isPositive = gainLoss > 0;
+                  const isNegative = gainLoss < 0;
+                  const colorClass = isPositive
+                    ? 'text-green-400'
+                    : isNegative
+                      ? 'text-red-400'
+                      : 'text-slate-400';
+                  const sign = isPositive ? '+' : '';
+                  const isMF = h.instrument_type === 'mutual_fund';
+                  const matchedInstrument = isMF ? instrumentBySymbol.get(h.symbol) : undefined;
+                  const displayName = matchedInstrument?.name ?? h.symbol;
+                  return (
+                    <div
+                      key={h.public_id}
+                      className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-white">{displayName}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex rounded border border-slate-600/70 px-2 py-0.5 text-[11px] text-slate-200">
+                              {instrumentTypeLabel(h.instrument_type)}
+                            </span>
+                            <CurrencyBadge code={h.currency} />
+                            <span className="text-[11px] text-slate-500">{h.account_name}</span>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="font-semibold text-white">
+                            {formatCurrency(
+                              h.current_value ?? deriveBookValue(h),
+                              h.currency,
+                              currencyDisplayPreference,
+                              displayLocale,
+                              decimalPlaces,
+                            )}
+                          </p>
+                          <p className={`text-xs font-medium ${colorClass}`}>
+                            {sign}
+                            {formatCurrency(
+                              gainLoss,
+                              h.currency,
+                              currencyDisplayPreference,
+                              displayLocale,
+                              decimalPlaces,
+                            )}{' '}
+                            ({sign}
+                            {gainLossPct.toFixed(2)}%)
+                          </p>
                         </div>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className="font-semibold text-white">{formatCurrency(h.current_value ?? deriveBookValue(h), h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</p>
-                        <p className={`text-xs font-medium ${colorClass}`}>{sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)} ({sign}{gainLossPct.toFixed(2)}%)</p>
+                      <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-700/40 pt-3 text-xs">
+                        <div>
+                          <span className="block text-slate-500">Qty</span>
+                          <span className="text-slate-200">{formatQuantity(h.quantity)}</span>
+                        </div>
+                        <div>
+                          <span className="block text-slate-500">Avg cost</span>
+                          <span className="text-slate-200">
+                            {formatCurrency(
+                              h.avg_cost,
+                              h.currency,
+                              currencyDisplayPreference,
+                              displayLocale,
+                              decimalPlaces,
+                            )}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-slate-500">Price</span>
+                          <span className="text-slate-200">
+                            {formatCurrency(
+                              h.current_price ?? h.avg_cost,
+                              h.currency,
+                              currencyDisplayPreference,
+                              displayLocale,
+                              decimalPlaces,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          data-testid={`investing-edit-holding-m-${h.public_id}`}
+                          disabled={deleteHoldingMutation.isPending}
+                          onClick={() => handleStartEditHolding(h)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600/70 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700/60 disabled:opacity-60"
+                        >
+                          <Edit2 className="h-4 w-4" /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          data-testid={`investing-holding-trade-history-m-${h.public_id}`}
+                          disabled={deleteHoldingMutation.isPending}
+                          onClick={() => setTradeHistoryHolding(h)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600/70 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700/60 disabled:opacity-60"
+                        >
+                          <ArrowDownUp className="h-4 w-4" /> History
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleteHoldingMutation.isPending}
+                          onClick={() => setPendingDeleteHolding(h)}
+                          className="inline-flex items-center rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
+                          title="Delete holding"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-700/40 pt-3 text-xs">
-                      <div><span className="block text-slate-500">Qty</span><span className="text-slate-200">{formatQuantity(h.quantity)}</span></div>
-                      <div><span className="block text-slate-500">Avg cost</span><span className="text-slate-200">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span></div>
-                      <div><span className="block text-slate-500">Price</span><span className="text-slate-200">{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span></div>
-                    </div>
-                    <div className="mt-3 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        data-testid={`investing-edit-holding-m-${h.public_id}`}
-                        disabled={deleteHoldingMutation.isPending}
-                        onClick={() => handleStartEditHolding(h)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600/70 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700/60 disabled:opacity-60"
-                      >
-                        <Edit2 className="h-4 w-4" /> Edit
-                      </button>
-                      <button
-                        type="button"
-                        data-testid={`investing-holding-trade-history-m-${h.public_id}`}
-                        disabled={deleteHoldingMutation.isPending}
-                        onClick={() => setTradeHistoryHolding(h)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600/70 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700/60 disabled:opacity-60"
-                      >
-                        <ArrowDownUp className="h-4 w-4" /> History
-                      </button>
-                      <button
-                        type="button"
-                        disabled={deleteHoldingMutation.isPending}
-                        onClick={() => setPendingDeleteHolding(h)}
-                        className="inline-flex items-center rounded-lg border border-rose-500/40 p-2 text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
-                        title="Delete holding"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
               </>
             )}
           </div>
@@ -631,22 +809,126 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
             <table className="w-full text-left text-sm text-slate-300 min-w-[1000px]">
               <thead className="border-b border-slate-700/50 bg-slate-800/50 text-xs uppercase text-slate-400">
                 <tr>
-                  <SortableHeader col="symbol" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Symbol</SortableHeader>
-                  <SortableHeader col="instrument_type" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Asset Type</SortableHeader>
-                  <SortableHeader col="account_name" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Account</SortableHeader>
-                  <SortableHeader col="currency" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Currency</SortableHeader>
-                  <SortableHeader col="quantity" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Qty</SortableHeader>
-                  <SortableHeader col="avg_cost" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Avg Cost</SortableHeader>
-                  <SortableHeader col="book_value" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Book Value</SortableHeader>
-                  <SortableHeader col="current_price" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Unit Price</SortableHeader>
-                  <SortableHeader col="current_value" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Current Value</SortableHeader>
-                  <SortableHeader col="gain_loss" activeCol={holdingsSortCol} dir={holdingsSortDir} onSort={(c, d) => { setHoldingsSortCol(c); setHoldingsSortDir(d); }}>Gain / Loss</SortableHeader>
+                  <SortableHeader
+                    col="symbol"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Symbol
+                  </SortableHeader>
+                  <SortableHeader
+                    col="instrument_type"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Asset Type
+                  </SortableHeader>
+                  <SortableHeader
+                    col="account_name"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Account
+                  </SortableHeader>
+                  <SortableHeader
+                    col="currency"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Currency
+                  </SortableHeader>
+                  <SortableHeader
+                    col="quantity"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Qty
+                  </SortableHeader>
+                  <SortableHeader
+                    col="avg_cost"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Avg Cost
+                  </SortableHeader>
+                  <SortableHeader
+                    col="book_value"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Book Value
+                  </SortableHeader>
+                  <SortableHeader
+                    col="current_price"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Unit Price
+                  </SortableHeader>
+                  <SortableHeader
+                    col="current_value"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Current Value
+                  </SortableHeader>
+                  <SortableHeader
+                    col="gain_loss"
+                    activeCol={holdingsSortCol}
+                    dir={holdingsSortDir}
+                    onSort={(c, d) => {
+                      setHoldingsSortCol(c);
+                      setHoldingsSortDir(d);
+                    }}
+                  >
+                    Gain / Loss
+                  </SortableHeader>
                   <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
                 {holdingsRes.isLoading ? (
-                  <tr><td className="px-4 py-6 text-slate-400" colSpan={11}>Loading holdings…</td></tr>
+                  <tr>
+                    <td className="px-4 py-6 text-slate-400" colSpan={11}>
+                      Loading holdings…
+                    </td>
+                  </tr>
                 ) : sortedHoldings.length === 0 ? (
                   <tr>
                     <td className="px-4 py-6" colSpan={11}>
@@ -668,14 +950,21 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                     const gainLossPct = toNumber(h.gain_loss_pct ?? 0);
                     const isPositive = gainLoss > 0;
                     const isNegative = gainLoss < 0;
-                    const colorClass = isPositive ? 'text-green-400' : isNegative ? 'text-red-400' : 'text-slate-400';
+                    const colorClass = isPositive
+                      ? 'text-green-400'
+                      : isNegative
+                        ? 'text-red-400'
+                        : 'text-slate-400';
                     const sign = isPositive ? '+' : '';
                     const isMF = h.instrument_type === 'mutual_fund';
                     const matchedInstrument = isMF ? instrumentBySymbol.get(h.symbol) : undefined;
                     const displayName = matchedInstrument?.name ?? h.symbol;
                     return (
                       <tr key={h.public_id} data-testid={`investing-holding-row-${h.public_id}`}>
-                        <td data-testid={`investing-holding-symbol-${h.symbol}`} className="px-4 py-3 font-medium text-white">
+                        <td
+                          data-testid={`investing-holding-symbol-${h.symbol}`}
+                          className="px-4 py-3 font-medium text-white"
+                        >
                           {isMF ? (
                             <span className="inline-flex items-center gap-1.5">
                               <span>{displayName}</span>
@@ -686,7 +975,9 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                                 </span>
                               </span>
                             </span>
-                          ) : h.symbol}
+                          ) : (
+                            h.symbol
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex rounded border border-slate-600/70 px-2 py-0.5 text-xs text-slate-200">
@@ -698,8 +989,24 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                           <CurrencyBadge code={h.currency} />
                         </td>
                         <td className="px-4 py-3">{formatQuantity(h.quantity)}</td>
-                        <td className="px-4 py-3">{formatCurrency(h.avg_cost, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</td>
-                        <td className="px-4 py-3">{formatCurrency(deriveBookValue(h), h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</td>
+                        <td className="px-4 py-3">
+                          {formatCurrency(
+                            h.avg_cost,
+                            h.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatCurrency(
+                            deriveBookValue(h),
+                            h.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           {editingPriceHoldingId === h.public_id ? (
                             <div className="flex items-center gap-1.5">
@@ -731,7 +1038,15 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 group">
-                              <span>{formatCurrency(h.current_price ?? h.avg_cost, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span>
+                              <span>
+                                {formatCurrency(
+                                  h.current_price ?? h.avg_cost,
+                                  h.currency,
+                                  currencyDisplayPreference,
+                                  displayLocale,
+                                  decimalPlaces,
+                                )}
+                              </span>
                               <button
                                 data-testid={`investing-edit-price-${h.public_id}`}
                                 onClick={() => handleStartEditPrice(h)}
@@ -743,10 +1058,27 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3">{formatCurrency(h.current_value ?? deriveBookValue(h), h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</td>
+                        <td className="px-4 py-3">
+                          {formatCurrency(
+                            h.current_value ?? deriveBookValue(h),
+                            h.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )}
+                        </td>
                         <td className="px-4 py-3 font-medium">
                           <span className={colorClass}>
-                            {sign}{formatCurrency(gainLoss, h.currency, currencyDisplayPreference, displayLocale, decimalPlaces)} ({sign}{gainLossPct.toFixed(2)}%)
+                            {sign}
+                            {formatCurrency(
+                              gainLoss,
+                              h.currency,
+                              currencyDisplayPreference,
+                              displayLocale,
+                              decimalPlaces,
+                            )}{' '}
+                            ({sign}
+                            {gainLossPct.toFixed(2)}%)
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -788,16 +1120,30 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
               {sortedHoldings.length > 0 ? (
                 <tfoot>
                   <tr className="border-t border-slate-700/50 bg-slate-900/40">
-                    <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={6}>Total Cost & Value</td>
+                    <td className="px-4 py-3 text-slate-400 font-semibold" colSpan={6}>
+                      Total Cost & Value
+                    </td>
                     <td className="px-4 py-3 font-semibold text-white">
                       {totalBookCost != null
-                        ? formatCurrency(totalBookCost.amount, totalBookCost.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
+                        ? formatCurrency(
+                            totalBookCost.amount,
+                            totalBookCost.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )
                         : 'N/A (multi-currency)'}
                     </td>
                     <td />
                     <td className="px-4 py-3 font-semibold text-white">
                       {totalCurrentValue != null
-                        ? formatCurrency(totalCurrentValue.amount, totalCurrentValue.currency, currencyDisplayPreference, displayLocale, decimalPlaces)
+                        ? formatCurrency(
+                            totalCurrentValue.amount,
+                            totalCurrentValue.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )
                         : 'N/A (multi-currency)'}
                     </td>
                     <td colSpan={2} />
@@ -836,19 +1182,37 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                       <div>
                         <span className="block text-slate-500">Invested</span>
                         <span className="text-slate-200">
-                          {formatCurrency(row.invested, row.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                          {formatCurrency(
+                            row.invested,
+                            row.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )}
                         </span>
                       </div>
                       <div>
                         <span className="block text-slate-500">Market value</span>
                         <span className="font-medium text-white">
-                          {formatCurrency(row.marketValue, row.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                          {formatCurrency(
+                            row.marketValue,
+                            row.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )}
                         </span>
                       </div>
                       <div className="col-span-2">
                         <span className="block text-slate-500">Profit / loss</span>
                         <span className={positive ? 'text-emerald-300' : 'text-rose-300'}>
-                          {formatCurrency(pl, row.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                          {formatCurrency(
+                            pl,
+                            row.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )}
                           {plPct != null ? ` (${positive ? '+' : ''}${plPct.toFixed(2)}%)` : ''}
                         </span>
                       </div>
@@ -862,35 +1226,58 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
       </div>
 
       {/* Trade History Modal */}
-      <Dialog open={!!tradeHistoryHolding} onOpenChange={(open) => !open && setTradeHistoryHolding(null)}>
+      <Dialog
+        open={!!tradeHistoryHolding}
+        onOpenChange={(open) => !open && setTradeHistoryHolding(null)}
+      >
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {tradeHistoryHolding && (
             <>
-            <DialogHeader className="mb-5">
-              <DialogTitle>
-                Trade History — {tradeHistoryHolding.symbol} ({tradeHistoryHolding.account_name})
-              </DialogTitle>
-            </DialogHeader>
-            <div className="max-h-[60vh] overflow-y-auto overflow-x-auto rounded-xl border border-slate-700/50">
-              <table data-testid="investing-trade-history-table" className="w-full text-sm">
-                <thead className="border-b border-slate-700/50 bg-slate-800/40">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Type</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Qty</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Price</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Net</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Realized G/L</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700/30">
-                  {tradeHistoryRes.isLoading ? (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
-                  ) : sortedTradeHistory.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">No trades found.</td></tr>
-                  ) : (
-                    sortedTradeHistory.map((o) => {
+              <DialogHeader className="mb-5">
+                <DialogTitle>
+                  Trade History — {tradeHistoryHolding.symbol} ({tradeHistoryHolding.account_name})
+                </DialogTitle>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto overflow-x-auto rounded-xl border border-slate-700/50">
+                <table data-testid="investing-trade-history-table" className="w-full text-sm">
+                  <thead className="border-b border-slate-700/50 bg-slate-800/40">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Type
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Qty
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Price
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Net
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Realized G/L
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700/30">
+                    {tradeHistoryRes.isLoading ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                          Loading…
+                        </td>
+                      </tr>
+                    ) : sortedTradeHistory.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                          No trades found.
+                        </td>
+                      </tr>
+                    ) : (
+                      sortedTradeHistory.map((o) => {
                         const isBuy = o.order_type === 'buy';
                         return (
                           <tr
@@ -902,21 +1289,53 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                               {formatDate(o.occurred_at, { fallback: 'N/A' })}
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isBuy ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                              <span
+                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                  isBuy
+                                    ? 'bg-emerald-500/20 text-emerald-300'
+                                    : 'bg-rose-500/20 text-rose-300'
+                                }`}
+                              >
                                 {isBuy ? 'BUY' : 'SELL'}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-right text-slate-300">{formatQuantity(o.quantity)}</td>
                             <td className="px-4 py-3 text-right text-slate-300">
-                              {formatCurrency(toNumber(o.price_per_unit), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                              {formatQuantity(o.quantity)}
+                            </td>
+                            <td className="px-4 py-3 text-right text-slate-300">
+                              {formatCurrency(
+                                toNumber(o.price_per_unit),
+                                o.currency,
+                                currencyDisplayPreference,
+                                displayLocale,
+                                decimalPlaces,
+                              )}
                             </td>
                             <td className="px-4 py-3 text-right font-medium text-white">
-                              {formatCurrency(toNumber(o.net_amount), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                              {formatCurrency(
+                                toNumber(o.net_amount),
+                                o.currency,
+                                currencyDisplayPreference,
+                                displayLocale,
+                                decimalPlaces,
+                              )}
                             </td>
                             <td className="px-4 py-3 text-right">
                               {o.realized_gain_loss != null ? (
-                                <span className={toNumber(o.realized_gain_loss) >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                                  {formatCurrency(toNumber(o.realized_gain_loss), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                                <span
+                                  className={
+                                    toNumber(o.realized_gain_loss) >= 0
+                                      ? 'text-emerald-300'
+                                      : 'text-rose-300'
+                                  }
+                                >
+                                  {formatCurrency(
+                                    toNumber(o.realized_gain_loss),
+                                    o.currency,
+                                    currencyDisplayPreference,
+                                    displayLocale,
+                                    decimalPlaces,
+                                  )}
                                 </span>
                               ) : (
                                 <span className="text-slate-500">—</span>
@@ -949,10 +1368,10 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
                           </tr>
                         );
                       })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </DialogContent>
@@ -965,153 +1384,189 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
           if (open) return;
           setIsEditHoldingModalOpen(false);
           setSelectedHolding(null);
+          setHoldingSaveSucceeded(false);
+          setIdentitySaveError(null);
         }}
       >
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           {isEditHoldingModalOpen && selectedHolding && (
             <>
-            <DialogHeader className="mb-4 border-b border-slate-800 pb-4">
-              <DialogTitle>Edit Holding</DialogTitle>
-            </DialogHeader>
+              <DialogHeader className="mb-4 border-b border-slate-800 pb-4">
+                <DialogTitle>Edit Holding</DialogTitle>
+              </DialogHeader>
 
-            <form
-              data-testid="investing-edit-holding-form"
-              onSubmit={onUpdateHolding}
-              className="space-y-4"
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Symbol</label>
-                    <span className="group relative inline-flex">
-                      <button
-                        type="button"
-                        aria-label="Symbol input help"
-                        className="rounded-full text-slate-500 transition-colors hover:text-cyan-300 focus:text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                      >
-                        <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                      </button>
-                      <span
-                        role="tooltip"
-                        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-72 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal leading-relaxed text-slate-300 shadow-xl group-hover:block group-focus-within:block"
-                      >
-                        Stocks/ETFs: use the exchange ticker, such as DRREDDY or PHARMABEES.
-                        Indian mutual funds: use the numeric AMFI scheme code, such as 122639—not
-                        the fund name or ISIN.
+              <form
+                data-testid="investing-edit-holding-form"
+                onSubmit={onUpdateHolding}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-xs font-semibold text-slate-300">Symbol</label>
+                      <span className="group relative inline-flex">
+                        <button
+                          type="button"
+                          aria-label="Symbol input help"
+                          className="rounded-full text-slate-500 transition-colors hover:text-cyan-300 focus:text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                        >
+                          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-72 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-normal leading-relaxed text-slate-300 shadow-xl group-hover:block group-focus-within:block"
+                        >
+                          Stocks/ETFs: use the exchange ticker, such as DRREDDY or PHARMABEES.
+                          Indian mutual funds: use the numeric AMFI scheme code, such as 122639—not
+                          the fund name or ISIN.
+                        </span>
                       </span>
-                    </span>
+                    </div>
+                    <input
+                      data-testid="investing-edit-holding-symbol"
+                      className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                      value={editHoldingForm.symbol}
+                      onChange={(event) =>
+                        setEditHoldingForm((state) => ({ ...state, symbol: event.target.value }))
+                      }
+                      required
+                    />
                   </div>
-                  <input
-                    data-testid="investing-edit-holding-symbol"
-                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
-                    value={editHoldingForm.symbol}
-                    onChange={(event) =>
-                      setEditHoldingForm((state) => ({ ...state, symbol: event.target.value }))
-                    }
-                    required
-                  />
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Asset Type</label>
+                    <DropdownSelect
+                      testId="investing-edit-holding-instrument-type"
+                      value={editHoldingForm.instrument_type}
+                      options={instrumentTypeOptions}
+                      onChange={(value) =>
+                        setEditHoldingForm((s) => ({
+                          ...s,
+                          instrument_type: value as InstrumentType,
+                        }))
+                      }
+                      placeholder="Asset type"
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Asset Type</label>
-                  <DropdownSelect
-                    testId="investing-edit-holding-instrument-type"
-                    value={editHoldingForm.instrument_type}
-                    options={instrumentTypeOptions}
-                    onChange={(value) =>
-                      setEditHoldingForm((s) => ({
-                        ...s,
-                        instrument_type: value as InstrumentType,
-                      }))
-                    }
-                    placeholder="Asset type"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Account</label>
-                  <input
-                    data-testid="investing-edit-holding-account"
-                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-300 focus:outline-none"
-                    value={selectedHolding.account_name}
-                    readOnly
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Account</label>
+                    <input
+                      data-testid="investing-edit-holding-account"
+                      className="w-full h-10 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-300 focus:outline-none"
+                      value={selectedHolding.account_name}
+                      readOnly
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Currency</label>
+                    <DropdownSelect
+                      testId="investing-edit-holding-currency"
+                      value={editHoldingForm.currency}
+                      options={currencyDropdownOptions}
+                      onChange={(value) => setEditHoldingForm((s) => ({ ...s, currency: value }))}
+                      placeholder="Currency"
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Currency</label>
-                  <DropdownSelect
-                    testId="investing-edit-holding-currency"
-                    value={editHoldingForm.currency}
-                    options={currencyDropdownOptions}
-                    onChange={(value) => setEditHoldingForm((s) => ({ ...s, currency: value }))}
-                    placeholder="Currency"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Quantity</label>
-                  <input
-                    data-testid="investing-edit-holding-quantity"
-                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    type="number"
-                    step="0.00000001"
-                    value={editHoldingForm.quantity}
-                    onChange={(e) => setEditHoldingForm((s) => ({ ...s, quantity: e.target.value }))}
-                    disabled={selectedHolding.source_type === 'order'}
-                    required={selectedHolding.source_type !== 'order'}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Quantity</label>
+                    <input
+                      data-testid="investing-edit-holding-quantity"
+                      className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      type="number"
+                      step="0.00000001"
+                      value={editHoldingForm.quantity}
+                      onChange={(e) =>
+                        setEditHoldingForm((s) => ({ ...s, quantity: e.target.value }))
+                      }
+                      disabled={selectedHolding.source_type === 'order'}
+                      required={selectedHolding.source_type !== 'order'}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-300">Avg Cost</label>
+                    <input
+                      data-testid="investing-edit-holding-avg-cost"
+                      className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      type="number"
+                      step="0.01"
+                      value={editHoldingForm.avg_cost}
+                      onChange={(e) =>
+                        setEditHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))
+                      }
+                      disabled={selectedHolding.source_type === 'order'}
+                      required={selectedHolding.source_type !== 'order'}
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-300">Avg Cost</label>
-                  <input
-                    data-testid="investing-edit-holding-avg-cost"
-                    className="w-full h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    type="number"
-                    step="0.01"
-                    value={editHoldingForm.avg_cost}
-                    onChange={(e) => setEditHoldingForm((s) => ({ ...s, avg_cost: e.target.value }))}
-                    disabled={selectedHolding.source_type === 'order'}
-                    required={selectedHolding.source_type !== 'order'}
-                  />
+                {selectedHolding.source_type === 'order' && (
+                  <p className="text-xs text-slate-500">
+                    Quantity and average cost are computed from orders — edit the order history to
+                    change these.
+                  </p>
+                )}
+
+                {editingHoldingInstrumentId ? (
+                  <div className="space-y-2 border-t border-slate-800 pt-4">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Security Identity
+                    </label>
+                    <IdentifierFields
+                      idPrefix="investing-edit-holding"
+                      value={editIdentity}
+                      onChange={setEditIdentity}
+                      instrumentType={editHoldingForm.instrument_type}
+                    />
+                  </div>
+                ) : null}
+
+                {updateHoldingMutation.isError && (
+                  <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+                    {extractApiErrorDetail(updateHoldingMutation.error, 'Failed to update holding')}
+                  </p>
+                )}
+
+                {holdingSaveSucceeded && identitySaveError && (
+                  <p
+                    data-testid="investing-edit-holding-identity-error"
+                    className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300"
+                  >
+                    Holding saved, but the identifier fields failed to save: {identitySaveError}.
+                    Retrying only saves the identifier fields.
+                  </p>
+                )}
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditHoldingModalOpen(false);
+                      setSelectedHolding(null);
+                      setHoldingSaveSucceeded(false);
+                      setIdentitySaveError(null);
+                    }}
+                    className="h-10 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    data-testid="investing-edit-holding-submit"
+                    disabled={updateHoldingMutation.isPending || isSavingIdentity}
+                    type="submit"
+                    className="h-10 flex-1 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {updateHoldingMutation.isPending || isSavingIdentity
+                      ? 'Saving...'
+                      : holdingSaveSucceeded
+                        ? 'Retry Identity Save'
+                        : 'Save Holding'}
+                  </button>
                 </div>
-              </div>
-              {selectedHolding.source_type === 'order' && (
-                <p className="text-xs text-slate-500">
-                  Quantity and average cost are computed from orders — edit the order history to
-                  change these.
-                </p>
-              )}
-
-              {updateHoldingMutation.isError && (
-                <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
-                  {(updateHoldingMutation.error as Error)?.message ?? 'Failed to update holding'}
-                </p>
-              )}
-
-              <div className="flex gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditHoldingModalOpen(false);
-                    setSelectedHolding(null);
-                  }}
-                  className="h-10 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-4 text-xs font-semibold text-slate-100 hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  data-testid="investing-edit-holding-submit"
-                  disabled={updateHoldingMutation.isPending}
-                  type="submit"
-                  className="h-10 flex-1 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {updateHoldingMutation.isPending ? 'Saving...' : 'Save Holding'}
-                </button>
-              </div>
-            </form>
+              </form>
             </>
           )}
         </DialogContent>
@@ -1119,7 +1574,9 @@ export const HoldingsTab: React.FC<HoldingsTabProps> = ({
 
       <Dialog
         open={!!pendingDeleteHolding}
-        onOpenChange={(open) => !open && !deleteHoldingMutation.isPending && setPendingDeleteHolding(null)}
+        onOpenChange={(open) =>
+          !open && !deleteHoldingMutation.isPending && setPendingDeleteHolding(null)
+        }
       >
         <DialogContent className="max-w-md">
           <DialogHeader>

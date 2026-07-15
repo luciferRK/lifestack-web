@@ -70,7 +70,10 @@ export const ResetPasswordPage: React.FC = () => {
     try {
       await authService.resetPassword(token, password);
       navigate('/login', {
-        state: { message: 'Your password has been successfully reset. Please sign in with your new password.' },
+        state: {
+          message:
+            'Your password has been successfully reset. Please sign in with your new password.',
+        },
         replace: true,
       });
     } catch (err) {
@@ -96,7 +99,10 @@ export const ResetPasswordPage: React.FC = () => {
               </p>
             </div>
             <p className="text-center text-sm text-slate-400">
-              <Link to="/forgot-password" className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+              <Link
+                to="/forgot-password"
+                className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+              >
                 Request reset link
               </Link>
             </p>
@@ -127,7 +133,8 @@ export const ResetPasswordPage: React.FC = () => {
                   />
                   <div className="mt-2 space-y-2">
                     <p className="text-xs text-slate-400">
-                      Use at least 8 characters with upper and lower case letters, a number, and a symbol.
+                      Use at least 8 characters with upper and lower case letters, a number, and a
+                      symbol.
                     </p>
                     <div className="flex items-center gap-3">
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-700">

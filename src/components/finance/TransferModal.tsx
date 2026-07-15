@@ -145,7 +145,12 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         notes: notes || null,
       });
     },
-    [queryKeys.finance.all, queryKeys.spending.all, queryKeys.investing.all, queryKeys.dashboard.all],
+    [
+      queryKeys.finance.all,
+      queryKeys.spending.all,
+      queryKeys.investing.all,
+      queryKeys.dashboard.all,
+    ],
     {
       successMessage: 'Transfer created',
       onSuccess: () => {
@@ -171,11 +176,25 @@ export const TransferModal: React.FC<TransferModalProps> = ({
         >
           <div>
             <Label className="mb-2 block">From</Label>
-            <DropdownSelect value={fromAccountId} onChange={setFromAccountId} options={accountOptions} placeholder="Select source account" showSearch sortByLabel />
+            <DropdownSelect
+              value={fromAccountId}
+              onChange={setFromAccountId}
+              options={accountOptions}
+              placeholder="Select source account"
+              showSearch
+              sortByLabel
+            />
           </div>
           <div>
             <Label className="mb-2 block">To</Label>
-            <DropdownSelect value={toAccountId} onChange={setToAccountId} options={accountOptions} placeholder="Select destination account" showSearch sortByLabel />
+            <DropdownSelect
+              value={toAccountId}
+              onChange={setToAccountId}
+              options={accountOptions}
+              placeholder="Select destination account"
+              showSearch
+              sortByLabel
+            />
           </div>
           {onCreateAccount ? (
             <div>
@@ -191,7 +210,15 @@ export const TransferModal: React.FC<TransferModalProps> = ({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label className="mb-2 block">Amount</Label>
-              <Input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" required />
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                required
+              />
             </div>
             <div>
               <Label className="mb-2 block">Date</Label>
@@ -214,23 +241,48 @@ export const TransferModal: React.FC<TransferModalProps> = ({
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
                 <div>
                   <Label className="mb-2 block">FX Rate (optional)</Label>
-                  <Input type="number" min="0" step="0.0000000001" value={fxRate} onChange={(e) => setFxRate(e.target.value)} />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.0000000001"
+                    value={fxRate}
+                    onChange={(e) => setFxRate(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label className="mb-2 block">FX Fee</Label>
-                  <Input type="number" min="0" step="0.01" value={fxFee} onChange={(e) => setFxFee(e.target.value)} />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={fxFee}
+                    onChange={(e) => setFxFee(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label className="mb-2 block">Platform Fee</Label>
-                  <Input type="number" min="0" step="0.01" value={platformFee} onChange={(e) => setPlatformFee(e.target.value)} />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={platformFee}
+                    onChange={(e) => setPlatformFee(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label className="mb-2 block">Tax</Label>
-                  <Input type="number" min="0" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={tax}
+                    onChange={(e) => setTax(e.target.value)}
+                  />
                 </div>
               </div>
               <p className="text-xs text-slate-400">
-                Same-currency transfer: FX rate can be empty. Cross-currency transfer: provide FX rate and optional fee/tax charges.
+                Same-currency transfer: FX rate can be empty. Cross-currency transfer: provide FX
+                rate and optional fee/tax charges.
               </p>
             </div>
           </details>
@@ -246,7 +298,11 @@ export const TransferModal: React.FC<TransferModalProps> = ({
           )}
           <div>
             <Label className="mb-2 block">Notes (optional)</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Top-up to wallet" />
+            <Input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Top-up to wallet"
+            />
           </div>
           <div className="mt-6 flex gap-3">
             <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>

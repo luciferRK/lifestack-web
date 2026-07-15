@@ -57,7 +57,9 @@ const RecurringTabImpl: React.FC<RecurringTabProps> = ({
             <RefreshCw className="h-8 w-8 text-slate-500" />
           </div>
           <h3 className="mb-2 text-lg font-medium text-white">No recurring rules yet</h3>
-          <p className="text-slate-400">Set up recurring transactions for rent, subscriptions, or salary.</p>
+          <p className="text-slate-400">
+            Set up recurring transactions for rent, subscriptions, or salary.
+          </p>
           <button
             onClick={onOpenNew}
             className="mt-6 flex items-center gap-2 rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-cyan-500 transition-colors"
@@ -99,11 +101,10 @@ const RecurringTabImpl: React.FC<RecurringTabProps> = ({
                 {/* Amount */}
                 <div>
                   <p
-                    className={`text-2xl font-bold ${
-                      isIncome ? 'text-emerald-400' : 'text-white'
-                    }`}
+                    className={`text-2xl font-bold ${isIncome ? 'text-emerald-400' : 'text-white'}`}
                   >
-                    {isIncome ? '+' : '-'}{formatCurrency(Number(r.amount), displayCurrency, currencyDisplayPreference)}
+                    {isIncome ? '+' : '-'}
+                    {formatCurrency(Number(r.amount), displayCurrency, currencyDisplayPreference)}
                   </p>
                   {r.description && (
                     <p className="mt-0.5 text-sm text-slate-400 truncate">{r.description}</p>
@@ -166,10 +167,7 @@ const RecurringTabImpl: React.FC<RecurringTabProps> = ({
           onPageChange={onPageChange}
         />
       )}
-      <Dialog
-        open={!!pendingDeactivate}
-        onOpenChange={(open) => !open && onCancelDeactivate()}
-      >
+      <Dialog open={!!pendingDeactivate} onOpenChange={(open) => !open && onCancelDeactivate()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Deactivate recurring rule?</DialogTitle>

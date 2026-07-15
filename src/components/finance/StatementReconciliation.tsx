@@ -41,7 +41,7 @@ export const StatementReconciliation: React.FC<StatementReconciliationProps> = (
   const selectedStatementId =
     statementIdOverride && statements?.some((s) => s.public_id === statementIdOverride)
       ? statementIdOverride
-      : (statements?.[0]?.public_id ?? '');
+      : statements?.[0]?.public_id ?? '';
   const setSelectedStatementId = (id: string) =>
     setStatementIdOverrides((prev) => ({ ...prev, [accountId]: id }));
 
@@ -85,7 +85,8 @@ export const StatementReconciliation: React.FC<StatementReconciliationProps> = (
   });
 
   const currency = activeStatement?.currency_code ?? 'USD';
-  const fmt = (v: string | number) => formatCurrency(Number(v), currency, currencyDisplayPreference);
+  const fmt = (v: string | number) =>
+    formatCurrency(Number(v), currency, currencyDisplayPreference);
 
   return (
     <div className="rounded-2xl border border-slate-700/60 bg-slate-900/70 p-4 space-y-4">
@@ -104,8 +105,8 @@ export const StatementReconciliation: React.FC<StatementReconciliationProps> = (
 
       {!statements || statements.length === 0 ? (
         <p className="text-sm text-slate-500">
-          No statements imported yet. Upload a bank statement CSV to reconcile this account
-          against an external source of truth.
+          No statements imported yet. Upload a bank statement CSV to reconcile this account against
+          an external source of truth.
         </p>
       ) : (
         <>
@@ -122,11 +123,15 @@ export const StatementReconciliation: React.FC<StatementReconciliationProps> = (
                 </option>
               ))}
             </select>
-            {activeStatement?.closing_balance !== null && activeStatement?.closing_balance !== undefined && (
-              <span className="text-xs text-slate-400">
-                Statement closing balance: <span className="font-mono text-slate-200">{fmt(activeStatement.closing_balance)}</span>
-              </span>
-            )}
+            {activeStatement?.closing_balance !== null &&
+              activeStatement?.closing_balance !== undefined && (
+                <span className="text-xs text-slate-400">
+                  Statement closing balance:{' '}
+                  <span className="font-mono text-slate-200">
+                    {fmt(activeStatement.closing_balance)}
+                  </span>
+                </span>
+              )}
             {activeStatement?.reconciled_through ? (
               <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                 <CheckCircle2 className="h-3 w-3" />
@@ -173,10 +178,14 @@ export const StatementReconciliation: React.FC<StatementReconciliationProps> = (
                               <button
                                 key={c.id}
                                 data-testid="statement-match-candidate"
-                                onClick={() => matchMutation.mutate({ lineId: line.public_id, candidate: c })}
+                                onClick={() =>
+                                  matchMutation.mutate({ lineId: line.public_id, candidate: c })
+                                }
                                 disabled={matchMutation.isPending || unmatchMutation.isPending}
                                 className="rounded-lg bg-cyan-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-60"
-                                title={`${c.kind} on ${formatDate(c.occurred_at)}: ${fmt(c.amount)}`}
+                                title={`${c.kind} on ${formatDate(c.occurred_at)}: ${fmt(
+                                  c.amount,
+                                )}`}
                               >
                                 Match
                               </button>
@@ -225,7 +234,8 @@ export const StatementReconciliation: React.FC<StatementReconciliationProps> = (
               {reconciliation.unmatched_ledger_rows.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Ledger entries not on the statement ({reconciliation.unmatched_ledger_rows.length})
+                    Ledger entries not on the statement (
+                    {reconciliation.unmatched_ledger_rows.length})
                   </p>
                   <p className="text-xs text-slate-500">
                     Possible duplicates or entries outside this bank's clearing window.

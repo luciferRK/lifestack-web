@@ -137,11 +137,7 @@ describe('api — refresh interceptor', () => {
     );
 
     // Fire three requests simultaneously — all will 401
-    await Promise.allSettled([
-      api.get('/v1/todos'),
-      api.get('/v1/todos'),
-      api.get('/v1/todos'),
-    ]);
+    await Promise.allSettled([api.get('/v1/todos'), api.get('/v1/todos'), api.get('/v1/todos')]);
 
     // Only one refresh request should have been made
     expect(refreshCallCount).toBe(1);
