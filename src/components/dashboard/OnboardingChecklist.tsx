@@ -31,9 +31,14 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ worksp
   // by workspace — only so the "Dismiss" click can trigger a re-render
   // without a page reload. Keying by workspace stops a dismissal in one
   // workspace from suppressing the checklist after switching to another.
-  const [sessionDismissedByWorkspace, setSessionDismissedByWorkspace] = useState<Record<string, boolean>>({});
-  const persistedDismissed = workspaceId ? window.localStorage.getItem(dismissalKey(workspaceId)) === '1' : false;
-  const dismissed = sessionDismissedByWorkspace[workspaceStorageKey(workspaceId)] || persistedDismissed;
+  const [sessionDismissedByWorkspace, setSessionDismissedByWorkspace] = useState<
+    Record<string, boolean>
+  >({});
+  const persistedDismissed = workspaceId
+    ? window.localStorage.getItem(dismissalKey(workspaceId)) === '1'
+    : false;
+  const dismissed =
+    sessionDismissedByWorkspace[workspaceStorageKey(workspaceId)] || persistedDismissed;
 
   const requiredSteps = steps.filter((step) => !step.optional);
   const allRequiredDone = requiredSteps.length > 0 && requiredSteps.every((step) => step.done);
@@ -43,7 +48,10 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ worksp
   const doneCount = steps.filter((step) => step.done).length;
 
   const handleDismiss = () => {
-    setSessionDismissedByWorkspace((prev) => ({ ...prev, [workspaceStorageKey(workspaceId)]: true }));
+    setSessionDismissedByWorkspace((prev) => ({
+      ...prev,
+      [workspaceStorageKey(workspaceId)]: true,
+    }));
     if (workspaceId) {
       window.localStorage.setItem(dismissalKey(workspaceId), '1');
     }
@@ -87,13 +95,20 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ worksp
             <Circle className="h-5 w-5 shrink-0 text-slate-500" />
           );
           const label = <span className={step.done ? 'line-through' : ''}>{step.label}</span>;
-          const optionalTag = step.optional && !step.done ? (
-            <span className="ml-auto text-xs uppercase tracking-wide text-slate-500">Optional</span>
-          ) : null;
+          const optionalTag =
+            step.optional && !step.done ? (
+              <span className="ml-auto text-xs uppercase tracking-wide text-slate-500">
+                Optional
+              </span>
+            ) : null;
 
           if (step.actions && step.actions.length > 0) {
             return (
-              <li key={step.id} data-testid={`dashboard-onboarding-step-${step.id}`} className={rowClassName}>
+              <li
+                key={step.id}
+                data-testid={`dashboard-onboarding-step-${step.id}`}
+                className={rowClassName}
+              >
                 {icon}
                 {label}
                 {optionalTag}

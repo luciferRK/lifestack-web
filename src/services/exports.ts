@@ -26,8 +26,7 @@ export const exportsService = {
     return {
       blob: response.data as Blob,
       filename:
-        filenameFromDisposition(response.headers?.['content-disposition']) ??
-        'lifestack-export',
+        filenameFromDisposition(response.headers?.['content-disposition']) ?? 'lifestack-export',
     };
   },
 

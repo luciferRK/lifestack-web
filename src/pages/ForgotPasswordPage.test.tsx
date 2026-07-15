@@ -22,9 +22,7 @@ describe('ForgotPasswordPage', () => {
   });
 
   it('shows success message and clears email on success', async () => {
-    server.use(
-      http.post('*/auth/forgot-password', () => HttpResponse.json({ ok: true })),
-    );
+    server.use(http.post('*/auth/forgot-password', () => HttpResponse.json({ ok: true })));
 
     renderPage();
     fireEvent.change(screen.getByPlaceholderText('Email address'), {
@@ -33,17 +31,13 @@ describe('ForgotPasswordPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send Reset Link' }));
 
     expect(
-      await screen.findByText(
-        'If the email is registered, a password reset link has been sent.',
-      ),
+      await screen.findByText('If the email is registered, a password reset link has been sent.'),
     ).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Email address')).toHaveValue('');
   });
 
   it('shows error message on failure', async () => {
-    server.use(
-      http.post('*/auth/forgot-password', () => new HttpResponse(null, { status: 500 })),
-    );
+    server.use(http.post('*/auth/forgot-password', () => new HttpResponse(null, { status: 500 })));
 
     renderPage();
     fireEvent.change(screen.getByPlaceholderText('Email address'), {
@@ -51,18 +45,18 @@ describe('ForgotPasswordPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Send Reset Link' }));
 
-    expect(
-      await screen.findByText('An error occurred. Please try again.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('An error occurred. Please try again.')).toBeInTheDocument();
   });
 
   it('shows loading state while submitting', async () => {
     let resolveRequest!: () => void;
     server.use(
-      http.post('*/auth/forgot-password', () =>
-        new Promise<Response>((resolve) => {
-          resolveRequest = () => resolve(HttpResponse.json({ ok: true }) as unknown as Response);
-        }),
+      http.post(
+        '*/auth/forgot-password',
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveRequest = () => resolve(HttpResponse.json({ ok: true }) as unknown as Response);
+          }),
       ),
     );
 

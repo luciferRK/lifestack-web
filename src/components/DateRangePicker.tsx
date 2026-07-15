@@ -78,7 +78,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const endMonth = new Date(today.getFullYear() + 5, 11, 31);
 
   const label = fromDate
-    ? `${formatDate(fromDate, { utc: false })} — ${toDate ? formatDate(toDate, { utc: false }) : '…'}`
+    ? `${formatDate(fromDate, { utc: false })} — ${
+        toDate ? formatDate(toDate, { utc: false }) : '…'
+      }`
     : placeholder;
 
   return (

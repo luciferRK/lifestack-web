@@ -97,7 +97,7 @@ export const ExportsPage: React.FC = () => {
       <PageHero
         title="Data Exports"
         subtitle="Create a workspace export, download it when ready, and delete the artifact when you are done."
-        actions={(
+        actions={
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
@@ -106,10 +106,13 @@ export const ExportsPage: React.FC = () => {
             <Plus className="h-4 w-4" />
             Create Export
           </button>
-        )}
+        }
       />
 
-      <Dialog open={isCreateModalOpen} onOpenChange={(open) => !open && setIsCreateModalOpen(false)}>
+      <Dialog
+        open={isCreateModalOpen}
+        onOpenChange={(open) => !open && setIsCreateModalOpen(false)}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader className="pb-4 mb-4 border-b border-slate-800">
             <DialogTitle>Create Export</DialogTitle>
@@ -201,13 +204,18 @@ export const ExportsPage: React.FC = () => {
                     {activeExport.status}
                   </span>
                 </div>
-                <p>Format: <span className="font-semibold text-slate-100">{activeExport.format}</span></p>
+                <p>
+                  Format:{' '}
+                  <span className="font-semibold text-slate-100">{activeExport.format}</span>
+                </p>
                 <p>Schema version: {activeExport.schema_version}</p>
                 <p>Created: {formatDateTime(activeExport.created_at)}</p>
                 {activeExport.completed_at ? (
                   <p>Completed: {formatDateTime(activeExport.completed_at)}</p>
                 ) : null}
-                {activeExport.artifact_filename ? <p>Artifact: {activeExport.artifact_filename}</p> : null}
+                {activeExport.artifact_filename ? (
+                  <p>Artifact: {activeExport.artifact_filename}</p>
+                ) : null}
                 {activeExport.error_message ? (
                   <p className="text-rose-300">Error: {activeExport.error_message}</p>
                 ) : null}
@@ -235,7 +243,9 @@ export const ExportsPage: React.FC = () => {
               </div>
 
               {downloadMutation.isError ? (
-                <p className="mt-3 text-sm text-rose-300 text-right">Download failed. Refresh status and try again.</p>
+                <p className="mt-3 text-sm text-rose-300 text-right">
+                  Download failed. Refresh status and try again.
+                </p>
               ) : null}
             </>
           )}

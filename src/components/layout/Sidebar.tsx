@@ -13,7 +13,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const navLinkClass = (isActive: boolean, collapsedState: boolean) =>
     `flex items-center rounded-lg py-2 text-sm font-medium transition-colors ${
       collapsedState ? 'justify-center px-0' : 'px-3'
-    } ${isActive ? 'bg-cyan-500/10 text-cyan-300' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`;
+    } ${
+      isActive
+        ? 'bg-cyan-500/10 text-cyan-300'
+        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+    }`;
 
   return (
     <nav
@@ -21,7 +25,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         collapsed ? 'w-16 px-2' : 'w-64 px-4'
       }`}
     >
-      <div className={`mb-8 flex items-center justify-between ${collapsed ? 'flex-col gap-4' : 'px-2'}`}>
+      <div
+        className={`mb-8 flex items-center justify-between ${
+          collapsed ? 'flex-col gap-4' : 'px-2'
+        }`}
+      >
         {!collapsed ? (
           <h1 className="text-2xl font-bold tracking-tight text-white">Lifestack</h1>
         ) : (
@@ -44,33 +52,38 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               </p>
             )}
             <ul className="space-y-1">
-              {NAV_LINKS.filter((link) => link.section === section).map(({ to, label, testId, icon: Icon }) => (
-                <li key={to}>
-                  {to === '/capture' ? (
-                    <button
-                      type="button"
-                      data-testid={testId}
-                      title={collapsed ? label : undefined}
-                      className={`w-full bg-transparent text-left ${navLinkClass(false, collapsed)}`}
-                      onClick={() => setIsOpen(true)}
-                    >
-                      <Icon className={`shrink-0 ${collapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'}`} />
-                      {!collapsed && <span>{label}</span>}
-                    </button>
-                  ) : (
-                    <NavLink
-                      to={to}
-                      end={to === '/'}
-                      data-testid={testId}
-                      title={collapsed ? label : undefined}
-                      className={({ isActive }) => navLinkClass(isActive, collapsed)}
-                    >
-                      <Icon className={`shrink-0 ${collapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'}`} />
-                      {!collapsed && <span>{label}</span>}
-                    </NavLink>
-                  )}
-                </li>
-              ))}
+              {NAV_LINKS.filter((link) => link.section === section).map(
+                ({ to, label, testId, icon: Icon }) => (
+                  <li key={to}>
+                    {to === '/capture' ? (
+                      <button
+                        type="button"
+                        data-testid={testId}
+                        title={collapsed ? label : undefined}
+                        className={`w-full bg-transparent text-left ${navLinkClass(
+                          false,
+                          collapsed,
+                        )}`}
+                        onClick={() => setIsOpen(true)}
+                      >
+                        <Icon className={`shrink-0 ${collapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'}`} />
+                        {!collapsed && <span>{label}</span>}
+                      </button>
+                    ) : (
+                      <NavLink
+                        to={to}
+                        end={to === '/'}
+                        data-testid={testId}
+                        title={collapsed ? label : undefined}
+                        className={({ isActive }) => navLinkClass(isActive, collapsed)}
+                      >
+                        <Icon className={`shrink-0 ${collapsed ? 'h-5 w-5' : 'h-4 w-4 mr-3'}`} />
+                        {!collapsed && <span>{label}</span>}
+                      </NavLink>
+                    )}
+                  </li>
+                ),
+              )}
             </ul>
           </div>
         ))}

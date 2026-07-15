@@ -43,21 +43,35 @@ export const TaskRow: React.FC<TaskRowProps> = ({
       <div
         key={todo.public_id}
         data-testid={`todo-item-${todo.public_id}`}
-        className={`group flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/45 px-4 py-3 transition-all hover:border-slate-600 ${todo.completed ? 'opacity-60' : ''}`}
+        className={`group flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/45 px-4 py-3 transition-all hover:border-slate-600 ${
+          todo.completed ? 'opacity-60' : ''
+        }`}
       >
         <div className="flex min-w-0 items-center gap-3">
           <button
             data-testid={`todo-toggle-${todo.public_id}`}
-            aria-label={todo.completed ? `Mark todo as incomplete: ${todo.title}` : `Mark todo as complete: ${todo.title}`}
+            aria-label={
+              todo.completed
+                ? `Mark todo as incomplete: ${todo.title}`
+                : `Mark todo as complete: ${todo.title}`
+            }
             onClick={() => onToggle(todo)}
             disabled={isToggling}
             className="shrink-0 text-slate-400 transition-colors hover:text-cyan-500 disabled:opacity-50"
           >
-            {todo.completed ? <CheckCircle2 className="h-5 w-5 text-cyan-400" /> : <Circle className="h-5 w-5" />}
+            {todo.completed ? (
+              <CheckCircle2 className="h-5 w-5 text-cyan-400" />
+            ) : (
+              <Circle className="h-5 w-5" />
+            )}
           </button>
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <h3 className={`truncate text-sm font-semibold text-white ${todo.completed ? 'line-through text-slate-400' : ''}`}>
+              <h3
+                className={`truncate text-sm font-semibold text-white ${
+                  todo.completed ? 'line-through text-slate-400' : ''
+                }`}
+              >
                 {todo.title}
               </h3>
               {!isSubtask && todo.subtask_count > 0 ? (
@@ -72,13 +86,26 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                   {todo.subtask_count - subtasks.length}/{todo.subtask_count}
                 </span>
               ) : null}
-              <span className={`inline-flex rounded border px-2 py-0.5 text-xs ${priorityTone(todo.priority)}`}>
+              <span
+                className={`inline-flex rounded border px-2 py-0.5 text-xs ${priorityTone(
+                  todo.priority,
+                )}`}
+              >
                 {priorityLabel(todo.priority)}
               </span>
               {dueLabel ? (
-                <span className={`text-xs ${isOverdueTodo(todo) ? 'text-rose-400 font-semibold flex items-center gap-1 bg-rose-950/40 border border-rose-900/50 rounded px-1.5 py-0.5' : 'text-slate-400'}`}>
-                  {isOverdueTodo(todo) && <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />}
-                  {isOverdueTodo(todo) ? 'Overdue: ' : 'Due: '}{dueLabel}
+                <span
+                  className={`text-xs ${
+                    isOverdueTodo(todo)
+                      ? 'text-rose-400 font-semibold flex items-center gap-1 bg-rose-950/40 border border-rose-900/50 rounded px-1.5 py-0.5'
+                      : 'text-slate-400'
+                  }`}
+                >
+                  {isOverdueTodo(todo) && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />
+                  )}
+                  {isOverdueTodo(todo) ? 'Overdue: ' : 'Due: '}
+                  {dueLabel}
                 </span>
               ) : null}
             </div>

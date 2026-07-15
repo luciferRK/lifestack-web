@@ -25,7 +25,12 @@ const formatDelta = (delta: string | null): string => {
   return `${sign}${value.toFixed(1)} kg`;
 };
 
-export const WeightSection: React.FC<WeightSectionProps> = ({ trend, isLoading, onLog, isLogging = false }) => {
+export const WeightSection: React.FC<WeightSectionProps> = ({
+  trend,
+  isLoading,
+  onLog,
+  isLogging = false,
+}) => {
   const [weightInput, setWeightInput] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -40,7 +45,10 @@ export const WeightSection: React.FC<WeightSectionProps> = ({ trend, isLoading, 
     <div className="space-y-4">
       <form onSubmit={handleSubmit} className="flex items-end gap-3">
         <div className="flex-1">
-          <label className="mb-1.5 block text-sm font-medium text-slate-300" htmlFor="weight-quick-log">
+          <label
+            className="mb-1.5 block text-sm font-medium text-slate-300"
+            htmlFor="weight-quick-log"
+          >
             Log weight (kg)
           </label>
           <input
@@ -56,7 +64,12 @@ export const WeightSection: React.FC<WeightSectionProps> = ({ trend, isLoading, 
             className="h-10 w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm text-white"
           />
         </div>
-        <Button type="submit" loading={isLogging} disabled={!weightInput.trim()} data-testid="weight-quick-log-submit">
+        <Button
+          type="submit"
+          loading={isLogging}
+          disabled={!weightInput.trim()}
+          data-testid="weight-quick-log-submit"
+        >
           Log
         </Button>
       </form>
@@ -66,7 +79,10 @@ export const WeightSection: React.FC<WeightSectionProps> = ({ trend, isLoading, 
       ) : trend && trend.entries.length > 0 ? (
         <>
           <div className="grid grid-cols-3 gap-3">
-            <StatTile label="Latest" value={trend.latest_kg ? `${parseFloat(trend.latest_kg).toFixed(1)} kg` : '—'} />
+            <StatTile
+              label="Latest"
+              value={trend.latest_kg ? `${parseFloat(trend.latest_kg).toFixed(1)} kg` : '—'}
+            />
             <StatTile label="Δ 7 days" value={formatDelta(trend.delta_7d_kg)} />
             <StatTile label="Δ 30 days" value={formatDelta(trend.delta_30d_kg)} />
           </div>

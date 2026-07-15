@@ -17,7 +17,9 @@ describe('MedicationFormDialog', () => {
     const onSubmit = vi.fn();
     render(<MedicationFormDialog open onOpenChange={vi.fn()} onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByTestId('medication-name-input'), { target: { value: 'Vitamin D' } });
+    fireEvent.change(screen.getByTestId('medication-name-input'), {
+      target: { value: 'Vitamin D' },
+    });
     fireEvent.click(screen.getByTestId('medication-frequency'));
     fireEvent.click(await screen.findByRole('option', { name: 'Weekly' }));
 
@@ -35,7 +37,9 @@ describe('MedicationFormDialog', () => {
     const onSubmit = vi.fn();
     render(<MedicationFormDialog open onOpenChange={vi.fn()} onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByTestId('medication-name-input'), { target: { value: 'Vitamin D' } });
+    fireEvent.change(screen.getByTestId('medication-name-input'), {
+      target: { value: 'Vitamin D' },
+    });
     fireEvent.click(screen.getByTestId('medication-frequency'));
     fireEvent.click(await screen.findByRole('option', { name: 'Weekly' }));
     fireEvent.click(screen.getByTestId('medication-weekday-0'));

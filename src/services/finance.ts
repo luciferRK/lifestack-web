@@ -38,7 +38,6 @@ import type {
   WorkspaceFinanceSettingUpdate,
 } from '../types/finance';
 
-
 const PaginatedAccountsSchema = paginatedSchema(AccountSchema);
 const PaginatedTransfersSchema = paginatedSchema(CapitalTransferSchema);
 const PaginatedUserFxRatesSchema = paginatedSchema(UserFxRateSchema);

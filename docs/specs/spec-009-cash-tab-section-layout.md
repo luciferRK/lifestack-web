@@ -47,13 +47,13 @@ Reorder to put actionable content before read-only context:
 
 ## Now vs. Proposed
 
-| Aspect | Now | Proposed |
-|---|---|---|
-| Cash balances list | up to 200 rows rendered | 10/page + Pagination |
-| Transfers list | up to 200 rows, client-filtered | 10/page (client-side over the fetched window), link to full history |
-| Dividends list | up to 200 rows | 10/page + Pagination |
-| Reaching Dividends | scroll past everything | ≤ 2 screens regardless of data volume |
-| Consistency | Orders paginated, Cash tab not | one pattern everywhere |
+| Aspect             | Now                             | Proposed                                                            |
+| ------------------ | ------------------------------- | ------------------------------------------------------------------- |
+| Cash balances list | up to 200 rows rendered         | 10/page + Pagination                                                |
+| Transfers list     | up to 200 rows, client-filtered | 10/page (client-side over the fetched window), link to full history |
+| Dividends list     | up to 200 rows                  | 10/page + Pagination                                                |
+| Reaching Dividends | scroll past everything          | ≤ 2 screens regardless of data volume                               |
+| Consistency        | Orders paginated, Cash tab not  | one pattern everywhere                                              |
 
 ## Testing & evidence
 

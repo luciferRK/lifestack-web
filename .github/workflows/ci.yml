@@ -51,4 +51,3 @@ jobs:
         with:
           path: ./
           extra_args: --results=verified
-

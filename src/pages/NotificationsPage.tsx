@@ -24,10 +24,16 @@ const NotificationRow: React.FC<{ n: NotificationItem }> = ({ n }) => {
   });
 
   return (
-    <article className={`rounded-xl border p-4 ${n.is_read ? 'border-slate-800 bg-slate-900/40' : 'border-cyan-800 bg-cyan-950/40'}`}>
+    <article
+      className={`rounded-xl border p-4 ${
+        n.is_read ? 'border-slate-800 bg-slate-900/40' : 'border-cyan-800 bg-cyan-950/40'
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-slate-400">{categoryLabel(n.category)} · {n.severity}</p>
+          <p className="text-sm text-slate-400">
+            {categoryLabel(n.category)} · {n.severity}
+          </p>
           <h3 className="font-semibold text-white">{n.title}</h3>
           {n.body ? <p className="mt-1 text-sm text-slate-300">{n.body}</p> : null}
           <p className="mt-2 text-xs text-slate-500">
@@ -93,7 +99,13 @@ export const NotificationsPage: React.FC = () => {
       ? preferences
       : [
           ...preferences,
-          { category: 'todo_reminder', channel_in_app: true, channel_email: false, channel_push: false, is_muted: false },
+          {
+            category: 'todo_reminder',
+            channel_in_app: true,
+            channel_email: false,
+            channel_push: false,
+            is_muted: false,
+          },
         ]
     : undefined;
 
@@ -110,7 +122,7 @@ export const NotificationsPage: React.FC = () => {
       <PageHero
         title="Notifications"
         subtitle="In-app alerts and delivery preferences."
-        actions={(
+        actions={
           <button
             onClick={() => markAllMutation.mutate()}
             disabled={markAllMutation.isPending}
@@ -118,13 +130,17 @@ export const NotificationsPage: React.FC = () => {
           >
             Mark all read
           </button>
-        )}
+        }
       />
 
       <Tabs defaultValue="inbox">
         <TabsList>
-          <TabsTrigger value="inbox" data-testid="notifications-tab-inbox">Inbox</TabsTrigger>
-          <TabsTrigger value="settings" data-testid="notifications-tab-settings">Preferences & Devices</TabsTrigger>
+          <TabsTrigger value="inbox" data-testid="notifications-tab-inbox">
+            Inbox
+          </TabsTrigger>
+          <TabsTrigger value="settings" data-testid="notifications-tab-settings">
+            Preferences & Devices
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="inbox">
@@ -143,7 +159,12 @@ export const NotificationsPage: React.FC = () => {
                 ))}
               </div>
               <div className="mt-4">
-                <Pagination total={data.total} limit={data.limit} offset={data.offset} onPageChange={setOffset} />
+                <Pagination
+                  total={data.total}
+                  limit={data.limit}
+                  offset={data.offset}
+                  onPageChange={setOffset}
+                />
               </div>
             </>
           ) : (
@@ -158,13 +179,19 @@ export const NotificationsPage: React.FC = () => {
         <TabsContent value="settings">
           <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6">
             <div>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">Preferences</h2>
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">
+                Preferences
+              </h2>
               <p className="mb-3 text-xs text-slate-500">
-                Push and email notifications can be toggled per category. All categories are always shown in-app.
+                Push and email notifications can be toggled per category. All categories are always
+                shown in-app.
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {displayedPreferences?.map((pref) => (
-                  <div key={pref.category} className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm">
+                  <div
+                    key={pref.category}
+                    className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm"
+                  >
                     <p className="font-semibold text-white">{categoryLabel(pref.category)}</p>
                     <label className="mt-2 flex items-center gap-2 text-slate-300">
                       <input
@@ -172,7 +199,10 @@ export const NotificationsPage: React.FC = () => {
                         checked={pref.channel_push}
                         disabled={togglePushMutation.isPending}
                         onChange={(e) =>
-                          togglePushMutation.mutate({ category: pref.category, channel_push: e.target.checked })
+                          togglePushMutation.mutate({
+                            category: pref.category,
+                            channel_push: e.target.checked,
+                          })
                         }
                       />
                       Push notifications
@@ -183,7 +213,10 @@ export const NotificationsPage: React.FC = () => {
                         checked={pref.channel_email}
                         disabled={toggleEmailMutation.isPending || togglePushMutation.isPending}
                         onChange={(e) =>
-                          toggleEmailMutation.mutate({ category: pref.category, channel_email: e.target.checked })
+                          toggleEmailMutation.mutate({
+                            category: pref.category,
+                            channel_email: e.target.checked,
+                          })
                         }
                       />
                       Email notifications
@@ -194,7 +227,9 @@ export const NotificationsPage: React.FC = () => {
             </div>
 
             <div>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">Devices</h2>
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">
+                Devices
+              </h2>
               <PushSubscriptionSettings />
             </div>
           </section>

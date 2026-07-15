@@ -1,14 +1,7 @@
 import { useState } from 'react';
 import { Navigate, Link, NavLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Bell,
-  Building2,
-  ChevronDown,
-  Menu,
-  Plus,
-  UserCircle2,
-} from 'lucide-react';
+import { Bell, Building2, ChevronDown, Menu, Plus, UserCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { authService } from '../../services/auth';
@@ -163,7 +156,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                       className="max-w-[180px] bg-transparent text-sm font-semibold text-slate-100 outline-none"
                     >
                       {workspaces.map((item) => (
-                        <option key={item.public_id} value={item.public_id} className="bg-slate-900">
+                        <option
+                          key={item.public_id}
+                          value={item.public_id}
+                          className="bg-slate-900"
+                        >
                           {item.name}
                         </option>
                       ))}
@@ -174,7 +171,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                     </span>
                   )}
                   {roleBadge && (
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleBadge}`}>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleBadge}`}
+                    >
                       {workspace.role}
                     </span>
                   )}
@@ -236,20 +235,28 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   className="list-none inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
                 >
                   <UserCircle2 className="h-4 w-4 text-slate-400" />
-                  <span className="max-w-[140px] truncate">{user?.username ?? user?.email ?? 'Profile'}</span>
+                  <span className="max-w-[140px] truncate">
+                    {user?.username ?? user?.email ?? 'Profile'}
+                  </span>
                   <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
                 </summary>
                 <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-2xl shadow-black/40">
                   <div className="mb-2 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Signed In</p>
-                    <p className="mt-1 truncate text-sm font-semibold text-slate-100">{user?.username ?? 'Profile'}</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                      Signed In
+                    </p>
+                    <p className="mt-1 truncate text-sm font-semibold text-slate-100">
+                      {user?.username ?? 'Profile'}
+                    </p>
                     <p className="truncate text-xs text-slate-400">{user?.email ?? ''}</p>
                     {workspace && (
                       <div className="mt-2 flex items-center gap-1.5 border-t border-slate-800 pt-2">
                         <Building2 className="h-3 w-3 text-slate-500 shrink-0" />
                         <span className="text-xs text-slate-400 truncate">{workspace.name}</span>
                         {roleBadge && (
-                          <span className={`ml-auto shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${roleBadge}`}>
+                          <span
+                            className={`ml-auto shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${roleBadge}`}
+                          >
                             {workspace.role}
                           </span>
                         )}

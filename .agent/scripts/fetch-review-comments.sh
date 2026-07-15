@@ -140,7 +140,7 @@ for i, thread in enumerate(visible_threads, 1):
     is_outdated = thread.get("isOutdated")
     path = thread.get("path")
     line = thread.get("line")
-    
+
     status_parts = []
     if is_resolved:
         status_parts.append("✅ RESOLVED")
@@ -148,15 +148,15 @@ for i, thread in enumerate(visible_threads, 1):
         status_parts.append("🔴 UNRESOLVED")
     if is_outdated:
         status_parts.append("⚠️ OUTDATED")
-        
+
     status_str = ", ".join(status_parts)
     line_str = f"L{line}" if line else "New/No Line Info"
-    
+
     print(f"\n[{i}] Thread ID: {thread_id}")
     print(f"    Status: {status_str}")
     print(f"    File:   {path}:{line_str}")
     print("    " + "-" * 76)
-    
+
     comments = thread.get("comments", {}).get("nodes", [])
     for c in comments:
         author = c.get("author", {}).get("login") if c.get("author") else "ghost"

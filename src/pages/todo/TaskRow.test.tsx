@@ -26,7 +26,11 @@ describe('TaskRow subtask progress', () => {
     // about it. Regression test for a bug where the badge read 0/1 instead
     // of 1/2 because it derived the total from subtasks.length.
     const parent = makeTodo({ public_id: 'parent-1', title: 'Plan trip', subtask_count: 2 });
-    const openChild = makeTodo({ public_id: 'child-1', title: 'Pack bags', parent_public_id: 'parent-1' });
+    const openChild = makeTodo({
+      public_id: 'child-1',
+      title: 'Pack bags',
+      parent_public_id: 'parent-1',
+    });
 
     render(
       <TaskRow

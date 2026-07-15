@@ -16,7 +16,13 @@ import { useToast } from '../components/ui/toast';
 import { useInvalidatingMutation } from '../hooks/useInvalidatingMutation';
 import { queryKeys } from '../lib/queryKeys';
 import { todoService } from '../services/todo';
-import type { MonthlyMode, RecurringTodoCreate, RecurringTodoRule, Todo, TodoCreate } from '../services/todo';
+import type {
+  MonthlyMode,
+  RecurringTodoCreate,
+  RecurringTodoRule,
+  Todo,
+  TodoCreate,
+} from '../services/todo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { formatDate, formatDateTime } from '../utils/dateFormat';
 import { describeRecurrence } from '../utils/recurrenceLabel';
@@ -77,13 +83,18 @@ const toLocalDateInput = (value: string | null | undefined): string => {
   if (!value || Number.isNaN(Date.parse(value))) return '';
   if (isUtcMidnight(value)) return value.slice(0, 10);
   const date = new Date(value);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}`;
 };
 
 const toLocalTimeInput = (value: string | null | undefined): string => {
   if (!value || Number.isNaN(Date.parse(value)) || isUtcMidnight(value)) return '';
   const date = new Date(value);
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(
+    2,
+    '0',
+  )}`;
 };
 
 const toIsoDueDate = (yyyyMmDd: string, hhMm: string): string | null => {
@@ -186,10 +197,13 @@ export const TodoPage: React.FC = () => {
   useEffect(() => {
     if (searchParams.get('new') === '1') {
       openNewTaskModal();
-      setSearchParams((params) => {
-        params.delete('new');
-        return params;
-      }, { replace: true });
+      setSearchParams(
+        (params) => {
+          params.delete('new');
+          return params;
+        },
+        { replace: true },
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -231,7 +245,10 @@ export const TodoPage: React.FC = () => {
       errorMessage: 'Could not clear completed tasks. Please try again.',
       onSuccess: (result) => {
         setIsClearCompletedOpen(false);
-        showToast(`Cleared ${result.deleted} completed task${result.deleted === 1 ? '' : 's'}`, 'success');
+        showToast(
+          `Cleared ${result.deleted} completed task${result.deleted === 1 ? '' : 's'}`,
+          'success',
+        );
       },
     },
   );
@@ -433,7 +450,7 @@ export const TodoPage: React.FC = () => {
       <PageHero
         title="Todos"
         subtitle="Manage your tasks and recurring todos for this workspace."
-        actions={(
+        actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -453,7 +470,7 @@ export const TodoPage: React.FC = () => {
               New recurring todo
             </button>
           </div>
-        )}
+        }
       />
 
       <Dialog open={isTaskModalOpen} onOpenChange={(open) => !open && closeTaskModal()}>
@@ -462,7 +479,9 @@ export const TodoPage: React.FC = () => {
             <DialogTitle>
               {subtaskParent
                 ? `New subtask for "${subtaskParent.title}"`
-                : editingTodo ? 'Edit task' : 'New task'}
+                : editingTodo
+                  ? 'Edit task'
+                  : 'New task'}
             </DialogTitle>
           </DialogHeader>
           {isTaskModalOpen && (
@@ -470,7 +489,10 @@ export const TodoPage: React.FC = () => {
               {editingTodo?.parent_public_id && !removeFromParent ? (
                 <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-300">
                   <span data-testid="todo-edit-parent-chip">
-                    Subtask of: <span className="font-semibold text-slate-100">{editingParentTitle ?? 'parent task'}</span>
+                    Subtask of:{' '}
+                    <span className="font-semibold text-slate-100">
+                      {editingParentTitle ?? 'parent task'}
+                    </span>
                   </span>
                   <button
                     type="button"
@@ -483,7 +505,9 @@ export const TodoPage: React.FC = () => {
                 </div>
               ) : null}
               <div className="flex flex-col gap-2">
-                <label htmlFor="todo-new-title" className="text-sm font-semibold text-slate-300">What needs to be done?</label>
+                <label htmlFor="todo-new-title" className="text-sm font-semibold text-slate-300">
+                  What needs to be done?
+                </label>
                 <input
                   id="todo-new-title"
                   data-testid="todo-new-title"
@@ -497,7 +521,12 @@ export const TodoPage: React.FC = () => {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label htmlFor="todo-new-description" className="text-sm font-semibold text-slate-300">Description (optional)</label>
+                <label
+                  htmlFor="todo-new-description"
+                  className="text-sm font-semibold text-slate-300"
+                >
+                  Description (optional)
+                </label>
                 <textarea
                   id="todo-new-description"
                   data-testid="todo-new-description"
@@ -512,19 +541,28 @@ export const TodoPage: React.FC = () => {
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="todo-new-priority" className="text-sm font-semibold text-slate-300">Priority</label>
+                  <label
+                    htmlFor="todo-new-priority"
+                    className="text-sm font-semibold text-slate-300"
+                  >
+                    Priority
+                  </label>
                   <DropdownSelect
                     id="todo-new-priority"
                     testId="todo-new-priority"
                     value={taskForm.priority}
-                    onChange={(value) => setTaskForm((s) => ({ ...s, priority: value as TodoPriority }))}
+                    onChange={(value) =>
+                      setTaskForm((s) => ({ ...s, priority: value as TodoPriority }))
+                    }
                     options={priorityOptions}
                     placeholder="Priority"
                     disabled={createMutation.isPending || updateMutation.isPending}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-slate-300">Due date (optional)</label>
+                  <label className="text-sm font-semibold text-slate-300">
+                    Due date (optional)
+                  </label>
                   <DatePicker
                     testId="todo-new-due-date"
                     value={taskForm.due_date}
@@ -540,12 +578,16 @@ export const TodoPage: React.FC = () => {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-slate-300">Due time (optional)</label>
+                  <label className="text-sm font-semibold text-slate-300">
+                    Due time (optional)
+                  </label>
                   <TimePicker
                     testId="todo-new-due-time"
                     value={taskForm.due_time}
                     onChange={(value) => setTaskForm((s) => ({ ...s, due_time: value }))}
-                    disabled={!taskForm.due_date || createMutation.isPending || updateMutation.isPending}
+                    disabled={
+                      !taskForm.due_date || createMutation.isPending || updateMutation.isPending
+                    }
                   />
                 </div>
               </div>
@@ -560,12 +602,16 @@ export const TodoPage: React.FC = () => {
                 <button
                   data-testid="todo-new-submit"
                   type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending || !taskForm.title.trim()}
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending || !taskForm.title.trim()
+                  }
                   className="flex-1 h-10 rounded-lg bg-cyan-600 px-4 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
                 >
                   {createMutation.isPending || updateMutation.isPending
                     ? 'Saving...'
-                    : editingTodo ? 'Save Task' : 'Add Task'}
+                    : editingTodo
+                      ? 'Save Task'
+                      : 'Add Task'}
                 </button>
               </div>
             </form>
@@ -585,8 +631,12 @@ export const TodoPage: React.FC = () => {
         className="w-full"
       >
         <TabsList className="mb-6">
-          <TabsTrigger value="tasks" data-testid="todo-tab-tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="recurring" data-testid="todo-tab-recurring">Recurring todos</TabsTrigger>
+          <TabsTrigger value="tasks" data-testid="todo-tab-tasks">
+            Tasks
+          </TabsTrigger>
+          <TabsTrigger value="recurring" data-testid="todo-tab-recurring">
+            Recurring todos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tasks" className="space-y-6 focus-visible:outline-none">
@@ -597,11 +647,16 @@ export const TodoPage: React.FC = () => {
               {topLevelTodos.length === 0 ? (
                 <div className="rounded-2xl border border-slate-800 bg-slate-800/30 p-8 text-center">
                   <p className="text-slate-300">No tasks yet.</p>
-                  <p className="mt-1 text-sm text-slate-500">Create your first task above to get started.</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Create your first task above to get started.
+                  </p>
                 </div>
               ) : (
                 dateBuckets.map((bucket) => (
-                  <div key={bucket.label} data-testid={`todo-bucket-${bucket.label.replace(/\s+/g, '-').toLowerCase()}`}>
+                  <div
+                    key={bucket.label}
+                    data-testid={`todo-bucket-${bucket.label.replace(/\s+/g, '-').toLowerCase()}`}
+                  >
                     <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
                       {bucket.label}
                       <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-normal text-slate-400">
@@ -635,7 +690,8 @@ export const TodoPage: React.FC = () => {
                   onClick={() => setOpenLimit((n) => n + OPEN_TASKS_PAGE_SIZE)}
                   className="text-sm font-semibold text-cyan-400 hover:text-cyan-300"
                 >
-                  {openTodosResponse.total - openTodosResponse.items.length} more not shown — load more
+                  {openTodosResponse.total - openTodosResponse.items.length} more not shown — load
+                  more
                 </button>
               ) : null}
 
@@ -647,7 +703,11 @@ export const TodoPage: React.FC = () => {
                     onClick={() => setIsCompletedOpen((v) => !v)}
                     className="flex items-center gap-2 text-left hover:text-white"
                   >
-                    {isCompletedOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    {isCompletedOpen ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
                     Completed
                     {completedTodosResponse ? (
                       <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-normal text-slate-400">
@@ -686,8 +746,11 @@ export const TodoPage: React.FC = () => {
                             >
                               <div className="min-w-0">
                                 <div className="flex min-w-0 items-center gap-2">
-                                  <span className="truncate text-sm text-slate-300 line-through">{todo.title}</span>
-                                  {todo.parent_public_id && parentTitleById.get(todo.parent_public_id) ? (
+                                  <span className="truncate text-sm text-slate-300 line-through">
+                                    {todo.title}
+                                  </span>
+                                  {todo.parent_public_id &&
+                                  parentTitleById.get(todo.parent_public_id) ? (
                                     <span className="shrink-0 rounded border border-slate-700 px-1.5 py-0.5 text-xs text-slate-500">
                                       ↳ {parentTitleById.get(todo.parent_public_id)}
                                     </span>
@@ -738,7 +801,9 @@ export const TodoPage: React.FC = () => {
               {(recurringResponse?.items ?? []).length === 0 ? (
                 <div className="rounded-2xl border border-slate-800 bg-slate-800/30 p-8 text-center">
                   <p className="text-slate-300">No recurring todos yet.</p>
-                  <p className="mt-1 text-sm text-slate-500">Create one to auto-generate routine tasks.</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Create one to auto-generate routine tasks.
+                  </p>
                   <button
                     type="button"
                     onClick={openNewRecurringModal}
@@ -750,7 +815,10 @@ export const TodoPage: React.FC = () => {
                 </div>
               ) : (
                 recurringResponse?.items.map((rule) => (
-                  <div key={rule.public_id} className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-5">
+                  <div
+                    key={rule.public_id}
+                    className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-5"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="font-medium text-white">{rule.title}</h3>
@@ -758,11 +826,25 @@ export const TodoPage: React.FC = () => {
                           <p className="mt-1 text-sm text-slate-300">{rule.description}</p>
                         ) : null}
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex rounded border px-2 py-0.5 text-xs ${priorityTone(rule.priority)}`}>
+                          <span
+                            className={`inline-flex rounded border px-2 py-0.5 text-xs ${priorityTone(
+                              rule.priority,
+                            )}`}
+                          >
                             {priorityLabel(rule.priority)}
                           </span>
-                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium border ${rule.is_active ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-800 text-slate-400'}`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${rule.is_active ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium border ${
+                              rule.is_active
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                                : 'border-slate-700 bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                rule.is_active ? 'bg-emerald-400' : 'bg-slate-500'
+                              }`}
+                            />
                             {rule.is_active ? 'Active' : 'Paused'}
                           </span>
                         </div>
@@ -805,7 +887,9 @@ export const TodoPage: React.FC = () => {
       <Dialog open={isRecurringModalOpen} onOpenChange={(open) => !open && closeRecurringModal()}>
         <DialogContent className="max-w-lg p-0">
           <DialogHeader className="border-b border-slate-800 px-5 py-4">
-            <DialogTitle>{editingRecurringRule ? 'Edit recurring todo' : 'Create recurring todo'}</DialogTitle>
+            <DialogTitle>
+              {editingRecurringRule ? 'Edit recurring todo' : 'Create recurring todo'}
+            </DialogTitle>
           </DialogHeader>
           {isRecurringModalOpen && (
             <form onSubmit={handleSaveRule} className="space-y-4 p-5">
@@ -929,7 +1013,9 @@ export const TodoPage: React.FC = () => {
                 >
                   {createRuleMutation.isPending || updateRuleMutation.isPending
                     ? 'Saving...'
-                    : editingRecurringRule ? 'Save recurring todo' : 'Create recurring todo'}
+                    : editingRecurringRule
+                      ? 'Save recurring todo'
+                      : 'Create recurring todo'}
                 </button>
               </div>
             </form>
@@ -944,7 +1030,8 @@ export const TodoPage: React.FC = () => {
         description={(() => {
           if (!pendingDeleteTodo) return 'This cannot be undone.';
           const subtaskCount = pendingDeleteTodo.subtask_count;
-          const suffix = subtaskCount > 0 ? ` This will also delete its ${subtaskCount} subtasks.` : '';
+          const suffix =
+            subtaskCount > 0 ? ` This will also delete its ${subtaskCount} subtasks.` : '';
           return `Delete "${pendingDeleteTodo.title}"? This cannot be undone.${suffix}`;
         })()}
         isPending={deleteMutation.isPending}
@@ -957,7 +1044,9 @@ export const TodoPage: React.FC = () => {
         open={isClearCompletedOpen}
         onOpenChange={setIsClearCompletedOpen}
         title="Clear completed tasks?"
-        description={`This will permanently delete all ${completedTodosResponse?.total ?? 0} completed tasks. This cannot be undone.`}
+        description={`This will permanently delete all ${
+          completedTodosResponse?.total ?? 0
+        } completed tasks. This cannot be undone.`}
         confirmLabel="Clear completed"
         pendingLabel="Clearing…"
         isPending={clearCompletedMutation.isPending}

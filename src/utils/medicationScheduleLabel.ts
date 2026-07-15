@@ -24,9 +24,14 @@ export interface MedicationScheduleLike {
  * "Every week on Mon, Wed, 09:00 — until 15 Aug" (spec-069 §D). */
 export const describeMedicationSchedule = (schedule: MedicationScheduleLike): string => {
   const unit = UNIT_NAMES[schedule.frequency] ?? schedule.frequency;
-  let cadence = schedule.interval === 1 ? `Every ${unit}` : `Every ${ordinalSuffix(schedule.interval)} ${unit}`;
+  let cadence =
+    schedule.interval === 1 ? `Every ${unit}` : `Every ${ordinalSuffix(schedule.interval)} ${unit}`;
 
-  if (schedule.frequency === 'weekly' && schedule.days_of_week && schedule.days_of_week.length > 0) {
+  if (
+    schedule.frequency === 'weekly' &&
+    schedule.days_of_week &&
+    schedule.days_of_week.length > 0
+  ) {
     const days = [...schedule.days_of_week]
       .sort((a, b) => a - b)
       .map((d) => WEEKDAY_SHORT[d] ?? '')

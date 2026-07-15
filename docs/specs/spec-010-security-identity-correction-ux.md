@@ -21,19 +21,19 @@ editable on `Instrument` for the first time. None of that is usable without a UI
 and correct those fields, and — just as important — a UI surface a user would actually **find**.
 
 Today, instrument authoring/correction lives entirely inside the Analytics tab, behind an
-`Advanced` `<details>` disclosure (`AnalyticsTab.tsx`), on a tab whose job is *reading* exposure —
+`Advanced` `<details>` disclosure (`AnalyticsTab.tsx`), on a tab whose job is _reading_ exposure —
 not fixing data. This is a discoverability mismatch: a user noticing their Indian mutual fund is
 missing its ISIN would look at the security itself (Holdings), not at an analytics screen's
 collapsed advanced panel.
 
 ## 2. UX Rationale — why Holdings, not Analytics
 
-| Signal | Holdings tab | Analytics tab |
-|---|---|---|
-| What it lists | Every security the user **owns** (stock/ETF/MF) | Pooled instruments + exposure/overlap read-outs |
+| Signal                | Holdings tab                                                                                     | Analytics tab                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| What it lists         | Every security the user **owns** (stock/ETF/MF)                                                  | Pooled instruments + exposure/overlap read-outs                                    |
 | Existing edit surface | Edit Holding modal already edits `symbol`, `quantity`, `avg_cost`, `currency`, `instrument_type` | Inline table-cell edit for `name`/`instrument_type` only, under an `Advanced` fold |
-| User's mental model | "I own this security, let me fix its details" | "I'm analyzing my portfolio's concentration" |
-| Discoverability | Primary tab, daily-use | One disclosure-click deep on a secondary tab |
+| User's mental model   | "I own this security, let me fix its details"                                                    | "I'm analyzing my portfolio's concentration"                                       |
+| Discoverability       | Primary tab, daily-use                                                                           | One disclosure-click deep on a secondary tab                                       |
 
 **Decision:** the **Holdings tab's Edit Holding modal becomes the primary identity-correction
 surface.** It already edits the entity a user thinks of as "this stock I own"; extending it with
@@ -47,27 +47,30 @@ Analytics both read/write the same `Instrument` entity (`queryKeys.investing.ins
 correction made in either place is immediately reflected in the other — there is no data
 duplication, only a change in which surface is the primary entry point.
 
-**Company/constituent identity** (the names *inside* an ETF, which the user does not directly own)
+**Company/constituent identity** (the names _inside_ an ETF, which the user does not directly own)
 has no analog in Holdings — it stays in the Seed Constituents modal and the CSV import preview,
 which are the only surfaces where those entities exist at all.
 
 ## 3. Scope
 
 ### 3.1 Holdings tab — Edit Holding modal (primary, new)
+
 File: `src/pages/investing/HoldingsTab.tsx`.
 
 Add to the existing edit form:
+
 - `Ticker` (text input, uppercase-normalized)
 - `ISIN` (text input, uppercase-normalized)
 - `Exchange` (text input; optional — see §4 inference note)
 
 Behavior:
+
 - The **required-identifier hint** (§4) is computed from the currently-selected `instrument_type`
   and shown inline above/below the identifier fields, exactly as it already reacts to
   `instrument_type` changes for the existing `Asset Type` dropdown.
 - On submit, in addition to the existing `investingService.updateHolding(...)` call, PATCH the
   linked instrument's identity via `investingService.updateInstrument(instrument.public_id, {
-  ticker, isin, exchange })` (new fields on `InstrumentUpdate`, api spec-083 §5.2). Both calls are
+ticker, isin, exchange })` (new fields on `InstrumentUpdate`, api spec-083 §5.2). Both calls are
   part of the same save action from the user's perspective (single "Save" button, sequenced
   mutation or combined optimistic update — implementation detail for the coding agent). The **Save
   button must stay disabled for the full duration of both async calls** (not just the first) to
@@ -81,6 +84,7 @@ Behavior:
   §5 — UI enforcement is an affordance, not the authoritative gate).
 
 ### 3.2 Analytics tab — Advanced panel (demoted, existing surface extended)
+
 File: `src/pages/investing/AnalyticsTab.tsx`.
 
 - The inline table-cell edit (currently `name` + `instrument_type` only) graduates to a small **Edit
@@ -94,6 +98,7 @@ File: `src/pages/investing/AnalyticsTab.tsx`.
   Holding row).
 
 ### 3.3 Seed Constituents modal — fix the `company_name = ticker` quirk
+
 File: `src/pages/investing/AnalyticsTab.tsx`, `onUpsertConstituents`.
 
 Today the freeform `TICKER,WEIGHT` textarea parser sets `company_name: ticker` — i.e. it stores the
@@ -111,6 +116,7 @@ remains supported as a convenience, but parses into the same four fields — nev
 into name, and never conflates ticker with ISIN.
 
 ### 3.4 Import UI — template + preview
+
 File: `ImportsPage.tsx` (or wherever the constituents template/preview currently render).
 
 - Template download reflects api spec-083 §8a.1's self-documenting header (per-type identifier
@@ -123,6 +129,7 @@ File: `ImportsPage.tsx` (or wherever the constituents template/preview currently
   tooltip explaining the reason for `unresolved`/`ambiguous` rows.
 
 ### 3.5 Create Instrument modal
+
 File: `src/pages/investing/AnalyticsTab.tsx`.
 
 Add the same `ticker`/`isin`/`exchange` fields + per-type hint as §3.1, since instruments can be
@@ -154,7 +161,7 @@ sufficient. This is a testable behavior, not just a note — see §7.
   this spec doesn't touch `sortedExposureRows`/`concentration` logic.
 - No offline/local identifier validation (suffix-based hinting only) — the resolve call is the only
   source of `resolved/unresolved/ambiguous` truth; the web layer does not reimplement exchange
-  inference rules client-side beyond using them for the *hint* copy.
+  inference rules client-side beyond using them for the _hint_ copy.
 - Zod response-schema changes needed for the resolve endpoint and the new `Instrument`/constituent
   fields are in-scope as plumbing but are not separately re-litigated here — follow the existing
   `src/types/investing.ts` `z.infer` pattern (architecture contract).

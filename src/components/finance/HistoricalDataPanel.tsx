@@ -24,7 +24,6 @@ export const HistoricalDataPanel: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState<'net-worth' | 'fx'>('net-worth');
 
-
   const userPointsRes = useQuery({
     queryKey: queryKeys.netWorth.userPoints(),
     queryFn: () => financeService.getNetWorthUserPoints(200, 0),
@@ -52,7 +51,12 @@ export const HistoricalDataPanel: React.FC = () => {
 
   return (
     <>
-      <Button variant="secondary" size="sm" data-testid="historical-data-open" onClick={() => setIsOpen(true)}>
+      <Button
+        variant="secondary"
+        size="sm"
+        data-testid="historical-data-open"
+        onClick={() => setIsOpen(true)}
+      >
         <Upload className="h-4 w-4 mr-1" /> Add historical data
       </Button>
 
@@ -70,14 +74,22 @@ export const HistoricalDataPanel: React.FC = () => {
           <div className="flex gap-2 border-b border-border">
             <button
               type="button"
-              className={`px-3 py-2 text-sm ${tab === 'net-worth' ? 'border-b-2 border-cyan-500 text-foreground' : 'text-muted-foreground'}`}
+              className={`px-3 py-2 text-sm ${
+                tab === 'net-worth'
+                  ? 'border-b-2 border-cyan-500 text-foreground'
+                  : 'text-muted-foreground'
+              }`}
               onClick={() => setTab('net-worth')}
             >
               Net worth backfill
             </button>
             <button
               type="button"
-              className={`px-3 py-2 text-sm ${tab === 'fx' ? 'border-b-2 border-cyan-500 text-foreground' : 'text-muted-foreground'}`}
+              className={`px-3 py-2 text-sm ${
+                tab === 'fx'
+                  ? 'border-b-2 border-cyan-500 text-foreground'
+                  : 'text-muted-foreground'
+              }`}
               onClick={() => setTab('fx')}
             >
               Historical FX
@@ -97,7 +109,6 @@ export const HistoricalDataPanel: React.FC = () => {
                 </Link>
               </Button>
 
-
               {userPoints.length > 0 ? (
                 <div className="rounded-lg border border-border overflow-x-auto mt-4">
                   <table className="w-full text-sm">
@@ -110,7 +121,11 @@ export const HistoricalDataPanel: React.FC = () => {
                     </thead>
                     <tbody>
                       {userPoints.map((p) => (
-                        <tr key={p.id} data-testid={`historical-networth-row-${p.id}`} className="border-t border-border/60">
+                        <tr
+                          key={p.id}
+                          data-testid={`historical-networth-row-${p.id}`}
+                          className="border-t border-border/60"
+                        >
                           <td className="px-3 py-2">{formatDate(p.snapshot_date)}</td>
                           <td className="px-3 py-2 text-right">
                             {formatCurrency(p.total_net_worth, p.reporting_currency)}
@@ -145,7 +160,6 @@ export const HistoricalDataPanel: React.FC = () => {
                   <Upload className="h-4 w-4 mr-1" /> Import FX Rates CSV
                 </Link>
               </Button>
-
 
               {userFxRates.length > 0 ? (
                 <div className="rounded-lg border border-border overflow-x-auto mt-4">

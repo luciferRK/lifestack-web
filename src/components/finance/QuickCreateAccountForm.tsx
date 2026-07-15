@@ -43,14 +43,17 @@ export const QuickCreateAccountForm: React.FC<QuickCreateAccountFormProps> = ({
   allowedTypes,
 }) => {
   const showCurrency = currency !== undefined && onCurrencyChange !== undefined;
-  const canSubmit = name.trim().length > 0 && (!showCurrency || (currency ?? '').trim().length === 3);
+  const canSubmit =
+    name.trim().length > 0 && (!showCurrency || (currency ?? '').trim().length === 3);
   const typeOptions = allowedTypes
     ? accountTypeOptions.filter((option) => allowedTypes.includes(option.value))
     : accountTypeOptions;
 
   return (
     <div className="mt-4 border-t border-slate-800 pt-4">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Quick Create Account</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        Quick Create Account
+      </p>
       <div className={showCurrency ? 'space-y-4' : 'grid grid-cols-2 gap-4 items-end'}>
         <div className="flex flex-col gap-2">
           <Label className="text-xs">Account Name</Label>
@@ -77,7 +80,9 @@ export const QuickCreateAccountForm: React.FC<QuickCreateAccountFormProps> = ({
             <Input
               data-testid={`${testIdPrefix}-currency`}
               value={currency}
-              onChange={(e) => onCurrencyChange?.(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase())}
+              onChange={(e) =>
+                onCurrencyChange?.(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase())
+              }
               placeholder="USD"
               maxLength={3}
             />

@@ -89,7 +89,10 @@ export const formatShortDate = (
  * the user's clock says "today" is.
  */
 export const formatDateInputValue = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(
+    2,
+    '0',
+  )}`;
 
 /** Value for <input type="datetime-local">: local date + time, YYYY-MM-DDTHH:mm. */
 export const formatDateTimeInputValue = (d: Date): string => {

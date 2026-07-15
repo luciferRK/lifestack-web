@@ -90,7 +90,10 @@ describe('DashboardPage', () => {
     expect(screen.getByText('$84.50 of $100.00')).toBeInTheDocument();
     expect(screen.getByTestId('dashboard-portfolio-value')).toHaveTextContent('$1,680.00');
     expect(screen.getByText('Invested $1,500.00 · Gain +$180.00 (+12.00%)')).toBeInTheDocument();
-    expect(screen.getByTestId('dashboard-portfolio-value').closest('a')).toHaveAttribute('href', '/investing');
+    expect(screen.getByTestId('dashboard-portfolio-value').closest('a')).toHaveAttribute(
+      'href',
+      '/investing',
+    );
     expect(screen.getByTestId('dashboard-data-as-of')).toHaveTextContent('Data as of');
     expect(screen.queryByText('Status')).not.toBeInTheDocument();
   });
@@ -132,7 +135,12 @@ describe('DashboardPage', () => {
   const minimalSummary = () =>
     http.get('*/v1/dashboard/summary', () =>
       HttpResponse.json({
-        todos: { open_count: 0, overdue_count: 0, next_due_items: [], active_guardrail_todo_count: 0 },
+        todos: {
+          open_count: 0,
+          overdue_count: 0,
+          next_due_items: [],
+          active_guardrail_todo_count: 0,
+        },
         spending: { month_spent: '0.00', budget_spotlight: [], top_overspent_categories: [] },
         investing: { portfolio_value: null, daily_change: null, holdings_count: 0 },
         system: { generated_at: '2026-05-24T10:00:00Z' },
@@ -145,7 +153,9 @@ describe('DashboardPage', () => {
     renderWithQuery(<DashboardPage />);
 
     expect(
-      await screen.findByText('No insights right now — check back after your next few transactions.'),
+      await screen.findByText(
+        'No insights right now — check back after your next few transactions.',
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('dashboard-insight-card')).not.toBeInTheDocument();
   });

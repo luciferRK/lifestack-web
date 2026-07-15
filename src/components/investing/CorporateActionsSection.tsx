@@ -134,8 +134,12 @@ export const CorporateActionsSection: React.FC<CorporateActionsSectionProps> = (
   const ratioQuoteNum = Number(form.ratio_quote) || 0;
   const previewResult =
     form.action_type === 'bonus'
-      ? `+${((heldQuantity * ratioQuoteNum) / (ratioBaseNum || 1)).toFixed(4)} bonus units (illustrative)`
-      : `${heldQuantity} units → ${((heldQuantity * ratioQuoteNum) / (ratioBaseNum || 1)).toFixed(4)} units (illustrative)`;
+      ? `+${((heldQuantity * ratioQuoteNum) / (ratioBaseNum || 1)).toFixed(
+          4,
+        )} bonus units (illustrative)`
+      : `${heldQuantity} units → ${((heldQuantity * ratioQuoteNum) / (ratioBaseNum || 1)).toFixed(
+          4,
+        )} units (illustrative)`;
 
   return (
     <div className="rounded-lg border border-border">
@@ -185,7 +189,11 @@ export const CorporateActionsSection: React.FC<CorporateActionsSectionProps> = (
                 </thead>
                 <tbody>
                   {actions.map((a) => (
-                    <tr key={a.public_id} data-testid={`corporate-action-row-${a.public_id}`} className="border-t border-border/60">
+                    <tr
+                      key={a.public_id}
+                      data-testid={`corporate-action-row-${a.public_id}`}
+                      className="border-t border-border/60"
+                    >
                       <td className="px-3 py-2">{a.account_name}</td>
                       <td className="px-3 py-2">{a.symbol}</td>
                       <td className="px-3 py-2 text-muted-foreground">
@@ -314,7 +322,11 @@ export const CorporateActionsSection: React.FC<CorporateActionsSectionProps> = (
               <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" data-testid="corporate-action-save" disabled={createMutation.isPending}>
+              <Button
+                type="submit"
+                data-testid="corporate-action-save"
+                disabled={createMutation.isPending}
+              >
                 Record
               </Button>
             </DialogFooter>

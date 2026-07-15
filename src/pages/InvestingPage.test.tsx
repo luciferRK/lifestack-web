@@ -258,7 +258,7 @@ describe('InvestingPage', () => {
     renderWithQuery(<InvestingPage />);
 
     await screen.findByText('Investing');
-    
+
     // Open the Add Holding Modal
     fireEvent.click(await screen.findByRole('button', { name: /Add Holding/i }));
 
@@ -741,6 +741,330 @@ describe('InvestingPage', () => {
     expect(instrumentPatchPayload).toBeNull();
   });
 
+  it('patches the linked instrument identity (ticker/isin/exchange) on Edit Holding save (spec-010 §3.1)', async () => {
+    let holdingPatchPayload: Record<string, unknown> | null = null;
+    let instrumentPatchPayload: Record<string, unknown> | null = null;
+
+    server.use(
+      http.get('*/v1/investing/holdings', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: 'holding-vti-id',
+              symbol: 'VTI',
+              instrument_type: 'stock',
+              account_id: '11111111-1111-1111-1111-111111111111',
+              account_name: 'Brokerage A',
+              quantity: '10.00000000',
+              avg_cost: '150.00',
+              currency: 'USD',
+              current_price: '180.00',
+              current_value: '1800.00',
+              gain_loss: '300.00',
+              gain_loss_pct: '20.00',
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/investing/cash-balances', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
+      http.get('*/v1/finance/accounts', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: '11111111-1111-1111-1111-111111111111',
+              name: 'Brokerage A',
+              account_type: 'brokerage',
+              default_currency_code: 'USD',
+              is_active: true,
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/finance/currencies', () =>
+        HttpResponse.json([
+          { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
+        ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
+      ),
+      http.get('*/v1/investing/summary', () =>
+        HttpResponse.json({
+          portfolio_value: '1800.00',
+          holdings_count: 1,
+          cash_total: '0',
+          currency_breakdown: { USD: '1500.00' },
+          daily_change: null,
+          reporting_currency: 'USD',
+          valuation_status: 'single_currency_native',
+        }),
+      ),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '1800.00',
+          total_cost: '1500.00',
+          total_gain_loss: '300.00',
+          total_gain_loss_pct: '20.00',
+          snapshot_date: '2026-05-24',
+          currency: 'USD',
+        }),
+      ),
+      http.get('*/v1/investing/instruments', () =>
+        HttpResponse.json([
+          {
+            public_id: 'instrument-vti-id',
+            symbol: 'VTI',
+            name: 'Vanguard Total Market ETF',
+            instrument_type: 'stock',
+            company_id: 'company-vti-id',
+            ticker: null,
+            isin: null,
+            exchange: null,
+            is_active: true,
+            created_at: '2026-05-24T00:00:00Z',
+            updated_at: '2026-05-24T00:00:00Z',
+          },
+        ]),
+      ),
+      http.patch('*/v1/investing/holdings/holding-vti-id', async ({ request }) => {
+        holdingPatchPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          public_id: 'holding-vti-id',
+          symbol: 'VTI',
+          instrument_type: 'stock',
+          account_id: '11111111-1111-1111-1111-111111111111',
+          account_name: 'Brokerage A',
+          quantity: holdingPatchPayload.quantity,
+          avg_cost: holdingPatchPayload.avg_cost,
+          currency: holdingPatchPayload.currency,
+          created_at: '2026-05-24T00:00:00Z',
+          updated_at: '2026-05-24T00:00:00Z',
+        });
+      }),
+      http.patch('*/v1/investing/instruments/instrument-vti-id', async ({ request }) => {
+        instrumentPatchPayload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          public_id: 'instrument-vti-id',
+          symbol: 'VTI',
+          name: 'Vanguard Total Market ETF',
+          instrument_type: 'stock',
+          company_id: 'company-vti-id',
+          ticker: instrumentPatchPayload.ticker,
+          isin: instrumentPatchPayload.isin,
+          exchange: instrumentPatchPayload.exchange,
+          is_active: true,
+          created_at: '2026-05-24T00:00:00Z',
+          updated_at: '2026-05-24T00:00:00Z',
+        });
+      }),
+    );
+
+    renderWithQuery(<InvestingPage />);
+
+    await screen.findByTestId('investing-holding-row-holding-vti-id');
+    fireEvent.click(screen.getByTestId('investing-edit-holding-holding-vti-id'));
+
+    fireEvent.change(await screen.findByTestId('investing-edit-holding-ticker'), {
+      target: { value: 'vti' },
+    });
+    fireEvent.click(screen.getByTestId('investing-edit-holding-submit'));
+
+    await waitFor(() => {
+      expect(instrumentPatchPayload).not.toBeNull();
+    });
+    expect(holdingPatchPayload).not.toBeNull();
+    expect(instrumentPatchPayload).toEqual({ ticker: 'VTI' });
+  });
+
+  it('keeps the Edit Holding modal open and lets the user retry only the identity save when the instrument PATCH fails (spec-010 §3.1)', async () => {
+    let holdingPatchCount = 0;
+    let instrumentPatchCount = 0;
+
+    server.use(
+      http.get('*/v1/investing/holdings', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: 'holding-vti-id',
+              symbol: 'VTI',
+              instrument_type: 'stock',
+              account_id: '11111111-1111-1111-1111-111111111111',
+              account_name: 'Brokerage A',
+              quantity: '10.00000000',
+              avg_cost: '150.00',
+              currency: 'USD',
+              current_price: '180.00',
+              current_value: '1800.00',
+              gain_loss: '300.00',
+              gain_loss_pct: '20.00',
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/investing/cash-balances', () =>
+        HttpResponse.json({ items: [], total: 0, limit: 200, offset: 0 }),
+      ),
+      http.get('*/v1/finance/accounts', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: '11111111-1111-1111-1111-111111111111',
+              name: 'Brokerage A',
+              account_type: 'brokerage',
+              default_currency_code: 'USD',
+              is_active: true,
+              created_at: '2026-05-24T00:00:00Z',
+              updated_at: '2026-05-24T00:00:00Z',
+            },
+          ],
+          total: 1,
+          limit: 200,
+          offset: 0,
+        }),
+      ),
+      http.get('*/v1/finance/currencies', () =>
+        HttpResponse.json([
+          { code: 'USD', name: 'US Dollar', symbol: '$', minor_unit: 2, is_active: true },
+        ]),
+      ),
+      http.get('*/v1/finance/settings/user', () =>
+        HttpResponse.json({
+          reporting_currency_override_code: null,
+          currency_display_preference_override: null,
+          workspace_reporting_currency_code: 'USD',
+          workspace_currency_display_preference: 'symbol',
+          effective_reporting_currency_code: 'USD',
+          effective_currency_display_preference: 'symbol',
+          updated_at: '2026-05-24T00:00:00Z',
+        }),
+      ),
+      http.get('*/v1/investing/summary', () =>
+        HttpResponse.json({
+          portfolio_value: '1800.00',
+          holdings_count: 1,
+          cash_total: '0',
+          currency_breakdown: { USD: '1500.00' },
+          daily_change: null,
+          reporting_currency: 'USD',
+          valuation_status: 'single_currency_native',
+        }),
+      ),
+      http.get('*/v1/investing/performance/summary', () =>
+        HttpResponse.json({
+          total_value: '1800.00',
+          total_cost: '1500.00',
+          total_gain_loss: '300.00',
+          total_gain_loss_pct: '20.00',
+          snapshot_date: '2026-05-24',
+          currency: 'USD',
+        }),
+      ),
+      http.get('*/v1/investing/instruments', () =>
+        HttpResponse.json([
+          {
+            public_id: 'instrument-vti-id',
+            symbol: 'VTI',
+            name: 'Vanguard Total Market ETF',
+            instrument_type: 'stock',
+            company_id: 'company-vti-id',
+            ticker: null,
+            isin: null,
+            exchange: null,
+            is_active: true,
+            created_at: '2026-05-24T00:00:00Z',
+            updated_at: '2026-05-24T00:00:00Z',
+          },
+        ]),
+      ),
+      http.patch('*/v1/investing/holdings/holding-vti-id', async ({ request }) => {
+        holdingPatchCount += 1;
+        const payload = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          public_id: 'holding-vti-id',
+          symbol: 'VTI',
+          instrument_type: 'stock',
+          account_id: '11111111-1111-1111-1111-111111111111',
+          account_name: 'Brokerage A',
+          quantity: payload.quantity,
+          avg_cost: payload.avg_cost,
+          currency: payload.currency,
+          created_at: '2026-05-24T00:00:00Z',
+          updated_at: '2026-05-24T00:00:00Z',
+        });
+      }),
+      http.patch('*/v1/investing/instruments/instrument-vti-id', async ({ request }) => {
+        instrumentPatchCount += 1;
+        const payload = (await request.json()) as Record<string, unknown>;
+        if (instrumentPatchCount === 1) {
+          return HttpResponse.json({ detail: 'ticker: invalid format' }, { status: 422 });
+        }
+        return HttpResponse.json({
+          public_id: 'instrument-vti-id',
+          symbol: 'VTI',
+          name: 'Vanguard Total Market ETF',
+          instrument_type: 'stock',
+          company_id: 'company-vti-id',
+          ticker: payload.ticker,
+          isin: payload.isin,
+          exchange: payload.exchange,
+          is_active: true,
+          created_at: '2026-05-24T00:00:00Z',
+          updated_at: '2026-05-24T00:00:00Z',
+        });
+      }),
+    );
+
+    renderWithQuery(<InvestingPage />);
+
+    await screen.findByTestId('investing-holding-row-holding-vti-id');
+    fireEvent.click(screen.getByTestId('investing-edit-holding-holding-vti-id'));
+
+    fireEvent.change(await screen.findByTestId('investing-edit-holding-ticker'), {
+      target: { value: 'vti' },
+    });
+    fireEvent.click(screen.getByTestId('investing-edit-holding-submit'));
+
+    const identityError = await screen.findByTestId('investing-edit-holding-identity-error');
+    expect(identityError.textContent).toContain('ticker: invalid format');
+    expect(holdingPatchCount).toBe(1);
+    expect(instrumentPatchCount).toBe(1);
+    // Modal stays open — the holding edit form is still present.
+    expect(screen.getByTestId('investing-edit-holding-form')).toBeInTheDocument();
+
+    // Retry — must resubmit only the identity PATCH, not the holding PATCH again.
+    fireEvent.click(screen.getByTestId('investing-edit-holding-submit'));
+
+    await waitFor(() => {
+      expect(instrumentPatchCount).toBe(2);
+    });
+    expect(holdingPatchCount).toBe(1);
+  });
+
   it('renames the symbol of an order-derived holding without sending quantity/avg_cost, with quantity/avg_cost disabled', async () => {
     let holdingPatchPayload: Record<string, unknown> | null = null;
 
@@ -1000,7 +1324,7 @@ describe('InvestingPage', () => {
     expect(portfolioCardValue).toHaveTextContent('$3,114.00');
   });
 
-  it('shows a holding\'s trade history even when the order is outside the main Orders list page', async () => {
+  it("shows a holding's trade history even when the order is outside the main Orders list page", async () => {
     // Regression test: Trade History must call the dedicated unlimited
     // /orders/by-holding endpoint, not filter the paginated /orders list.
     // A historical order can fall off the (limited, occurred_at-desc-sorted)
@@ -1411,7 +1735,9 @@ describe('InvestingPage', () => {
     fireEvent.change(brokerageFeeInput, { target: { value: '-5' } });
     fireEvent.submit(form);
 
-    expect(await screen.findByText('Brokerage fee must be a non-negative number.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Brokerage fee must be a non-negative number.'),
+    ).toBeInTheDocument();
     expect(updateCalled).toBe(false);
 
     // Fix the fee, but break the trade date instead -- still should not submit.
@@ -1648,7 +1974,9 @@ describe('InvestingPage', () => {
     fireEvent.click(screen.getByTestId('investing-holdings-hide-zero-book-value'));
 
     expect(screen.getByTestId('investing-holding-row-holding-live-id')).toBeInTheDocument();
-    expect(screen.queryByTestId('investing-holding-row-holding-zeroed-out-id')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('investing-holding-row-holding-zeroed-out-id'),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the account name for each order in the Orders tab', async () => {
@@ -1907,7 +2235,10 @@ describe('InvestingPage', () => {
     const transferRow = await screen.findByTestId('investing-transfer-row-transfer-1');
     expect(transferRow).toHaveTextContent('HDFC Bank');
     expect(transferRow).toHaveTextContent('Groww');
-    expect(screen.getByTestId('investing-transfers-manage-link')).toHaveAttribute('href', '/spending?tab=ledger');
+    expect(screen.getByTestId('investing-transfers-manage-link')).toHaveAttribute(
+      'href',
+      '/spending?tab=ledger',
+    );
   });
 
   it('opens the Orders tab and the Place Order modal directly from a ?tab=orders&order=1 deep link', async () => {
