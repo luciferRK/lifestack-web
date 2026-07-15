@@ -9,15 +9,15 @@ describe('describeRecurrence', () => {
   });
 
   it('describes day-of-month monthly recurrence with no special mode', () => {
-    expect(describeRecurrence({ frequency: 'monthly', interval: 1, monthly_mode: 'day_of_month' })).toBe(
-      'Every month',
-    );
+    expect(
+      describeRecurrence({ frequency: 'monthly', interval: 1, monthly_mode: 'day_of_month' }),
+    ).toBe('Every month');
   });
 
   it('describes last-day-of-month recurrence', () => {
-    expect(describeRecurrence({ frequency: 'monthly', interval: 1, monthly_mode: 'last_day' })).toBe(
-      'Every month on the last day',
-    );
+    expect(
+      describeRecurrence({ frequency: 'monthly', interval: 1, monthly_mode: 'last_day' }),
+    ).toBe('Every month on the last day');
   });
 
   it('describes nth-weekday recurrence with interval composition', () => {

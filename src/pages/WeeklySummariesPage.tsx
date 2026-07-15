@@ -115,20 +115,18 @@ export const WeeklySummariesPage: React.FC = () => {
   );
 };
 
-const SummaryCard = ({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) => (
+const SummaryCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
     <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{title}</p>
     <div className="space-y-2">{children}</div>
   </div>
 );
 
-const Metric = ({ label, value, valueClass = 'text-white' }: {
+const Metric = ({
+  label,
+  value,
+  valueClass = 'text-white',
+}: {
   label: string;
   value: React.ReactNode;
   valueClass?: string;
@@ -143,7 +141,9 @@ const TodoCard = ({ summary }: { summary: WeeklySummary['todo_summary'] }) => (
   <SummaryCard title="Todo">
     <Metric label="Tasks created" value={summary?.tasks_created ?? 0} />
     <Metric label="Tasks completed" value={summary?.tasks_completed ?? 0} />
-    {summary?.tasks_overdue != null && <Metric label="Tasks overdue" value={summary.tasks_overdue} />}
+    {summary?.tasks_overdue != null && (
+      <Metric label="Tasks overdue" value={summary.tasks_overdue} />
+    )}
     {summary?.completion_rate_pct != null && (
       <Metric
         label="Completion rate"
@@ -158,16 +158,22 @@ const SpendingCard = ({ summary }: { summary: WeeklySummary['spending_summary'] 
     return (
       <SummaryCard title="Spending">
         <p className="text-sm text-amber-300">
-          Combined spending totals are unavailable because this week contains multiple or
-          unknown currencies.
+          Combined spending totals are unavailable because this week contains multiple or unknown
+          currencies.
         </p>
       </SummaryCard>
     );
   }
   return (
     <SummaryCard title="Spending">
-      <Metric label="Recorded income" value={formatCurrency(summary.total_income, summary.currency)} />
-      <Metric label="Recorded expense" value={formatCurrency(summary.total_expense, summary.currency)} />
+      <Metric
+        label="Recorded income"
+        value={formatCurrency(summary.total_income, summary.currency)}
+      />
+      <Metric
+        label="Recorded expense"
+        value={formatCurrency(summary.total_expense, summary.currency)}
+      />
       <Metric label="Net recorded amount" value={formatCurrency(summary.net, summary.currency)} />
       {summary.budget_utilization_pct != null && (
         <Metric label="Budget utilization" value={`${summary.budget_utilization_pct}%`} />
@@ -199,14 +205,25 @@ const InvestingCard = ({ summary }: { summary: WeeklySummary['investing_summary'
   const changePct = toNumber(summary.week_change_pct);
   const changeSign = change > 0 ? '+' : '';
   const pctSign = changePct > 0 ? '+' : '';
-  const movementClass = change > 0 ? 'text-emerald-300' : change < 0 ? 'text-rose-300' : 'text-slate-200';
+  const movementClass =
+    change > 0 ? 'text-emerald-300' : change < 0 ? 'text-rose-300' : 'text-slate-200';
   return (
     <SummaryCard title="Investing">
-      <Metric label="Portfolio value" value={formatCurrency(summary.portfolio_value_end, summary.currency)} />
+      <Metric
+        label="Portfolio value"
+        value={formatCurrency(summary.portfolio_value_end, summary.currency)}
+      />
       <Metric label="Investment cash" value={formatCurrency(summary.cash_end, summary.currency)} />
       <Metric
         label="Weekly movement"
-        value={changeSign + formatCurrency(change, summary.currency) + " (" + pctSign + changePct.toFixed(2) + "%)"}
+        value={
+          changeSign +
+          formatCurrency(change, summary.currency) +
+          ' (' +
+          pctSign +
+          changePct.toFixed(2) +
+          '%)'
+        }
         valueClass={movementClass}
       />
       <Metric

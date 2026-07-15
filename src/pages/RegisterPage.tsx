@@ -86,7 +86,10 @@ export const RegisterPage: React.FC = () => {
       }
 
       // Normalize 409 / 422 errors to prevent username/email enumeration
-      if (status === 409 || (typeof detail === 'string' && /already (exists|in use|registered)/i.test(detail))) {
+      if (
+        status === 409 ||
+        (typeof detail === 'string' && /already (exists|in use|registered)/i.test(detail))
+      ) {
         setError('Registration failed. Please check your details and try again.');
       } else if (invalidFields.length > 0) {
         setError(`Invalid fields: ${invalidFields.join(', ')}.`);
@@ -177,7 +180,8 @@ export const RegisterPage: React.FC = () => {
               />
               <div className="mt-2 space-y-2">
                 <p className="text-xs text-slate-400">
-                  Use at least 8 characters with upper and lower case letters, a number, and a symbol.
+                  Use at least 8 characters with upper and lower case letters, a number, and a
+                  symbol.
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-700">
@@ -186,7 +190,9 @@ export const RegisterPage: React.FC = () => {
                       style={{ width: `${passwordStrengthWidth}%` }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-slate-300">{password ? passwordStrength.label : 'Required'}</span>
+                  <span className="text-xs font-medium text-slate-300">
+                    {password ? passwordStrength.label : 'Required'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -203,7 +209,10 @@ export const RegisterPage: React.FC = () => {
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+          <Link
+            to="/login"
+            className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
             Sign In
           </Link>
         </p>

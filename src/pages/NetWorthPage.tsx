@@ -167,7 +167,9 @@ const NetWorthHistoryChart: React.FC<{
       if (indices.length === 0) return '';
       const first = indices[0];
       const last = indices[indices.length - 1];
-      return `M ${getX(first)},${height - paddingY} L ${path(value)} L ${getX(last)},${height - paddingY} Z`;
+      return `M ${getX(first)},${height - paddingY} L ${path(value)} L ${getX(last)},${
+        height - paddingY
+      } Z`;
     };
     return {
       pathTotal: path((p) => p.total),
@@ -397,7 +399,8 @@ const NetWorthHistoryChart: React.FC<{
               tooltip -- rendered in viewBox units so it scales with the
               responsive SVG. Transparent hit bands (one per point, drawn
               last so they capture events on top of everything) drive it. */}
-          {hoverIndex != null && points[hoverIndex] != null &&
+          {hoverIndex != null &&
+            points[hoverIndex] != null &&
             (() => {
               const p = points[hoverIndex];
               const hx = getX(hoverIndex);
@@ -472,11 +475,7 @@ const NetWorthHistoryChart: React.FC<{
                           stroke={row.color === '#ffffff' ? '#64748b' : 'none'}
                           strokeWidth={0.5}
                         />
-                        <text
-                          x={boxX + 24}
-                          y={ry + 8}
-                          className="text-[11px] fill-slate-400"
-                        >
+                        <text x={boxX + 24} y={ry + 8} className="text-[11px] fill-slate-400">
                           {row.label}
                         </text>
                         <text
@@ -631,7 +630,13 @@ export const NetWorthPage: React.FC = () => {
           </div>
 
           {/* History Chart */}
-          {rc && <NetWorthHistoryChart key={activeWorkspaceId ?? 'default'} history={historyData} currency={rc} />}
+          {rc && (
+            <NetWorthHistoryChart
+              key={activeWorkspaceId ?? 'default'}
+              history={historyData}
+              currency={rc}
+            />
+          )}
 
           {/* Investing breakdown */}
           {(data?.investing_cash_total != null || data?.holdings_value != null) && (

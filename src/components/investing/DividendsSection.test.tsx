@@ -25,7 +25,6 @@ const accounts = [
   },
 ] as unknown as Account[];
 
-
 const byParagraphText = (text: string) => (_: string, el: Element | null) =>
   el?.tagName === 'P' && el.textContent === text;
 

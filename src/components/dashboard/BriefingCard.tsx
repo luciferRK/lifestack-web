@@ -23,7 +23,12 @@ const SEVERITY_TEXT: Record<BriefingLine['severity'], string> = {
   info: 'text-slate-200',
 };
 
-export const BriefingCard: React.FC<BriefingCardProps> = ({ isLoading, isError, allClear, lines }) => {
+export const BriefingCard: React.FC<BriefingCardProps> = ({
+  isLoading,
+  isError,
+  allClear,
+  lines,
+}) => {
   // Degrades to nothing on error — the briefing is additive, not load-bearing
   // (spec-067 §Rollout): a failed fetch should never block the rest of the
   // dashboard from rendering.
@@ -60,7 +65,9 @@ export const BriefingCard: React.FC<BriefingCardProps> = ({ isLoading, isError, 
                 data-testid="dashboard-briefing-line"
                 className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-950/40 p-3 transition hover:border-slate-600 hover:bg-slate-800/60"
               >
-                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[line.severity]}`} />
+                <span
+                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[line.severity]}`}
+                />
                 <span className={`text-sm ${SEVERITY_TEXT[line.severity]}`}>{line.text}</span>
               </Link>
             </li>

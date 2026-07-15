@@ -67,13 +67,15 @@ export type TransactionSort = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount
 export const SourceMetadataSchema = z.object({
   source_type: z.enum(['manual', 'imported', 'synced', 'assistant', 'extracted']).default('manual'),
   source_ref: z.string().nullable().default(null),
-  origin: z.enum([
-    'manual_entry',
-    'bulk_import',
-    'external_sync',
-    'assistant_action',
-    'document_extraction',
-  ]).default('manual_entry'),
+  origin: z
+    .enum([
+      'manual_entry',
+      'bulk_import',
+      'external_sync',
+      'assistant_action',
+      'document_extraction',
+    ])
+    .default('manual_entry'),
   label: z.string().default(''),
   import_public_id: z.string().nullable().default(null),
   import_module: z.string().nullable().default(null),

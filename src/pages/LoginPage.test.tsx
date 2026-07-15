@@ -5,7 +5,9 @@ import { http, HttpResponse } from 'msw';
 import { LoginPage } from './LoginPage';
 import { server } from '../test/setup';
 
-const renderPage = (initialEntries: Array<string | { pathname: string; state?: unknown }> = ['/login']) =>
+const renderPage = (
+  initialEntries: Array<string | { pathname: string; state?: unknown }> = ['/login'],
+) =>
   render(
     <MemoryRouter initialEntries={initialEntries}>
       <Routes>
@@ -29,14 +31,14 @@ describe('LoginPage', () => {
   });
 
   it('shows a state message passed via location state', () => {
-    renderPage([{ pathname: '/login', state: { message: 'Registration successful. Please log in.' } }]);
+    renderPage([
+      { pathname: '/login', state: { message: 'Registration successful. Please log in.' } },
+    ]);
     expect(screen.getByText('Registration successful. Please log in.')).toBeInTheDocument();
   });
 
   it('shows invalid credentials error on 401', async () => {
-    server.use(
-      http.post('*/auth/login', () => new HttpResponse(null, { status: 401 })),
-    );
+    server.use(http.post('*/auth/login', () => new HttpResponse(null, { status: 401 })));
 
     renderPage(['/login']);
     fireEvent.change(screen.getByPlaceholderText('Email address'), {
@@ -53,9 +55,7 @@ describe('LoginPage', () => {
   });
 
   it('shows generic error on non-auth failure', async () => {
-    server.use(
-      http.post('*/auth/login', () => new HttpResponse(null, { status: 500 })),
-    );
+    server.use(http.post('*/auth/login', () => new HttpResponse(null, { status: 500 })));
 
     renderPage(['/login']);
     fireEvent.change(screen.getByPlaceholderText('Email address'), {
@@ -72,10 +72,13 @@ describe('LoginPage', () => {
   it('shows loading state while submitting', async () => {
     let resolveLogin!: () => void;
     server.use(
-      http.post('*/auth/login', () =>
-        new Promise<Response>((resolve) => {
-          resolveLogin = () => resolve(HttpResponse.json({ access_token: 'tok' }) as unknown as Response);
-        }),
+      http.post(
+        '*/auth/login',
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveLogin = () =>
+              resolve(HttpResponse.json({ access_token: 'tok' }) as unknown as Response);
+          }),
       ),
     );
 

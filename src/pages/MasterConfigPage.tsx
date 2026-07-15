@@ -63,7 +63,9 @@ export const MasterConfigPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>(
-    (SETTINGS_TABS as readonly string[]).includes(requestedTab ?? '') ? (requestedTab as SettingsTab) : 'currency',
+    (SETTINGS_TABS as readonly string[]).includes(requestedTab ?? '')
+      ? (requestedTab as SettingsTab)
+      : 'currency',
   );
 
   // Deep links (e.g. from the Dashboard onboarding checklist or the Net
@@ -72,21 +74,28 @@ export const MasterConfigPage: React.FC = () => {
   React.useEffect(() => {
     if (requestedTab && (SETTINGS_TABS as readonly string[]).includes(requestedTab)) {
       setActiveSettingsTab(requestedTab as SettingsTab);
-      setSearchParams((params) => {
-        params.delete('tab');
-        return params;
-      }, { replace: true });
+      setSearchParams(
+        (params) => {
+          params.delete('tab');
+          return params;
+        },
+        { replace: true },
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestedTab]);
 
   const [newAccountName, setNewAccountName] = useState('');
-  const [newAccountType, setNewAccountType] = useState<'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'>('wallet');
+  const [newAccountType, setNewAccountType] = useState<
+    'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'
+  >('wallet');
   const [newAccountCurrency, setNewAccountCurrency] = useState('');
   const [reportingCurrency, setReportingCurrency] = useState('');
   const [defaultSpendingAccountId, setDefaultSpendingAccountId] = useState('');
   const [lookthroughMinWeightPct, setLookthroughMinWeightPct] = useState('0.5');
-  const [currencyDisplayPreference, setCurrencyDisplayPreference] = useState<'symbol' | 'code'>('symbol');
+  const [currencyDisplayPreference, setCurrencyDisplayPreference] = useState<'symbol' | 'code'>(
+    'symbol',
+  );
   const [locale, setLocale] = useState('en-US');
   const [decimalPlaces, setDecimalPlaces] = useState('2');
   const [userReportingCurrencyOverride, setUserReportingCurrencyOverride] = useState('');
@@ -95,7 +104,9 @@ export const MasterConfigPage: React.FC = () => {
   const [userDecimalPlacesOverride, setUserDecimalPlacesOverride] = useState('');
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editingAccountName, setEditingAccountName] = useState('');
-  const [editingAccountType, setEditingAccountType] = useState<'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'>('wallet');
+  const [editingAccountType, setEditingAccountType] = useState<
+    'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card'
+  >('wallet');
   const [editingAccountCurrency, setEditingAccountCurrency] = useState('');
   const [editingAccountIsActive, setEditingAccountIsActive] = useState(true);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -103,8 +114,14 @@ export const MasterConfigPage: React.FC = () => {
   const [editingCategoryColor, setEditingCategoryColor] = useState('');
   const [editingCategoryIcon, setEditingCategoryIcon] = useState('');
   const [editingCategoryGroupId, setEditingCategoryGroupId] = useState('');
-  const [accountPendingDelete, setAccountPendingDelete] = useState<{ publicId: string; name: string } | null>(null);
-  const [categoryPendingDelete, setCategoryPendingDelete] = useState<{ publicId: string; name: string } | null>(null);
+  const [accountPendingDelete, setAccountPendingDelete] = useState<{
+    publicId: string;
+    name: string;
+  } | null>(null);
+  const [categoryPendingDelete, setCategoryPendingDelete] = useState<{
+    publicId: string;
+    name: string;
+  } | null>(null);
   const [deleteCategoryError, setDeleteCategoryError] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState('#64748b');
@@ -114,7 +131,10 @@ export const MasterConfigPage: React.FC = () => {
   const [editingGroupColor, setEditingGroupColor] = useState('');
   const [editingGroupIcon, setEditingGroupIcon] = useState('');
   const [editingGroupMemberIds, setEditingGroupMemberIds] = useState<string[]>([]);
-  const [groupPendingDelete, setGroupPendingDelete] = useState<{ publicId: string; name: string } | null>(null);
+  const [groupPendingDelete, setGroupPendingDelete] = useState<{
+    publicId: string;
+    name: string;
+  } | null>(null);
   const [deleteGroupError, setDeleteGroupError] = useState<string | null>(null);
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState('');
@@ -132,14 +152,20 @@ export const MasterConfigPage: React.FC = () => {
   const handleToggleLauncher = (checked: boolean) => {
     setShowLauncher(checked);
     if (activeWorkspaceId) {
-      window.localStorage.setItem(`lifestack:show-capture-launcher:${activeWorkspaceId}`, String(checked));
+      window.localStorage.setItem(
+        `lifestack:show-capture-launcher:${activeWorkspaceId}`,
+        String(checked),
+      );
       window.dispatchEvent(new Event('lifestack:show-capture-launcher-change'));
     }
   };
 
   React.useEffect(() => {
     if (activeWorkspaceId) {
-      setShowLauncher(window.localStorage.getItem(`lifestack:show-capture-launcher:${activeWorkspaceId}`) !== 'false');
+      setShowLauncher(
+        window.localStorage.getItem(`lifestack:show-capture-launcher:${activeWorkspaceId}`) !==
+          'false',
+      );
     }
     setEditingAccountId(null);
     setEditingAccountName('');
@@ -206,14 +232,17 @@ export const MasterConfigPage: React.FC = () => {
   const accounts = accountsResponse?.items ?? [];
   const categories = categoriesResponse?.items ?? [];
   const categoryGroups = groupsResponse?.items ?? [];
-  const groupById = useMemo(() => new Map(categoryGroups.map((g) => [g.public_id, g])), [categoryGroups]);
+  const groupById = useMemo(
+    () => new Map(categoryGroups.map((g) => [g.public_id, g])),
+    [categoryGroups],
+  );
   const categoryGroupOptions = useMemo(
     () => categoryGroups.map((g) => ({ value: g.public_id, label: g.name })),
-    [categoryGroups]
+    [categoryGroups],
   );
   const categoryOptionsForMerge = useMemo(
     () => categories.map((c) => ({ value: c.public_id, label: c.name })),
-    [categories]
+    [categories],
   );
 
   React.useEffect(() => {
@@ -236,7 +265,9 @@ export const MasterConfigPage: React.FC = () => {
     setUserDisplayPreferenceOverride(userSettings?.currency_display_preference_override ?? '');
     setUserLocaleOverride(userSettings?.locale_override ?? '');
     setUserDecimalPlacesOverride(
-      userSettings?.decimal_places_override != null ? String(userSettings.decimal_places_override) : '',
+      userSettings?.decimal_places_override != null
+        ? String(userSettings.decimal_places_override)
+        : '',
     );
   }, [
     userSettings?.reporting_currency_override_code,
@@ -246,8 +277,12 @@ export const MasterConfigPage: React.FC = () => {
   ]);
 
   const currencyOptions = useMemo(
-    () => currencies.map((currency) => ({ value: currency.code, label: `${currency.code} ${currency.symbol ?? ''}`.trim() })),
-    [currencies]
+    () =>
+      currencies.map((currency) => ({
+        value: currency.code,
+        label: `${currency.code} ${currency.symbol ?? ''}`.trim(),
+      })),
+    [currencies],
   );
 
   // The default spending account can't be a brokerage account (mirrors the
@@ -263,7 +298,7 @@ export const MasterConfigPage: React.FC = () => {
           value: account.public_id,
           label: `${account.name} (${account.account_type.replace('_', ' ')})`,
         })),
-    [accountsResponse?.items]
+    [accountsResponse?.items],
   );
 
   const createAccountMutation = useMutation({
@@ -405,7 +440,9 @@ export const MasterConfigPage: React.FC = () => {
       const toAdd = editingGroupMemberIds.filter((id) => !originalMemberIds.includes(id));
       const toRemove = originalMemberIds.filter((id) => !editingGroupMemberIds.includes(id));
       await Promise.all([
-        ...toAdd.map((id) => spendingService.updateCategory(id, { category_group_id: editingGroupId })),
+        ...toAdd.map((id) =>
+          spendingService.updateCategory(id, { category_group_id: editingGroupId }),
+        ),
         ...toRemove.map((id) => spendingService.updateCategory(id, { category_group_id: null })),
       ]);
     },
@@ -477,7 +514,7 @@ export const MasterConfigPage: React.FC = () => {
     },
   });
 
-  const openAccountEditor = (account: typeof accounts[number]) => {
+  const openAccountEditor = (account: (typeof accounts)[number]) => {
     setEditingAccountId(account.public_id);
     setEditingAccountName(account.name);
     setEditingAccountType(account.account_type);
@@ -494,11 +531,13 @@ export const MasterConfigPage: React.FC = () => {
     // the state change that renders the editor — rAF can fire first and find
     // no element to scroll to, especially on the null -> id transition.
     setTimeout(() => {
-      document.querySelector(`[data-testid="${testId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document
+        .querySelector(`[data-testid="${testId}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 0);
   };
 
-  const openCategoryEditor = (category: typeof categories[number]) => {
+  const openCategoryEditor = (category: (typeof categories)[number]) => {
     setEditingCategoryId(category.public_id);
     setEditingCategoryName(category.name);
     setEditingCategoryColor(category.color ?? '#64748b');
@@ -507,26 +546,26 @@ export const MasterConfigPage: React.FC = () => {
     scrollEditorIntoView('master-category-editor');
   };
 
-  const openGroupEditor = (group: typeof categoryGroups[number]) => {
+  const openGroupEditor = (group: (typeof categoryGroups)[number]) => {
     setEditingGroupId(group.public_id);
     setEditingGroupName(group.name);
     setEditingGroupColor(group.color ?? '#64748b');
     setEditingGroupIcon(group.icon ?? '');
     setEditingGroupMemberIds(
-      categories.filter((c) => c.category_group_id === group.public_id).map((c) => c.public_id)
+      categories.filter((c) => c.category_group_id === group.public_id).map((c) => c.public_id),
     );
     scrollEditorIntoView('master-group-editor');
   };
 
   const toggleGroupMember = (publicId: string) => {
     setEditingGroupMemberIds((prev) =>
-      prev.includes(publicId) ? prev.filter((id) => id !== publicId) : [...prev, publicId]
+      prev.includes(publicId) ? prev.filter((id) => id !== publicId) : [...prev, publicId],
     );
   };
 
   const toggleMergeSource = (publicId: string) => {
     setMergeSourceIds((prev) =>
-      prev.includes(publicId) ? prev.filter((id) => id !== publicId) : [...prev, publicId]
+      prev.includes(publicId) ? prev.filter((id) => id !== publicId) : [...prev, publicId],
     );
   };
 
@@ -571,799 +610,884 @@ export const MasterConfigPage: React.FC = () => {
         subtitle="Manage shared setup for spending and investing: currencies, accounts, categories, and recurrence anchors."
       />
 
-      <Tabs value={activeSettingsTab} onValueChange={(value) => setActiveSettingsTab(value as SettingsTab)}>
+      <Tabs
+        value={activeSettingsTab}
+        onValueChange={(value) => setActiveSettingsTab(value as SettingsTab)}
+      >
         <TabsList>
-          <TabsTrigger value="currency" data-testid="settings-tab-currency">Currency & Display</TabsTrigger>
-          <TabsTrigger value="accounts" data-testid="settings-tab-accounts">Accounts</TabsTrigger>
-          <TabsTrigger value="categories" data-testid="settings-tab-categories">Categories & Groups</TabsTrigger>
-          <TabsTrigger value="danger" data-testid="settings-tab-danger">Danger zone</TabsTrigger>
+          <TabsTrigger value="currency" data-testid="settings-tab-currency">
+            Currency & Display
+          </TabsTrigger>
+          <TabsTrigger value="accounts" data-testid="settings-tab-accounts">
+            Accounts
+          </TabsTrigger>
+          <TabsTrigger value="categories" data-testid="settings-tab-categories">
+            Categories & Groups
+          </TabsTrigger>
+          <TabsTrigger value="danger" data-testid="settings-tab-danger">
+            Danger zone
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="currency" className="space-y-6">
-      <section data-testid="master-workspace-settings" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
-        <h2 className="text-lg font-semibold text-white">Workspace Currency</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          This reporting currency drives default display in dashboard and spending. Investing still supports native multi-currency holdings.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
-          <DropdownSelect
-            testId="master-workspace-currency"
-            value={reportingCurrency}
-            onChange={setReportingCurrency}
-            options={currencyOptions}
-            placeholder="Select reporting currency"
-            clearLabel="Unset reporting currency"
-          />
-          <DropdownSelect
-            testId="master-workspace-display-preference"
-            value={currencyDisplayPreference}
-            onChange={(value) => setCurrencyDisplayPreference(value as 'symbol' | 'code')}
-            options={currencyDisplayPreferenceOptions}
-            placeholder="Display preference"
-          />
-          <Button
-            data-testid="master-workspace-save"
-            type="button"
-            onClick={() => updateSettingsMutation.mutate()}
-            disabled={updateSettingsMutation.isPending}
+          <section
+            data-testid="master-workspace-settings"
+            className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6"
           >
-            {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
-        <div className="mt-4 border-t border-slate-800 pt-4">
-          <Label className="text-sm text-slate-300">Number formatting</Label>
-          <p className="mt-1 text-xs text-slate-500">
-            Locale controls digit grouping app-wide (India uses 1,00,000-style grouping).
-          </p>
-          <div className="mt-2 grid gap-3 sm:grid-cols-[1fr,1fr,auto] max-w-lg">
-            <DropdownSelect
-              testId="master-workspace-locale"
-              value={locale}
-              onChange={setLocale}
-              options={localeOptions}
-              placeholder="Locale"
-            />
-            <DropdownSelect
-              testId="master-workspace-decimal-places"
-              value={decimalPlaces}
-              onChange={setDecimalPlaces}
-              options={decimalPlacesOptions}
-              placeholder="Decimal places"
-            />
-            <Button
-              data-testid="master-workspace-save-format"
-              type="button"
-              onClick={() => updateSettingsMutation.mutate()}
-              disabled={updateSettingsMutation.isPending}
-            >
-              {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </div>
-        <div className="mt-4 border-t border-slate-800 pt-4">
-          <Label className="text-sm text-slate-300">Default spending account</Label>
-          <p className="mt-1 text-xs text-slate-500">
-            New spending transactions use this account when none is picked on the form.
-          </p>
-          <div className="mt-2 max-w-sm">
-            <DropdownSelect
-              testId="master-default-spending-account"
-              value={defaultSpendingAccountId}
-              onChange={setDefaultSpendingAccountId}
-              options={defaultSpendingAccountOptions}
-              placeholder="No default"
-              clearLabel="No default"
-              showSearch
-            />
-          </div>
-        </div>
-      </section>
+            <h2 className="text-lg font-semibold text-white">Workspace Currency</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              This reporting currency drives default display in dashboard and spending. Investing
+              still supports native multi-currency holdings.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
+              <DropdownSelect
+                testId="master-workspace-currency"
+                value={reportingCurrency}
+                onChange={setReportingCurrency}
+                options={currencyOptions}
+                placeholder="Select reporting currency"
+                clearLabel="Unset reporting currency"
+              />
+              <DropdownSelect
+                testId="master-workspace-display-preference"
+                value={currencyDisplayPreference}
+                onChange={(value) => setCurrencyDisplayPreference(value as 'symbol' | 'code')}
+                options={currencyDisplayPreferenceOptions}
+                placeholder="Display preference"
+              />
+              <Button
+                data-testid="master-workspace-save"
+                type="button"
+                onClick={() => updateSettingsMutation.mutate()}
+                disabled={updateSettingsMutation.isPending}
+              >
+                {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+            <div className="mt-4 border-t border-slate-800 pt-4">
+              <Label className="text-sm text-slate-300">Number formatting</Label>
+              <p className="mt-1 text-xs text-slate-500">
+                Locale controls digit grouping app-wide (India uses 1,00,000-style grouping).
+              </p>
+              <div className="mt-2 grid gap-3 sm:grid-cols-[1fr,1fr,auto] max-w-lg">
+                <DropdownSelect
+                  testId="master-workspace-locale"
+                  value={locale}
+                  onChange={setLocale}
+                  options={localeOptions}
+                  placeholder="Locale"
+                />
+                <DropdownSelect
+                  testId="master-workspace-decimal-places"
+                  value={decimalPlaces}
+                  onChange={setDecimalPlaces}
+                  options={decimalPlacesOptions}
+                  placeholder="Decimal places"
+                />
+                <Button
+                  data-testid="master-workspace-save-format"
+                  type="button"
+                  onClick={() => updateSettingsMutation.mutate()}
+                  disabled={updateSettingsMutation.isPending}
+                >
+                  {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4 border-t border-slate-800 pt-4">
+              <Label className="text-sm text-slate-300">Default spending account</Label>
+              <p className="mt-1 text-xs text-slate-500">
+                New spending transactions use this account when none is picked on the form.
+              </p>
+              <div className="mt-2 max-w-sm">
+                <DropdownSelect
+                  testId="master-default-spending-account"
+                  value={defaultSpendingAccountId}
+                  onChange={setDefaultSpendingAccountId}
+                  options={defaultSpendingAccountOptions}
+                  placeholder="No default"
+                  clearLabel="No default"
+                  showSearch
+                />
+              </div>
+            </div>
+          </section>
 
-      <section data-testid="master-investing-settings" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
-        <h2 className="text-lg font-semibold text-white">Investing</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Constituents below this portfolio weight are hidden from detail lists only. Totals,
-          concentration, and overlap calculations still use every constituent.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,auto] max-w-md">
-          <label className="space-y-1 text-sm text-slate-300">
-            <span>Minimum constituent weight (%)</span>
-            <input
-              data-testid="master-lookthrough-threshold"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={lookthroughMinWeightPct}
-              onChange={(event) => setLookthroughMinWeightPct(event.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-slate-100"
-            />
-          </label>
-          <Button
-            type="button"
-            className="self-end"
-            onClick={() => updateSettingsMutation.mutate()}
-            disabled={updateSettingsMutation.isPending}
+          <section
+            data-testid="master-investing-settings"
+            className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6"
           >
-            {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
-      </section>
+            <h2 className="text-lg font-semibold text-white">Investing</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Constituents below this portfolio weight are hidden from detail lists only. Totals,
+              concentration, and overlap calculations still use every constituent.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,auto] max-w-md">
+              <label className="space-y-1 text-sm text-slate-300">
+                <span>Minimum constituent weight (%)</span>
+                <input
+                  data-testid="master-lookthrough-threshold"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={lookthroughMinWeightPct}
+                  onChange={(event) => setLookthroughMinWeightPct(event.target.value)}
+                  className="h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-slate-100"
+                />
+              </label>
+              <Button
+                type="button"
+                className="self-end"
+                onClick={() => updateSettingsMutation.mutate()}
+                disabled={updateSettingsMutation.isPending}
+              >
+                {updateSettingsMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </section>
 
-      <section data-testid="master-capture-settings" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
-        <h2 className="text-lg font-semibold text-white">Capture Launcher</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Control the visibility of the floating quick-capture launcher.
-        </p>
-        <div className="mt-4 max-w-sm">
-          <ToggleSwitch
-            testId="settings-capture-launcher-toggle"
-            checked={showLauncher}
-            onChange={handleToggleLauncher}
-            label="Show floating capture launcher"
-          />
-        </div>
-      </section>
+          <section
+            data-testid="master-capture-settings"
+            className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6"
+          >
+            <h2 className="text-lg font-semibold text-white">Capture Launcher</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Control the visibility of the floating quick-capture launcher.
+            </p>
+            <div className="mt-4 max-w-sm">
+              <ToggleSwitch
+                testId="settings-capture-launcher-toggle"
+                checked={showLauncher}
+                onChange={handleToggleLauncher}
+                label="Show floating capture launcher"
+              />
+            </div>
+          </section>
 
-      <section data-testid="master-user-overrides" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
-        <h2 className="text-lg font-semibold text-white">My Display Overrides</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Optional per-user overrides. Leave blank to inherit workspace defaults.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
-          <DropdownSelect
-            testId="master-user-currency-override"
-            value={userReportingCurrencyOverride}
-            onChange={setUserReportingCurrencyOverride}
-            options={currencyOptions}
-            placeholder="Inherit workspace currency"
-            clearLabel="Inherit workspace currency"
-          />
-          <DropdownSelect
-            testId="master-user-display-override"
-            value={userDisplayPreferenceOverride}
-            onChange={setUserDisplayPreferenceOverride}
-            options={userDisplayPreferenceOptions}
-            placeholder="Inherit workspace display style"
-            clearLabel="Inherit workspace display style"
-          />
-          <Button
-            data-testid="master-user-save-override"
-            type="button"
-            onClick={() => updateUserSettingsMutation.mutate()}
-            disabled={updateUserSettingsMutation.isPending}
+          <section
+            data-testid="master-user-overrides"
+            className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6"
           >
-            {updateUserSettingsMutation.isPending ? 'Saving...' : 'Save Override'}
-          </Button>
-        </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
-          <DropdownSelect
-            testId="master-user-locale-override"
-            value={userLocaleOverride}
-            onChange={setUserLocaleOverride}
-            options={userLocaleOverrideOptions}
-            placeholder="Inherit workspace locale"
-            clearLabel="Inherit workspace locale"
-          />
-          <DropdownSelect
-            testId="master-user-decimal-places-override"
-            value={userDecimalPlacesOverride}
-            onChange={setUserDecimalPlacesOverride}
-            options={decimalPlacesOptions}
-            placeholder="Inherit workspace decimal places"
-            clearLabel="Inherit workspace decimal places"
-          />
-          <Button
-            data-testid="master-user-save-format-override"
-            type="button"
-            onClick={() => updateUserSettingsMutation.mutate()}
-            disabled={updateUserSettingsMutation.isPending}
-          >
-            {updateUserSettingsMutation.isPending ? 'Saving...' : 'Save Override'}
-          </Button>
-        </div>
-        {userSettings ? (
-          <p className="mt-3 text-xs text-slate-500">
-            Effective now: {(userSettings.effective_reporting_currency_code ?? 'Unconfigured')} / {userSettings.effective_currency_display_preference} / {userSettings.effective_locale} / {userSettings.effective_decimal_places} decimals
-          </p>
-        ) : null}
-      </section>
+            <h2 className="text-lg font-semibold text-white">My Display Overrides</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Optional per-user overrides. Leave blank to inherit workspace defaults.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
+              <DropdownSelect
+                testId="master-user-currency-override"
+                value={userReportingCurrencyOverride}
+                onChange={setUserReportingCurrencyOverride}
+                options={currencyOptions}
+                placeholder="Inherit workspace currency"
+                clearLabel="Inherit workspace currency"
+              />
+              <DropdownSelect
+                testId="master-user-display-override"
+                value={userDisplayPreferenceOverride}
+                onChange={setUserDisplayPreferenceOverride}
+                options={userDisplayPreferenceOptions}
+                placeholder="Inherit workspace display style"
+                clearLabel="Inherit workspace display style"
+              />
+              <Button
+                data-testid="master-user-save-override"
+                type="button"
+                onClick={() => updateUserSettingsMutation.mutate()}
+                disabled={updateUserSettingsMutation.isPending}
+              >
+                {updateUserSettingsMutation.isPending ? 'Saving...' : 'Save Override'}
+              </Button>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr,1fr,auto]">
+              <DropdownSelect
+                testId="master-user-locale-override"
+                value={userLocaleOverride}
+                onChange={setUserLocaleOverride}
+                options={userLocaleOverrideOptions}
+                placeholder="Inherit workspace locale"
+                clearLabel="Inherit workspace locale"
+              />
+              <DropdownSelect
+                testId="master-user-decimal-places-override"
+                value={userDecimalPlacesOverride}
+                onChange={setUserDecimalPlacesOverride}
+                options={decimalPlacesOptions}
+                placeholder="Inherit workspace decimal places"
+                clearLabel="Inherit workspace decimal places"
+              />
+              <Button
+                data-testid="master-user-save-format-override"
+                type="button"
+                onClick={() => updateUserSettingsMutation.mutate()}
+                disabled={updateUserSettingsMutation.isPending}
+              >
+                {updateUserSettingsMutation.isPending ? 'Saving...' : 'Save Override'}
+              </Button>
+            </div>
+            {userSettings ? (
+              <p className="mt-3 text-xs text-slate-500">
+                Effective now: {userSettings.effective_reporting_currency_code ?? 'Unconfigured'} /{' '}
+                {userSettings.effective_currency_display_preference} /{' '}
+                {userSettings.effective_locale} / {userSettings.effective_decimal_places} decimals
+              </p>
+            ) : null}
+          </section>
         </TabsContent>
 
         <TabsContent value="accounts" className="space-y-6">
-      <section data-testid="master-accounts-section" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
-        <h2 className="text-lg font-semibold text-white">Accounts and Wallets</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Use these for spending source selection, transfer flows, and investing account linkage.
-        </p>
-
-        <div className="mt-4 grid gap-3 lg:grid-cols-4">
-          <Input
-            data-testid="master-account-name"
-            value={newAccountName}
-            onChange={(e) => setNewAccountName(e.target.value)}
-            placeholder="Account name"
-          />
-          <DropdownSelect
-            testId="master-account-type"
-            value={newAccountType}
-            onChange={(value) => setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
-            options={accountTypeOptions}
-            placeholder="Account type"
-          />
-          <DropdownSelect
-            testId="master-account-currency"
-            value={newAccountCurrency}
-            onChange={setNewAccountCurrency}
-            options={currencyOptions}
-            placeholder="Default currency"
-          />
-          <Button
-            data-testid="master-account-create"
-            type="button"
-            onClick={() => createAccountMutation.mutate()}
-            disabled={
-              createAccountMutation.isPending || !newAccountName.trim() || !newAccountCurrency
-            }
+          <section
+            data-testid="master-accounts-section"
+            className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6"
           >
-            {createAccountMutation.isPending ? 'Creating...' : 'Create Account'}
-          </Button>
-        </div>
+            <h2 className="text-lg font-semibold text-white">Accounts and Wallets</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Use these for spending source selection, transfer flows, and investing account
+              linkage.
+            </p>
 
-        {editingAccountId ? (
-          <div data-testid="master-account-editor" className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Edit account</h3>
-              <button
-                type="button"
-                onClick={() => setEditingAccountId(null)}
-                className="text-xs text-slate-400 hover:text-slate-200"
-              >
-                Cancel
-              </button>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-5">
+            <div className="mt-4 grid gap-3 lg:grid-cols-4">
               <Input
-                data-testid="master-account-edit-name"
-                value={editingAccountName}
-                onChange={(e) => setEditingAccountName(e.target.value)}
+                data-testid="master-account-name"
+                value={newAccountName}
+                onChange={(e) => setNewAccountName(e.target.value)}
                 placeholder="Account name"
               />
               <DropdownSelect
-                testId="master-account-edit-type"
-                value={editingAccountType}
-                onChange={(value) => setEditingAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')}
+                testId="master-account-type"
+                value={newAccountType}
+                onChange={(value) =>
+                  setNewAccountType(value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card')
+                }
                 options={accountTypeOptions}
                 placeholder="Account type"
               />
               <DropdownSelect
-                testId="master-account-edit-currency"
-                value={editingAccountCurrency}
-                onChange={setEditingAccountCurrency}
+                testId="master-account-currency"
+                value={newAccountCurrency}
+                onChange={setNewAccountCurrency}
                 options={currencyOptions}
                 placeholder="Default currency"
               />
-              <DropdownSelect
-                testId="master-account-edit-status"
-                value={editingAccountIsActive ? 'active' : 'inactive'}
-                onChange={(value) => setEditingAccountIsActive(value === 'active')}
-                options={[
-                  { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' },
-                ]}
-                placeholder="Status"
-              />
               <Button
-                data-testid="master-account-save"
+                data-testid="master-account-create"
                 type="button"
-                onClick={() => updateAccountMutation.mutate()}
+                onClick={() => createAccountMutation.mutate()}
                 disabled={
-                  updateAccountMutation.isPending ||
-                  !editingAccountName.trim() ||
-                  !editingAccountCurrency
+                  createAccountMutation.isPending || !newAccountName.trim() || !newAccountCurrency
                 }
               >
-                {updateAccountMutation.isPending ? 'Saving...' : 'Save Account'}
+                {createAccountMutation.isPending ? 'Creating...' : 'Create Account'}
               </Button>
-              {updateAccountMutation.isError ? (
-                <p className="text-sm text-rose-400">Failed to save account. Please try again.</p>
-              ) : null}
             </div>
-          </div>
-        ) : null}
 
-        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800">
-          <table className="w-full text-sm text-slate-300 min-w-[800px]">
-            <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Name</th>
-                <th className="px-4 py-3 text-left font-medium">Type</th>
-                <th className="px-4 py-3 text-left font-medium">Currency</th>
-                <th className="px-4 py-3 text-right font-medium">Edit</th>
-                <th className="px-4 py-3 text-right font-medium">Delete</th>
-                <th className="px-4 py-3 text-right font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {accounts.map((account) => (
-                <tr key={account.public_id} data-testid={`master-account-row-${account.public_id}`}>
-                  <td className="px-4 py-3">{account.name}</td>
-                  <td className="px-4 py-3">
-                    <AccountTypeBadge type={account.account_type} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <CurrencyBadge code={account.default_currency_code} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openAccountEditor(account)}
-                      data-testid={`master-account-edit-${account.public_id}`}
-                      className="inline-flex items-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
-                      title="Edit account"
+            {editingAccountId ? (
+              <div
+                data-testid="master-account-editor"
+                className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Edit account</h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingAccountId(null)}
+                    className="text-xs text-slate-400 hover:text-slate-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <div className="grid gap-3 lg:grid-cols-5">
+                  <Input
+                    data-testid="master-account-edit-name"
+                    value={editingAccountName}
+                    onChange={(e) => setEditingAccountName(e.target.value)}
+                    placeholder="Account name"
+                  />
+                  <DropdownSelect
+                    testId="master-account-edit-type"
+                    value={editingAccountType}
+                    onChange={(value) =>
+                      setEditingAccountType(
+                        value as 'bank' | 'brokerage' | 'wallet' | 'card' | 'gift_card',
+                      )
+                    }
+                    options={accountTypeOptions}
+                    placeholder="Account type"
+                  />
+                  <DropdownSelect
+                    testId="master-account-edit-currency"
+                    value={editingAccountCurrency}
+                    onChange={setEditingAccountCurrency}
+                    options={currencyOptions}
+                    placeholder="Default currency"
+                  />
+                  <DropdownSelect
+                    testId="master-account-edit-status"
+                    value={editingAccountIsActive ? 'active' : 'inactive'}
+                    onChange={(value) => setEditingAccountIsActive(value === 'active')}
+                    options={[
+                      { value: 'active', label: 'Active' },
+                      { value: 'inactive', label: 'Inactive' },
+                    ]}
+                    placeholder="Status"
+                  />
+                  <Button
+                    data-testid="master-account-save"
+                    type="button"
+                    onClick={() => updateAccountMutation.mutate()}
+                    disabled={
+                      updateAccountMutation.isPending ||
+                      !editingAccountName.trim() ||
+                      !editingAccountCurrency
+                    }
+                  >
+                    {updateAccountMutation.isPending ? 'Saving...' : 'Save Account'}
+                  </Button>
+                  {updateAccountMutation.isError ? (
+                    <p className="text-sm text-rose-400">
+                      Failed to save account. Please try again.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800">
+              <table className="w-full text-sm text-slate-300 min-w-[800px]">
+                <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Name</th>
+                    <th className="px-4 py-3 text-left font-medium">Type</th>
+                    <th className="px-4 py-3 text-left font-medium">Currency</th>
+                    <th className="px-4 py-3 text-right font-medium">Edit</th>
+                    <th className="px-4 py-3 text-right font-medium">Delete</th>
+                    <th className="px-4 py-3 text-right font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {accounts.map((account) => (
+                    <tr
+                      key={account.public_id}
+                      data-testid={`master-account-row-${account.public_id}`}
                     >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-9 px-3 text-rose-300 hover:text-rose-200"
-                      onClick={() =>
-                        setAccountPendingDelete({ publicId: account.public_id, name: account.name })
-                      }
-                      disabled={deleteAccountMutation.isPending}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <StatusBadge active={account.is_active} />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="h-9 px-3"
-                        onClick={() =>
-                          toggleAccountActiveMutation.mutate({
-                            publicId: account.public_id,
-                            isActive: !account.is_active,
-                          })
-                        }
-                        disabled={toggleAccountActiveMutation.isPending}
-                      >
-                        {account.is_active ? 'Deactivate' : 'Activate'}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {accounts.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-5 text-slate-400" colSpan={6}>
-                    No accounts configured yet.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                      <td className="px-4 py-3">{account.name}</td>
+                      <td className="px-4 py-3">
+                        <AccountTypeBadge type={account.account_type} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <CurrencyBadge code={account.default_currency_code} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => openAccountEditor(account)}
+                          data-testid={`master-account-edit-${account.public_id}`}
+                          className="inline-flex items-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                          title="Edit account"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-9 px-3 text-rose-300 hover:text-rose-200"
+                          onClick={() =>
+                            setAccountPendingDelete({
+                              publicId: account.public_id,
+                              name: account.name,
+                            })
+                          }
+                          disabled={deleteAccountMutation.isPending}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <StatusBadge active={account.is_active} />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-9 px-3"
+                            onClick={() =>
+                              toggleAccountActiveMutation.mutate({
+                                publicId: account.public_id,
+                                isActive: !account.is_active,
+                              })
+                            }
+                            disabled={toggleAccountActiveMutation.isPending}
+                          >
+                            {account.is_active ? 'Deactivate' : 'Activate'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {accounts.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-5 text-slate-400" colSpan={6}>
+                        No accounts configured yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </TabsContent>
 
         <TabsContent value="categories" className="space-y-6">
-      <section data-testid="master-categories-section" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Categories</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Rename, recolor, regroup, and merge spending categories. Recurring rules are managed in Spending.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            data-testid="master-category-merge-open"
-            onClick={() => {
-              setMergeError(null);
-              setMergeTargetId('');
-              setMergeSourceIds([]);
-              setIsMergeDialogOpen(true);
-            }}
-            disabled={categories.length < 2}
+          <section
+            data-testid="master-categories-section"
+            className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6"
           >
-            Merge Categories
-          </Button>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-            <Label className="text-slate-400">Total categories</Label>
-            <p className="mt-2 text-2xl font-semibold text-white">{categories.length}</p>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-            <Label className="text-slate-400">System categories</Label>
-            <p className="mt-2 text-2xl font-semibold text-white">
-              {categories.filter((category) => category.is_system).length}
-            </p>
-          </div>
-        </div>
-
-        {editingCategoryId ? (
-          <div data-testid="master-category-editor" className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Edit category</h3>
-              <button
-                type="button"
-                onClick={() => setEditingCategoryId(null)}
-                className="text-xs text-slate-400 hover:text-slate-200"
-              >
-                Cancel
-              </button>
-            </div>
-            <div className="grid gap-3 md:grid-cols-5">
-              <Input
-                data-testid="master-category-edit-name"
-                value={editingCategoryName}
-                onChange={(e) => setEditingCategoryName(e.target.value)}
-                placeholder="Category name"
-              />
-              <Input
-                data-testid="master-category-edit-color"
-                type="color"
-                value={editingCategoryColor}
-                onChange={(e) => setEditingCategoryColor(e.target.value)}
-              />
-              <Input
-                data-testid="master-category-edit-icon"
-                value={editingCategoryIcon}
-                onChange={(e) => setEditingCategoryIcon(e.target.value)}
-                placeholder="e.g. 🛒"
-              />
-              <DropdownSelect
-                testId="master-category-edit-group"
-                value={editingCategoryGroupId}
-                onChange={setEditingCategoryGroupId}
-                options={categoryGroupOptions}
-                placeholder="No group"
-                clearLabel="No group"
-              />
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Categories</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Rename, recolor, regroup, and merge spending categories. Recurring rules are
+                  managed in Spending.
+                </p>
+              </div>
               <Button
-                data-testid="master-category-save"
                 type="button"
-                onClick={() => updateCategoryMutation.mutate()}
-                disabled={updateCategoryMutation.isPending || !editingCategoryName.trim()}
+                variant="secondary"
+                data-testid="master-category-merge-open"
+                onClick={() => {
+                  setMergeError(null);
+                  setMergeTargetId('');
+                  setMergeSourceIds([]);
+                  setIsMergeDialogOpen(true);
+                }}
+                disabled={categories.length < 2}
               >
-                {updateCategoryMutation.isPending ? 'Saving...' : 'Save Category'}
+                Merge Categories
               </Button>
-              {updateCategoryMutation.isError ? (
-                <p className="text-sm text-rose-400">Failed to save category. Please try again.</p>
-              ) : null}
             </div>
-          </div>
-        ) : null}
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                <Label className="text-slate-400">Total categories</Label>
+                <p className="mt-2 text-2xl font-semibold text-white">{categories.length}</p>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                <Label className="text-slate-400">System categories</Label>
+                <p className="mt-2 text-2xl font-semibold text-white">
+                  {categories.filter((category) => category.is_system).length}
+                </p>
+              </div>
+            </div>
 
-        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800">
-          <table className="w-full text-sm text-slate-300 min-w-[700px]">
-            <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Name</th>
-                <th className="px-4 py-3 text-left font-medium">Color</th>
-                <th className="px-4 py-3 text-left font-medium">Icon</th>
-                <th className="px-4 py-3 text-left font-medium">Type</th>
-                <th className="px-4 py-3 text-left font-medium">Group</th>
-                <th className="px-4 py-3 text-right font-medium">Edit</th>
-                <th className="px-4 py-3 text-right font-medium">Delete</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {categories.map((category) => (
-                <tr key={category.public_id} data-testid={`master-category-row-${category.public_id}`}>
-                  <td className="px-4 py-3">{category.name}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: category.color ?? '#64748b' }} />
-                      <span className="text-slate-400">{category.color ?? '-'}</span>
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{category.icon ?? '-'}</td>
-                  <td className="px-4 py-3">{category.is_system ? 'System' : 'Custom'}</td>
-                  <td className="px-4 py-3">
-                    {category.category_group_id
-                      ? groupById.get(category.category_group_id)?.name ?? '-'
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openCategoryEditor(category)}
-                      data-testid={`master-category-edit-${category.public_id}`}
-                      className="inline-flex items-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
-                      title="Edit category"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-9 px-3 text-rose-300 hover:text-rose-200"
-                      onClick={() => {
-                        setDeleteCategoryError(null);
-                        setCategoryPendingDelete({ publicId: category.public_id, name: category.name });
-                      }}
-                      disabled={deleteCategoryMutation.isPending}
-                      title="Delete category"
-                      data-testid={`master-category-delete-${category.public_id}`}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {categories.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-5 text-slate-400" colSpan={7}>
-                    No categories configured yet.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section data-testid="master-category-groups-section" className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6">
-        <h2 className="text-lg font-semibold text-white">Category Groups</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Group related categories together for combined budgets and dashboard rollups. Deleting a
-          group un-groups its categories rather than deleting them.
-        </p>
-
-        <div className="mt-4 grid gap-3 lg:grid-cols-4">
-          <Input
-            data-testid="master-group-name"
-            value={newGroupName}
-            onChange={(e) => setNewGroupName(e.target.value)}
-            placeholder="Group name"
-          />
-          <Input
-            data-testid="master-group-color"
-            type="color"
-            value={newGroupColor}
-            onChange={(e) => setNewGroupColor(e.target.value)}
-          />
-          <Input
-            data-testid="master-group-icon"
-            value={newGroupIcon}
-            onChange={(e) => setNewGroupIcon(e.target.value)}
-            placeholder="e.g. 🏠"
-          />
-          <Button
-            data-testid="master-group-create"
-            type="button"
-            onClick={() => createGroupMutation.mutate()}
-            disabled={createGroupMutation.isPending || !newGroupName.trim()}
-          >
-            {createGroupMutation.isPending ? 'Creating...' : 'Create Group'}
-          </Button>
-        </div>
-        {createGroupMutation.isError ? (
-          <p className="mt-2 text-sm text-rose-400">Failed to create group. Please try again.</p>
-        ) : null}
-
-        {editingGroupId ? (
-          <div data-testid="master-group-editor" className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Edit group</h3>
-              <button
-                type="button"
-                onClick={() => setEditingGroupId(null)}
-                className="text-xs text-slate-400 hover:text-slate-200"
+            {editingCategoryId ? (
+              <div
+                data-testid="master-category-editor"
+                className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4"
               >
-                Cancel
-              </button>
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Edit category</h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCategoryId(null)}
+                    className="text-xs text-slate-400 hover:text-slate-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <div className="grid gap-3 md:grid-cols-5">
+                  <Input
+                    data-testid="master-category-edit-name"
+                    value={editingCategoryName}
+                    onChange={(e) => setEditingCategoryName(e.target.value)}
+                    placeholder="Category name"
+                  />
+                  <Input
+                    data-testid="master-category-edit-color"
+                    type="color"
+                    value={editingCategoryColor}
+                    onChange={(e) => setEditingCategoryColor(e.target.value)}
+                  />
+                  <Input
+                    data-testid="master-category-edit-icon"
+                    value={editingCategoryIcon}
+                    onChange={(e) => setEditingCategoryIcon(e.target.value)}
+                    placeholder="e.g. 🛒"
+                  />
+                  <DropdownSelect
+                    testId="master-category-edit-group"
+                    value={editingCategoryGroupId}
+                    onChange={setEditingCategoryGroupId}
+                    options={categoryGroupOptions}
+                    placeholder="No group"
+                    clearLabel="No group"
+                  />
+                  <Button
+                    data-testid="master-category-save"
+                    type="button"
+                    onClick={() => updateCategoryMutation.mutate()}
+                    disabled={updateCategoryMutation.isPending || !editingCategoryName.trim()}
+                  >
+                    {updateCategoryMutation.isPending ? 'Saving...' : 'Save Category'}
+                  </Button>
+                  {updateCategoryMutation.isError ? (
+                    <p className="text-sm text-rose-400">
+                      Failed to save category. Please try again.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800">
+              <table className="w-full text-sm text-slate-300 min-w-[700px]">
+                <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Name</th>
+                    <th className="px-4 py-3 text-left font-medium">Color</th>
+                    <th className="px-4 py-3 text-left font-medium">Icon</th>
+                    <th className="px-4 py-3 text-left font-medium">Type</th>
+                    <th className="px-4 py-3 text-left font-medium">Group</th>
+                    <th className="px-4 py-3 text-right font-medium">Edit</th>
+                    <th className="px-4 py-3 text-right font-medium">Delete</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {categories.map((category) => (
+                    <tr
+                      key={category.public_id}
+                      data-testid={`master-category-row-${category.public_id}`}
+                    >
+                      <td className="px-4 py-3">{category.name}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-2">
+                          <span
+                            className="inline-block h-3 w-3 rounded-full"
+                            style={{ backgroundColor: category.color ?? '#64748b' }}
+                          />
+                          <span className="text-slate-400">{category.color ?? '-'}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{category.icon ?? '-'}</td>
+                      <td className="px-4 py-3">{category.is_system ? 'System' : 'Custom'}</td>
+                      <td className="px-4 py-3">
+                        {category.category_group_id
+                          ? groupById.get(category.category_group_id)?.name ?? '-'
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => openCategoryEditor(category)}
+                          data-testid={`master-category-edit-${category.public_id}`}
+                          className="inline-flex items-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                          title="Edit category"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-9 px-3 text-rose-300 hover:text-rose-200"
+                          onClick={() => {
+                            setDeleteCategoryError(null);
+                            setCategoryPendingDelete({
+                              publicId: category.public_id,
+                              name: category.name,
+                            });
+                          }}
+                          disabled={deleteCategoryMutation.isPending}
+                          title="Delete category"
+                          data-testid={`master-category-delete-${category.public_id}`}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {categories.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-5 text-slate-400" colSpan={7}>
+                        No categories configured yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
             </div>
-            <div className="grid gap-3 md:grid-cols-4">
+          </section>
+
+          <section
+            data-testid="master-category-groups-section"
+            className="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-6"
+          >
+            <h2 className="text-lg font-semibold text-white">Category Groups</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Group related categories together for combined budgets and dashboard rollups. Deleting
+              a group un-groups its categories rather than deleting them.
+            </p>
+
+            <div className="mt-4 grid gap-3 lg:grid-cols-4">
               <Input
-                data-testid="master-group-edit-name"
-                value={editingGroupName}
-                onChange={(e) => setEditingGroupName(e.target.value)}
+                data-testid="master-group-name"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
                 placeholder="Group name"
               />
               <Input
-                data-testid="master-group-edit-color"
+                data-testid="master-group-color"
                 type="color"
-                value={editingGroupColor}
-                onChange={(e) => setEditingGroupColor(e.target.value)}
+                value={newGroupColor}
+                onChange={(e) => setNewGroupColor(e.target.value)}
               />
               <Input
-                data-testid="master-group-edit-icon"
-                value={editingGroupIcon}
-                onChange={(e) => setEditingGroupIcon(e.target.value)}
+                data-testid="master-group-icon"
+                value={newGroupIcon}
+                onChange={(e) => setNewGroupIcon(e.target.value)}
                 placeholder="e.g. 🏠"
               />
               <Button
-                data-testid="master-group-save"
+                data-testid="master-group-create"
                 type="button"
-                onClick={() => updateGroupMutation.mutate()}
-                disabled={updateGroupMutation.isPending || !editingGroupName.trim()}
+                onClick={() => createGroupMutation.mutate()}
+                disabled={createGroupMutation.isPending || !newGroupName.trim()}
               >
-                {updateGroupMutation.isPending ? 'Saving...' : 'Save Group'}
+                {createGroupMutation.isPending ? 'Creating...' : 'Create Group'}
               </Button>
-              {updateGroupMutation.isError ? (
-                <p className="text-sm text-rose-400">Failed to save group. Please try again.</p>
-              ) : null}
             </div>
-
-            <div className="mt-4">
-              <Label className="text-slate-400">Member categories</Label>
-              <p className="mt-1 text-xs text-slate-500">
-                Check every category that should belong to this group. Unchecking a category removes it from the
-                group (it becomes ungrouped unless reassigned elsewhere).
+            {createGroupMutation.isError ? (
+              <p className="mt-2 text-sm text-rose-400">
+                Failed to create group. Please try again.
               </p>
-              <div
-                data-testid="master-group-member-categories"
-                className="mt-2 grid max-h-48 gap-1.5 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-2 md:grid-cols-3"
-              >
-                {categories.map((category) => {
-                  const isChecked = editingGroupMemberIds.includes(category.public_id);
-                  const belongsElsewhere =
-                    !isChecked &&
-                    category.category_group_id &&
-                    category.category_group_id !== editingGroupId
-                      ? groupById.get(category.category_group_id)?.name
-                      : null;
-                  return (
-                    <label
-                      key={category.public_id}
-                      data-testid={`master-group-member-${category.public_id}`}
-                      className="flex items-center gap-2 rounded px-1.5 py-1 text-sm text-slate-300 hover:bg-slate-800/60"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleGroupMember(category.public_id)}
-                        className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 accent-cyan-500"
-                      />
-                      <span className="truncate">{category.name}</span>
-                      {belongsElsewhere ? (
-                        <span className="ml-auto shrink-0 text-[10px] text-slate-500">in {belongsElsewhere}</span>
-                      ) : null}
-                    </label>
-                  );
-                })}
-                {categories.length === 0 ? (
-                  <p className="text-xs text-slate-500">No categories yet.</p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        ) : null}
+            ) : null}
 
-        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800">
-          <table className="w-full text-sm text-slate-300 min-w-[600px]">
-            <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Name</th>
-                <th className="px-4 py-3 text-left font-medium">Color</th>
-                <th className="px-4 py-3 text-left font-medium">Icon</th>
-                <th className="px-4 py-3 text-left font-medium">Categories</th>
-                <th className="px-4 py-3 text-right font-medium">Edit</th>
-                <th className="px-4 py-3 text-right font-medium">Delete</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {categoryGroups.map((group) => (
-                <tr key={group.public_id} data-testid={`master-group-row-${group.public_id}`}>
-                  <td className="px-4 py-3">{group.name}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: group.color ?? '#64748b' }} />
-                      <span className="text-slate-400">{group.color ?? '-'}</span>
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{group.icon ?? '-'}</td>
-                  <td className="px-4 py-3">
-                    {categories.filter((c) => c.category_group_id === group.public_id).length}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openGroupEditor(group)}
-                      data-testid={`master-group-edit-${group.public_id}`}
-                      className="inline-flex items-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
-                      title="Edit group"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-9 px-3 text-rose-300 hover:text-rose-200"
-                      onClick={() => {
-                        setDeleteGroupError(null);
-                        setGroupPendingDelete({ publicId: group.public_id, name: group.name });
-                      }}
-                      disabled={deleteGroupMutation.isPending}
-                      title="Delete group"
-                      data-testid={`master-group-delete-${group.public_id}`}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {categoryGroups.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-5 text-slate-400" colSpan={6}>
-                    No category groups yet.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            {editingGroupId ? (
+              <div
+                data-testid="master-group-editor"
+                className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-4"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Edit group</h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingGroupId(null)}
+                    className="text-xs text-slate-400 hover:text-slate-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <div className="grid gap-3 md:grid-cols-4">
+                  <Input
+                    data-testid="master-group-edit-name"
+                    value={editingGroupName}
+                    onChange={(e) => setEditingGroupName(e.target.value)}
+                    placeholder="Group name"
+                  />
+                  <Input
+                    data-testid="master-group-edit-color"
+                    type="color"
+                    value={editingGroupColor}
+                    onChange={(e) => setEditingGroupColor(e.target.value)}
+                  />
+                  <Input
+                    data-testid="master-group-edit-icon"
+                    value={editingGroupIcon}
+                    onChange={(e) => setEditingGroupIcon(e.target.value)}
+                    placeholder="e.g. 🏠"
+                  />
+                  <Button
+                    data-testid="master-group-save"
+                    type="button"
+                    onClick={() => updateGroupMutation.mutate()}
+                    disabled={updateGroupMutation.isPending || !editingGroupName.trim()}
+                  >
+                    {updateGroupMutation.isPending ? 'Saving...' : 'Save Group'}
+                  </Button>
+                  {updateGroupMutation.isError ? (
+                    <p className="text-sm text-rose-400">Failed to save group. Please try again.</p>
+                  ) : null}
+                </div>
+
+                <div className="mt-4">
+                  <Label className="text-slate-400">Member categories</Label>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Check every category that should belong to this group. Unchecking a category
+                    removes it from the group (it becomes ungrouped unless reassigned elsewhere).
+                  </p>
+                  <div
+                    data-testid="master-group-member-categories"
+                    className="mt-2 grid max-h-48 gap-1.5 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:grid-cols-2 md:grid-cols-3"
+                  >
+                    {categories.map((category) => {
+                      const isChecked = editingGroupMemberIds.includes(category.public_id);
+                      const belongsElsewhere =
+                        !isChecked &&
+                        category.category_group_id &&
+                        category.category_group_id !== editingGroupId
+                          ? groupById.get(category.category_group_id)?.name
+                          : null;
+                      return (
+                        <label
+                          key={category.public_id}
+                          data-testid={`master-group-member-${category.public_id}`}
+                          className="flex items-center gap-2 rounded px-1.5 py-1 text-sm text-slate-300 hover:bg-slate-800/60"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleGroupMember(category.public_id)}
+                            className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 accent-cyan-500"
+                          />
+                          <span className="truncate">{category.name}</span>
+                          {belongsElsewhere ? (
+                            <span className="ml-auto shrink-0 text-[10px] text-slate-500">
+                              in {belongsElsewhere}
+                            </span>
+                          ) : null}
+                        </label>
+                      );
+                    })}
+                    {categories.length === 0 ? (
+                      <p className="text-xs text-slate-500">No categories yet.</p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-6 overflow-x-auto rounded-xl border border-slate-800">
+              <table className="w-full text-sm text-slate-300 min-w-[600px]">
+                <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Name</th>
+                    <th className="px-4 py-3 text-left font-medium">Color</th>
+                    <th className="px-4 py-3 text-left font-medium">Icon</th>
+                    <th className="px-4 py-3 text-left font-medium">Categories</th>
+                    <th className="px-4 py-3 text-right font-medium">Edit</th>
+                    <th className="px-4 py-3 text-right font-medium">Delete</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {categoryGroups.map((group) => (
+                    <tr key={group.public_id} data-testid={`master-group-row-${group.public_id}`}>
+                      <td className="px-4 py-3">{group.name}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-2">
+                          <span
+                            className="inline-block h-3 w-3 rounded-full"
+                            style={{ backgroundColor: group.color ?? '#64748b' }}
+                          />
+                          <span className="text-slate-400">{group.color ?? '-'}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{group.icon ?? '-'}</td>
+                      <td className="px-4 py-3">
+                        {categories.filter((c) => c.category_group_id === group.public_id).length}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => openGroupEditor(group)}
+                          data-testid={`master-group-edit-${group.public_id}`}
+                          className="inline-flex items-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                          title="Edit group"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="h-9 px-3 text-rose-300 hover:text-rose-200"
+                          onClick={() => {
+                            setDeleteGroupError(null);
+                            setGroupPendingDelete({ publicId: group.public_id, name: group.name });
+                          }}
+                          disabled={deleteGroupMutation.isPending}
+                          title="Delete group"
+                          data-testid={`master-group-delete-${group.public_id}`}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {categoryGroups.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-5 text-slate-400" colSpan={6}>
+                        No category groups yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </TabsContent>
 
         <TabsContent value="danger" className="space-y-6">
-      {currentWorkspace ? (
-        <details
-          data-testid="master-demo-reset-section"
-          className="group rounded-2xl border border-rose-900/50 bg-rose-950/10 p-6"
-        >
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-lg font-semibold text-rose-200">
-              <AlertTriangle className="h-5 w-5" />
-              Demo Data & Reset
-            </span>
-            <ChevronDown className="h-4 w-4 text-rose-300 transition-transform group-open:rotate-180" />
-          </summary>
-          <p className="mt-3 text-sm text-rose-200/80">
-            Reset <strong>{currentWorkspace.name}</strong> to seed a clean, deterministic mock dataset (including demo transactions, budgets, instruments, holdings, and notifications). <strong>Warning:</strong> This will delete all current accounts, transactions, and holdings in this workspace.
-          </p>
-          <div className="mt-4">
-            <Button
-              data-testid="master-demo-reset-button"
-              type="button"
-              className="bg-rose-600 hover:bg-rose-500 hover:shadow-rose-500/40 shadow-rose-500/20 text-white"
-              onClick={() => {
-                setResetConfirmationText('');
-                setIsConfirmResetOpen(true);
-              }}
-              disabled={isResetting || !demoResetStatus?.allowed}
+          {currentWorkspace ? (
+            <details
+              data-testid="master-demo-reset-section"
+              className="group rounded-2xl border border-rose-900/50 bg-rose-950/10 p-6"
             >
-              {isResetting ? 'Resetting Workspace...' : 'Reset & Seed Demo Data'}
-            </Button>
-            {isDemoResetStatusLoading ? (
-              <p className="mt-2 text-xs text-slate-500">Loading reset status...</p>
-            ) : null}
-            {demoResetStatus && !demoResetStatus.allowed ? (
-              <p className="mt-2 text-xs text-rose-400">
-                {demoResetStatus.reason ?? 'You do not have permission to reset this workspace.'}
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-lg font-semibold text-rose-200">
+                  <AlertTriangle className="h-5 w-5" />
+                  Demo Data & Reset
+                </span>
+                <ChevronDown className="h-4 w-4 text-rose-300 transition-transform group-open:rotate-180" />
+              </summary>
+              <p className="mt-3 text-sm text-rose-200/80">
+                Reset <strong>{currentWorkspace.name}</strong> to seed a clean, deterministic mock
+                dataset (including demo transactions, budgets, instruments, holdings, and
+                notifications). <strong>Warning:</strong> This will delete all current accounts,
+                transactions, and holdings in this workspace.
               </p>
-            ) : null}
-            {resetStatus === 'success' && (
-              <div className="mt-3 rounded-lg border border-emerald-600/40 bg-emerald-500/10 p-3 text-xs text-emerald-200">
-                Workspace successfully reset and seeded with demo data!
+              <div className="mt-4">
+                <Button
+                  data-testid="master-demo-reset-button"
+                  type="button"
+                  className="bg-rose-600 hover:bg-rose-500 hover:shadow-rose-500/40 shadow-rose-500/20 text-white"
+                  onClick={() => {
+                    setResetConfirmationText('');
+                    setIsConfirmResetOpen(true);
+                  }}
+                  disabled={isResetting || !demoResetStatus?.allowed}
+                >
+                  {isResetting ? 'Resetting Workspace...' : 'Reset & Seed Demo Data'}
+                </Button>
+                {isDemoResetStatusLoading ? (
+                  <p className="mt-2 text-xs text-slate-500">Loading reset status...</p>
+                ) : null}
+                {demoResetStatus && !demoResetStatus.allowed ? (
+                  <p className="mt-2 text-xs text-rose-400">
+                    {demoResetStatus.reason ??
+                      'You do not have permission to reset this workspace.'}
+                  </p>
+                ) : null}
+                {resetStatus === 'success' && (
+                  <div className="mt-3 rounded-lg border border-emerald-600/40 bg-emerald-500/10 p-3 text-xs text-emerald-200">
+                    Workspace successfully reset and seeded with demo data!
+                  </div>
+                )}
+                {resetStatus === 'error' && (
+                  <div className="mt-3 rounded-lg border border-rose-600/40 bg-rose-500/10 p-3 text-xs text-rose-200">
+                    Failed to reset workspace. Please try again.
+                  </div>
+                )}
               </div>
-            )}
-            {resetStatus === 'error' && (
-              <div className="mt-3 rounded-lg border border-rose-600/40 bg-rose-500/10 p-3 text-xs text-rose-200">
-                Failed to reset workspace. Please try again.
-              </div>
-            )}
-          </div>
-        </details>
-      ) : null}
+            </details>
+          ) : null}
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!accountPendingDelete} onOpenChange={(open) => !open && setAccountPendingDelete(null)}>
+      <Dialog
+        open={!!accountPendingDelete}
+        onOpenChange={(open) => !open && setAccountPendingDelete(null)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete account?</DialogTitle>
@@ -1414,7 +1538,11 @@ export const MasterConfigPage: React.FC = () => {
             </p>
           ) : null}
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setCategoryPendingDelete(null)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setCategoryPendingDelete(null)}
+            >
               Cancel
             </Button>
             <Button
@@ -1545,7 +1673,9 @@ export const MasterConfigPage: React.FC = () => {
               type="button"
               className="bg-rose-600 hover:bg-rose-500 hover:shadow-rose-500/40 shadow-rose-500/20 text-white"
               onClick={() => mergeCategoriesMutation.mutate()}
-              disabled={mergeCategoriesMutation.isPending || !mergeTargetId || mergeSourceIds.length === 0}
+              disabled={
+                mergeCategoriesMutation.isPending || !mergeTargetId || mergeSourceIds.length === 0
+              }
               data-testid="master-merge-confirm"
             >
               {mergeCategoriesMutation.isPending ? 'Merging...' : 'Merge categories'}
@@ -1559,7 +1689,9 @@ export const MasterConfigPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Reset {currentWorkspace?.name ?? 'workspace'}?</DialogTitle>
             <DialogDescription>
-              This action will permanently delete all accounts, transactions, budgets, holdings, cash balances, and tasks in {currentWorkspace?.name ?? 'this workspace'}. It will seed deterministic demo data in their place. This cannot be undone.
+              This action will permanently delete all accounts, transactions, budgets, holdings,
+              cash balances, and tasks in {currentWorkspace?.name ?? 'this workspace'}. It will seed
+              deterministic demo data in their place. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

@@ -44,11 +44,7 @@ describe('importsService', () => {
     await importsService.commitImport('imp_2');
     await importsService.deleteImport('imp_2');
 
-    expect(api.post).toHaveBeenNthCalledWith(
-      1,
-      '/imports',
-      expect.any(FormData)
-    );
+    expect(api.post).toHaveBeenNthCalledWith(1, '/imports', expect.any(FormData));
     expect(api.post).toHaveBeenNthCalledWith(2, '/imports/imp_2/commit');
     expect(api.delete).toHaveBeenCalledWith('/imports/imp_2');
   });

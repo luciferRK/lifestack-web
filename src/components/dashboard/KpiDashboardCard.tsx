@@ -16,7 +16,9 @@ interface KpiDashboardCardProps {
  * — the backend touch for spec-077 is confined to app/spending/ plus one
  * guardrails-job line, so the aggregated dashboard endpoint stays untouched.
  */
-export const KpiDashboardCard: React.FC<KpiDashboardCardProps> = ({ currencyDisplayPreference }) => {
+export const KpiDashboardCard: React.FC<KpiDashboardCardProps> = ({
+  currencyDisplayPreference,
+}) => {
   const { data, isLoading, isError } = useQuery({
     queryKey: queryKeys.spending.kpis('dashboard'),
     queryFn: () => spendingService.getKpis(20, 0),
@@ -39,7 +41,10 @@ export const KpiDashboardCard: React.FC<KpiDashboardCardProps> = ({ currencyDisp
             <Gauge className="h-5 w-5 text-cyan-400" />
             <h2 className="text-xl font-semibold text-white">Custom KPIs</h2>
           </div>
-          <Link to="/spending?tab=kpis" className="text-xs font-medium text-cyan-400 hover:text-cyan-300">
+          <Link
+            to="/spending?tab=kpis"
+            className="text-xs font-medium text-cyan-400 hover:text-cyan-300"
+          >
             Manage
           </Link>
         </div>
@@ -50,7 +55,8 @@ export const KpiDashboardCard: React.FC<KpiDashboardCardProps> = ({ currencyDisp
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {kpis.map((kpi) => {
               const current = parseFloat(kpi.current_value.toString());
-              const target = kpi.target_value != null ? parseFloat(kpi.target_value.toString()) : null;
+              const target =
+                kpi.target_value != null ? parseFloat(kpi.target_value.toString()) : null;
               return (
                 <div
                   key={kpi.public_id}
@@ -63,7 +69,11 @@ export const KpiDashboardCard: React.FC<KpiDashboardCardProps> = ({ currencyDisp
                       <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
                     ) : null}
                   </div>
-                  <p className={`mt-1 text-lg font-bold ${kpi.is_breached ? 'text-rose-300' : 'text-white'}`}>
+                  <p
+                    className={`mt-1 text-lg font-bold ${
+                      kpi.is_breached ? 'text-rose-300' : 'text-white'
+                    }`}
+                  >
                     {formatCurrency(current, kpi.currency_code, currencyDisplayPreference)}
                   </p>
                   {target != null ? (

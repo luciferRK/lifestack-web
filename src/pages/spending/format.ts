@@ -22,7 +22,8 @@ export const formatDueDate = (dateStr: string) => {
   today.setHours(0, 0, 0, 0);
   due.setHours(0, 0, 0, 0);
   const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, color: 'text-red-400 bg-red-500/10' };
+  if (diffDays < 0)
+    return { label: `${Math.abs(diffDays)}d overdue`, color: 'text-red-400 bg-red-500/10' };
   if (diffDays === 0) return { label: 'Due today', color: 'text-amber-400 bg-amber-500/10' };
   if (diffDays === 1) return { label: 'Due tomorrow', color: 'text-amber-400 bg-amber-500/10' };
   return { label: `Due in ${diffDays}d`, color: 'text-slate-400 bg-slate-800' };
@@ -43,7 +44,20 @@ const monthLabelFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
 });
 
-const MONTH_SHORT_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_SHORT_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 // Short month name (e.g. "Jan") from a `YYYY-MM` value. Falls back to the
 // raw input for anything that doesn't match, so callers can pass it through
@@ -67,7 +81,10 @@ export const buildMonthOptions = (pastCount = 24, futureCount = 12) => {
   const now = new Date();
   for (let offset = futureCount; offset >= -pastCount; offset -= 1) {
     const monthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
-    const value = `${monthDate.getUTCFullYear()}-${String(monthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    const value = `${monthDate.getUTCFullYear()}-${String(monthDate.getUTCMonth() + 1).padStart(
+      2,
+      '0',
+    )}`;
     options.push({ value, label: formatMonthLabel(value) });
   }
   return options;
@@ -81,7 +98,7 @@ export const monthStartToMonthValue = (monthStart: string) => monthStart.slice(0
 export const monthValueCoveredByRange = (
   monthValue: string,
   startMonth: string,
-  endMonth: string | null
+  endMonth: string | null,
 ) => {
   const start = monthStartToMonthValue(startMonth);
   if (monthValue < start) return false;
@@ -91,7 +108,9 @@ export const monthValueCoveredByRange = (
 
 export const formatBudgetRangeLabel = (startMonth: string, endMonth: string | null) => {
   const startLabel = formatMonthLabel(monthStartToMonthValue(startMonth));
-  return endMonth ? `${startLabel} – ${formatMonthLabel(monthStartToMonthValue(endMonth))}` : `${startLabel} – ongoing`;
+  return endMonth
+    ? `${startLabel} – ${formatMonthLabel(monthStartToMonthValue(endMonth))}`
+    : `${startLabel} – ongoing`;
 };
 
 export const monthValueToDateRange = (monthValue: string) => {

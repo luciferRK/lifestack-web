@@ -11,7 +11,11 @@ type WeekdayToggleGroupProps = {
 
 /** Multi-select weekday toggle row (Mon..Sun, 0-6) for weekly medication
  * schedules — no reusable widget existed for this before spec-069. */
-export const WeekdayToggleGroup: React.FC<WeekdayToggleGroupProps> = ({ value, onChange, testId }) => {
+export const WeekdayToggleGroup: React.FC<WeekdayToggleGroupProps> = ({
+  value,
+  onChange,
+  testId,
+}) => {
   const toggle = (day: number) => {
     if (value.includes(day)) {
       onChange(value.filter((d) => d !== day).sort((a, b) => a - b));

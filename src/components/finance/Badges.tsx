@@ -19,18 +19,13 @@ const Badge: React.FC<BadgeProps> = ({ children, className, title }) => {
 };
 
 export const CurrencyBadge: React.FC<{ code: string; title?: string }> = ({ code, title }) => (
-  <Badge
-    title={title}
-    className="border-cyan-500/40 bg-cyan-500/10 font-medium text-cyan-300"
-  >
+  <Badge title={title} className="border-cyan-500/40 bg-cyan-500/10 font-medium text-cyan-300">
     {code}
   </Badge>
 );
 
 export const AccountTypeBadge: React.FC<{ type: string }> = ({ type }) => (
-  <Badge className="border-slate-600 text-slate-300">
-    {type.replace('_', ' ')}
-  </Badge>
+  <Badge className="border-slate-600 text-slate-300">{type.replace('_', ' ')}</Badge>
 );
 
 export const StatusBadge: React.FC<{ active: boolean }> = ({ active }) => (

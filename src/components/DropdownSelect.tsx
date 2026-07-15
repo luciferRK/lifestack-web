@@ -1,8 +1,22 @@
 import React from 'react';
 import { Check, ChevronDown } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from './ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from './ui/command';
 import { cn } from '../lib/utils';
 
 export type DropdownOption = {
@@ -98,7 +112,10 @@ export const DropdownSelect: React.FC<DropdownSelectProps> = ({
           <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0" align="start">
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0"
+        align="start"
+      >
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandList className="max-h-60 overflow-y-auto">
@@ -113,7 +130,9 @@ export const DropdownSelect: React.FC<DropdownSelectProps> = ({
                   }}
                   className="flex items-center gap-2"
                 >
-                  <Check className={cn('h-4 w-4 text-cyan-300', !value ? 'opacity-100' : 'opacity-0')} />
+                  <Check
+                    className={cn('h-4 w-4 text-cyan-300', !value ? 'opacity-100' : 'opacity-0')}
+                  />
                   <span>{clearLabel}</span>
                 </CommandItem>
               )}
@@ -127,7 +146,12 @@ export const DropdownSelect: React.FC<DropdownSelectProps> = ({
                   }}
                   className="flex items-center gap-2"
                 >
-                  <Check className={cn('h-4 w-4 text-cyan-300', value === option.value ? 'opacity-100' : 'opacity-0')} />
+                  <Check
+                    className={cn(
+                      'h-4 w-4 text-cyan-300',
+                      value === option.value ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
                   <span className="truncate">{option.label}</span>
                 </CommandItem>
               ))}

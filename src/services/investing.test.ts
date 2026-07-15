@@ -17,7 +17,9 @@ describe('investingService', () => {
     await investingService.updateHolding('h1', {} as never);
     await investingService.deleteHolding('h1');
 
-    expect(api.get).toHaveBeenCalledWith('/investing/holdings', { params: { limit: 10, offset: 20 } });
+    expect(api.get).toHaveBeenCalledWith('/investing/holdings', {
+      params: { limit: 10, offset: 20 },
+    });
     expect(api.patch).toHaveBeenCalledWith('/investing/holdings/h1', {});
     expect(api.delete).toHaveBeenCalledWith('/investing/holdings/h1');
   });
@@ -33,7 +35,9 @@ describe('investingService', () => {
     await investingService.updateCashBalance('c1', {} as never);
     await investingService.deleteCashBalance('c1');
 
-    expect(api.get).toHaveBeenCalledWith('/investing/cash-balances', { params: { limit: 5, offset: 0 } });
+    expect(api.get).toHaveBeenCalledWith('/investing/cash-balances', {
+      params: { limit: 5, offset: 0 },
+    });
     expect(api.post).toHaveBeenCalledWith('/investing/cash-balances', {});
     expect(api.patch).toHaveBeenCalledWith('/investing/cash-balances/c1', {});
     expect(api.delete).toHaveBeenCalledWith('/investing/cash-balances/c1');
@@ -69,5 +73,42 @@ describe('investingService', () => {
     expect(api.get).toHaveBeenNthCalledWith(4, '/investing/analytics/overlap', {
       params: { as_of: '2026-05-24' },
     });
+  });
+
+  it('resolves a reference identifier (api spec-083 §5.4)', async () => {
+    vi.spyOn(api, 'get').mockResolvedValueOnce({
+      data: {
+        identifier_status: 'resolved',
+        isin: 'US0378331005',
+        ticker: 'AAPL',
+        exchange: 'XNAS',
+        name: 'Apple Inc',
+        security_type: 'stock',
+      },
+    } as never);
+
+    const result = await investingService.resolveReference({ ticker: 'AAPL', type: 'stock' });
+
+    expect(api.get).toHaveBeenCalledWith('/investing/reference/resolve', {
+      params: { isin: undefined, ticker: 'AAPL', exchange: undefined, type: 'stock' },
+    });
+    expect(result.identifier_status).toBe('resolved');
+    expect(result.name).toBe('Apple Inc');
+  });
+
+  it('falls back to "unresolved" for an unrecognized identifier_status value', async () => {
+    vi.spyOn(api, 'get').mockResolvedValueOnce({
+      data: {
+        identifier_status: 'something-new',
+        isin: null,
+        ticker: null,
+        exchange: null,
+        name: null,
+        security_type: null,
+      },
+    } as never);
+
+    const result = await investingService.resolveReference({ isin: 'BOGUS' });
+    expect(result.identifier_status).toBe('unresolved');
   });
 });

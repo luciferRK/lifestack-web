@@ -42,7 +42,11 @@ export const HealthPage: React.FC = () => {
   );
 
   const logWeightMutation = useInvalidatingMutation(
-    (weightKg: string) => healthService.createWeightEntry({ measured_at: new Date().toISOString(), weight_kg: weightKg }),
+    (weightKg: string) =>
+      healthService.createWeightEntry({
+        measured_at: new Date().toISOString(),
+        weight_kg: weightKg,
+      }),
     [queryKeys.health.weightTrend(30), queryKeys.health.weight()],
     { successMessage: 'Weight logged' },
   );
@@ -54,7 +58,8 @@ export const HealthPage: React.FC = () => {
   );
 
   const updateMedicationMutation = useInvalidatingMutation(
-    (args: { publicId: string; payload: MedicationUpdate }) => healthService.updateMedication(args.publicId, args.payload),
+    (args: { publicId: string; payload: MedicationUpdate }) =>
+      healthService.updateMedication(args.publicId, args.payload),
     [queryKeys.health.medications(), queryKeys.health.schedule(today)],
     { successMessage: 'Medication updated' },
   );
@@ -66,20 +71,33 @@ export const HealthPage: React.FC = () => {
   );
 
   const handleMarkTaken = (slot: DoseSlot) => {
-    eventMutation.mutate({ medicationPublicId: slot.medication_public_id, scheduledFor: slot.scheduled_for, status: 'taken' });
+    eventMutation.mutate({
+      medicationPublicId: slot.medication_public_id,
+      scheduledFor: slot.scheduled_for,
+      status: 'taken',
+    });
   };
 
   const handleMarkSkipped = (slot: DoseSlot) => {
-    eventMutation.mutate({ medicationPublicId: slot.medication_public_id, scheduledFor: slot.scheduled_for, status: 'skipped' });
+    eventMutation.mutate({
+      medicationPublicId: slot.medication_public_id,
+      scheduledFor: slot.scheduled_for,
+      status: 'skipped',
+    });
   };
 
   return (
     <PageShell animated>
-      <PageHero title="Health" subtitle="Medications and weight — logged in seconds, entered manually." />
+      <PageHero
+        title="Health"
+        subtitle="Medications and weight — logged in seconds, entered manually."
+      />
 
       <div className="space-y-8">
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-300">Today's doses</h2>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-300">
+            Today's doses
+          </h2>
           <DoseChecklist
             slots={scheduleQuery.data ?? []}
             isLoading={scheduleQuery.isLoading}
@@ -90,7 +108,9 @@ export const HealthPage: React.FC = () => {
         </section>
 
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-300">Weight</h2>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-300">
+            Weight
+          </h2>
           <WeightSection
             trend={weightTrendQuery.data}
             isLoading={weightTrendQuery.isLoading}
@@ -100,7 +120,9 @@ export const HealthPage: React.FC = () => {
         </section>
 
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-300">Medications</h2>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-300">
+            Medications
+          </h2>
           <MedicationsSection
             medications={medicationsQuery.data?.items ?? []}
             isLoading={medicationsQuery.isLoading}

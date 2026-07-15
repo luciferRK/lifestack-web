@@ -14,6 +14,7 @@ import {
   PaginatedCorporateActionsSchema,
   PaginatedDividendsSchema,
   PerformanceSummarySchema,
+  ReferenceResolveResultSchema,
   ReturnMetricsResponseSchema,
 } from '../types/investing';
 import type {
@@ -25,7 +26,6 @@ import type {
   Dividend,
   DividendCreate,
   DividendUpdate,
-
   ExposureAnalytics,
   Holding,
   HoldingUpdate,
@@ -34,6 +34,7 @@ import type {
   InstrumentConstituentUpsert,
   InstrumentCreate,
   InstrumentUpdate,
+  InstrumentType,
   InvestingOrder,
   InvestingOrderBulkCreate,
   InvestingOrderCreate,
@@ -42,6 +43,7 @@ import type {
   OrderType,
   OverlapAnalytics,
   PerformanceSummary,
+  ReferenceResolveResult,
   ReturnMetricsResponse,
 } from '../types/investing';
 
@@ -178,6 +180,23 @@ export const investingService = {
   updateInstrument: async (publicId: string, data: InstrumentUpdate): Promise<Instrument> => {
     const response = await api.patch(`/investing/instruments/${publicId}`, data);
     return InstrumentSchema.parse(response.data);
+  },
+
+  resolveReference: async (params: {
+    isin?: string;
+    ticker?: string;
+    exchange?: string;
+    type?: InstrumentType;
+  }): Promise<ReferenceResolveResult> => {
+    const response = await api.get('/investing/reference/resolve', {
+      params: {
+        isin: params.isin || undefined,
+        ticker: params.ticker || undefined,
+        exchange: params.exchange || undefined,
+        type: params.type || undefined,
+      },
+    });
+    return ReferenceResolveResultSchema.parse(response.data);
   },
 
   upsertInstrumentConstituents: async (

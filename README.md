@@ -32,43 +32,51 @@ The long-term interface goal is a daily briefing, not a generic chat surface: to
 Lifestack Web follows the same staged roadmap as the core platform:
 
 ### Stage 1: Personal OS Foundation
+
 - Dashboard, todo, spending, and investing flows
 - Shared authentication and protected routes
 - Core review-and-action experience for one user or one household
 
 ### Stage 2: Capture Layer
+
 - Faster entry points for todo, spending, and journal capture
 - Voice-first and mobile-friendly input paths
 - Lower-friction daily interactions
 
 ### Stage 3: AI Assistant Interface
+
 - Voice and chat actions on top of existing features
 - Assistant flows grounded in structured product data
 - Summaries, logging, and task creation through AI adapters
 
 ### Stage 4: Mobile Companion
+
 - Shared design language across web and mobile
 - Faster capture, notifications, camera flows, and sync
 - Health-app sync foundation for sleep, weight, workouts, and other supported metrics
 - Personal-device-first use cases handled outside the desktop browser
 
 ### Stage 5: Health Module
+
 - UI for vitals, labs, medications, symptoms, sleep, weight, and workouts
 - Medication tracker and reminder flows
 - Manual health entry first, followed by mobile health-app sync review surfaces
 - Shared dashboard views and follow-up workflows
 
 ### Stage 6: Document Intelligence
+
 - Upload, review, and confirm extracted data from receipts, statements, reports, and forms
 - Source-linked document views tied to normalized records
 
 ### Stage 7: Memory and Second Brain
+
 - Journal, notes, timeline, and context views
 - Cross-domain retrieval and review surfaces across documents, notes, health, tasks, and finance
 - Source-backed personal coach views grounded in structured product data
 - Permissioned agent-access surfaces for MCP and other trusted integrations
 
 ### Stage 8: SaaS
+
 - Multi-user and multi-workspace collaboration surfaces
 - Roles, admin, billing, and expanded platform controls when product maturity justifies them
 
@@ -163,6 +171,7 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
 ## Frontend Notes
 
 ### Investing module behavior
+
 - Investing forms now use backend-managed finance references:
   - `GET /v1/finance/accounts`
   - `GET /v1/finance/currencies`
@@ -175,6 +184,7 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
 - When conversion is unavailable, totals may be `null`; UI should display `N/A` and show `valuation_status` plus `reporting_currency`.
 
 ### Look-through analytics (Spec 012)
+
 - Frontend now supports:
   - `GET /v1/investing/instruments`
   - `POST /v1/investing/instruments`
@@ -188,6 +198,7 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
 - Analytics responses may be partial; UI surfaces `analysis_status`, coverage, and warnings.
 
 ### Phase 1.1 surfaces
+
 - Notifications page:
   - list
   - unread count
@@ -205,9 +216,11 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
   - upcoming recurring preview support from backend
 
 ### Dashboard budget spotlight
+
 - Replaced the single-category `Budget remaining` card (spec-064, web#86). The dashboard now renders a `Budget spotlight` section from `spending.budget_spotlight`: one card per category-group budget showing utilization %, spent-of-budget, and daily-amount-left, colored by `status` (`ok` / `warning` / `exceeded`). Renders nothing when there are no group budgets.
 
 ### Net worth history
+
 - The Net Worth page (`src/pages/NetWorthPage.tsx`) renders a stacked-area chart from `GET /finance/net-worth/history` (spec-065), showing spending cash, investing cash, and holdings value per day for the last 90 days by default (query params `from_date`/`to_date`, capped at 365 days server-side). History rows are backfilled by the daily `net_worth_snapshot` job and opportunistically by every `GET /finance/net-worth` read for the current day.
 
 ---
@@ -230,6 +243,7 @@ The UI goal is not just "good CRUD." It is to help users notice what matters, de
 The current browser E2E suite in this repo focuses on frontend behavior. The full-stack end-to-end harness now lives in the standalone `lifestack-e2e` repo, where the UI, API, and database run together against real contracts.
 
 ### E2E Strategy
+
 - Current frontend Playwright tests mock API responses for fast UI regression checks.
 - Full-stack FE+BE+DB coverage is handled in the dedicated `lifestack-e2e` repo because FE and BE are separate repositories.
 - Remaining follow-up:

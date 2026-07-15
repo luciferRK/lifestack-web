@@ -44,7 +44,9 @@ describe('NotificationsPage', () => {
     renderWithQuery(<NotificationsPage />);
 
     expect(await screen.findByText('Notifications')).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'No notifications yet' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'No notifications yet' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mark all read' })).toBeInTheDocument();
   });
 
@@ -75,7 +77,13 @@ describe('NotificationsPage', () => {
     server.use(
       http.get('*/v1/notifications/preferences', () =>
         HttpResponse.json([
-          { category: 'budget', channel_in_app: true, channel_email: false, channel_push: false, is_muted: false },
+          {
+            category: 'budget',
+            channel_in_app: true,
+            channel_email: false,
+            channel_push: false,
+            is_muted: false,
+          },
         ]),
       ),
       http.patch('*/v1/notifications/preferences/budget', async ({ request }) => {

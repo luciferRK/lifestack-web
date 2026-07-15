@@ -9,7 +9,10 @@ export const toNumber = (value: number | string | null | undefined): number => {
  * crypto), but whole-share counts shouldn't render as "10.00000000". Round to
  * maxDecimals then strip trailing zeros so desktop and mobile always agree.
  */
-export const formatQuantity = (value: number | string | null | undefined, maxDecimals = 8): string => {
+export const formatQuantity = (
+  value: number | string | null | undefined,
+  maxDecimals = 8,
+): string => {
   const str = toNumber(value).toFixed(maxDecimals);
   return str.includes('.') ? str.replace(/0+$/, '').replace(/\.$/, '') : str;
 };
@@ -29,7 +32,9 @@ export const DEFAULT_DECIMAL_PLACES = 2;
 // caller degrades to the default instead of crashing the render.
 const clampDecimalPlaces = (decimalPlaces: number): number => {
   const parsed = Number(decimalPlaces);
-  return Number.isFinite(parsed) ? Math.min(20, Math.max(0, Math.floor(parsed))) : DEFAULT_DECIMAL_PLACES;
+  return Number.isFinite(parsed)
+    ? Math.min(20, Math.max(0, Math.floor(parsed)))
+    : DEFAULT_DECIMAL_PLACES;
 };
 
 export const formatCurrency = (

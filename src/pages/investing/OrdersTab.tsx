@@ -53,7 +53,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   const accounts = useMemo(() => accountsRes.data?.items ?? [], [accountsRes.data]);
   const accountDropdownOptions = useMemo(
     () => accounts.map((acc) => ({ value: acc.public_id, label: acc.name })),
-    [accounts]
+    [accounts],
   );
 
   const ordersRes = useQuery({
@@ -74,25 +74,43 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         case 'occurred_at': {
           const timeA = new Date(a.occurred_at).getTime();
           const timeB = new Date(b.occurred_at).getTime();
-          return dir * ((Number.isFinite(timeA) ? timeA : 0) - (Number.isFinite(timeB) ? timeB : 0));
+          return (
+            dir * ((Number.isFinite(timeA) ? timeA : 0) - (Number.isFinite(timeB) ? timeB : 0))
+          );
         }
-        case 'order_type': return dir * a.order_type.localeCompare(b.order_type);
-        case 'symbol': return dir * a.symbol.localeCompare(b.symbol);
-        case 'account_name': return dir * a.account_name.localeCompare(b.account_name);
-        case 'quantity': return dir * (toNumber(a.quantity) - toNumber(b.quantity));
-        case 'price_per_unit': return dir * (toNumber(a.price_per_unit) - toNumber(b.price_per_unit));
-        case 'gross_amount': return dir * (toNumber(a.gross_amount) - toNumber(b.gross_amount));
-        case 'fees': return dir * ((toNumber(a.brokerage_fee) + toNumber(a.tax_amount) + toNumber(a.other_fees)) - (toNumber(b.brokerage_fee) + toNumber(b.tax_amount) + toNumber(b.other_fees)));
-        case 'net_amount': return dir * (toNumber(a.net_amount) - toNumber(b.net_amount));
-        case 'realized_gain_loss': return dir * (toNumber(a.realized_gain_loss ?? 0) - toNumber(b.realized_gain_loss ?? 0));
-        default: return 0;
+        case 'order_type':
+          return dir * a.order_type.localeCompare(b.order_type);
+        case 'symbol':
+          return dir * a.symbol.localeCompare(b.symbol);
+        case 'account_name':
+          return dir * a.account_name.localeCompare(b.account_name);
+        case 'quantity':
+          return dir * (toNumber(a.quantity) - toNumber(b.quantity));
+        case 'price_per_unit':
+          return dir * (toNumber(a.price_per_unit) - toNumber(b.price_per_unit));
+        case 'gross_amount':
+          return dir * (toNumber(a.gross_amount) - toNumber(b.gross_amount));
+        case 'fees':
+          return (
+            dir *
+            (toNumber(a.brokerage_fee) +
+              toNumber(a.tax_amount) +
+              toNumber(a.other_fees) -
+              (toNumber(b.brokerage_fee) + toNumber(b.tax_amount) + toNumber(b.other_fees)))
+          );
+        case 'net_amount':
+          return dir * (toNumber(a.net_amount) - toNumber(b.net_amount));
+        case 'realized_gain_loss':
+          return dir * (toNumber(a.realized_gain_loss ?? 0) - toNumber(b.realized_gain_loss ?? 0));
+        default:
+          return 0;
       }
     });
   }, [orders, ordersSortCol, ordersSortDir]);
 
   const visibleOrders = useMemo(
     () => sortedOrders.filter((o) => !ordersAccountFilter || o.account_id === ordersAccountFilter),
-    [sortedOrders, ordersAccountFilter]
+    [sortedOrders, ordersAccountFilter],
   );
 
   return (
@@ -119,7 +137,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         </CompactFilterField>
       </CompactFilterBar>
 
-      <div data-testid="investing-orders-heading" className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div
+        data-testid="investing-orders-heading"
+        className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <h3 className="font-semibold text-white text-base">Orders</h3>
         <Button
           type="button"
@@ -165,24 +186,40 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           desktop table so tests resolve to exactly one element). */}
       <div className="space-y-3 lg:hidden">
         {ordersRes.isLoading ? (
-          <div className="rounded-xl border border-slate-700/50 p-6 text-center text-sm text-slate-400">Loading…</div>
+          <div className="rounded-xl border border-slate-700/50 p-6 text-center text-sm text-slate-400">
+            Loading…
+          </div>
         ) : visibleOrders.length === 0 ? (
-          <div className="rounded-xl border border-slate-700/50 p-6 text-center text-sm text-slate-400">No orders for this account yet.</div>
+          <div className="rounded-xl border border-slate-700/50 p-6 text-center text-sm text-slate-400">
+            No orders for this account yet.
+          </div>
         ) : (
           visibleOrders.map((o) => {
-            const fees = toNumber(o.brokerage_fee) + toNumber(o.tax_amount) + toNumber(o.other_fees);
+            const fees =
+              toNumber(o.brokerage_fee) + toNumber(o.tax_amount) + toNumber(o.other_fees);
             const isBuy = o.order_type === 'buy';
             return (
-              <div key={o.public_id} className="rounded-xl border border-slate-700/50 bg-slate-900/30 p-4">
+              <div
+                key={o.public_id}
+                className="rounded-xl border border-slate-700/50 bg-slate-900/30 p-4"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isBuy ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          isBuy
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-300'
+                        }`}
+                      >
                         {isBuy ? 'BUY' : 'SELL'}
                       </span>
                       <span className="truncate font-semibold text-white">{o.symbol}</span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">{formatDate(o.occurred_at, { fallback: 'N/A' })} · {o.account_name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {formatDate(o.occurred_at, { fallback: 'N/A' })} · {o.account_name}
+                    </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <button
@@ -206,16 +243,64 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-700/40 pt-3 text-xs">
-                  <div><span className="block text-slate-500">Qty × Price</span><span className="text-slate-200">{formatQuantity(o.quantity)} × {formatCurrency(toNumber(o.price_per_unit), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span></div>
-                  <div><span className="block text-slate-500">Net</span><span className="font-medium text-white">{formatCurrency(toNumber(o.net_amount), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span></div>
+                  <div>
+                    <span className="block text-slate-500">Qty × Price</span>
+                    <span className="text-slate-200">
+                      {formatQuantity(o.quantity)} ×{' '}
+                      {formatCurrency(
+                        toNumber(o.price_per_unit),
+                        o.currency,
+                        currencyDisplayPreference,
+                        displayLocale,
+                        decimalPlaces,
+                      )}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-slate-500">Net</span>
+                    <span className="font-medium text-white">
+                      {formatCurrency(
+                        toNumber(o.net_amount),
+                        o.currency,
+                        currencyDisplayPreference,
+                        displayLocale,
+                        decimalPlaces,
+                      )}
+                    </span>
+                  </div>
                   <div>
                     <span className="block text-slate-500">Realized G/L</span>
                     {o.realized_gain_loss != null ? (
-                      <span className={toNumber(o.realized_gain_loss) >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{formatCurrency(toNumber(o.realized_gain_loss), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</span>
-                    ) : <span className="text-slate-500">—</span>}
+                      <span
+                        className={
+                          toNumber(o.realized_gain_loss) >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                        }
+                      >
+                        {formatCurrency(
+                          toNumber(o.realized_gain_loss),
+                          o.currency,
+                          currencyDisplayPreference,
+                          displayLocale,
+                          decimalPlaces,
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
                   </div>
                 </div>
-                {fees > 0 ? <p className="mt-1 text-[11px] text-slate-500">Fees {formatCurrency(fees, o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}</p> : null}
+                {fees > 0 ? (
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Fees{' '}
+                    {formatCurrency(
+                      fees,
+                      o.currency,
+                      currencyDisplayPreference,
+                      displayLocale,
+                      decimalPlaces,
+                    )}
+                  </p>
+                ) : null}
               </div>
             );
           })
@@ -227,27 +312,142 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         <table data-testid="investing-orders-table" className="w-full text-sm">
           <thead className="border-b border-slate-700/50 bg-slate-800/40">
             <tr>
-              <SortableHeader col="occurred_at" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Date</SortableHeader>
-              <SortableHeader col="order_type" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Type</SortableHeader>
-              <SortableHeader col="symbol" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Symbol</SortableHeader>
-              <SortableHeader col="account_name" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }}>Account</SortableHeader>
-              <SortableHeader col="quantity" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Qty</SortableHeader>
-              <SortableHeader col="price_per_unit" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Price</SortableHeader>
-              <SortableHeader col="gross_amount" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Gross</SortableHeader>
-              <SortableHeader col="fees" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Fees</SortableHeader>
-              <SortableHeader col="net_amount" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Net</SortableHeader>
-              <SortableHeader col="realized_gain_loss" activeCol={ordersSortCol} dir={ordersSortDir} onSort={(c, d) => { setOrdersSortCol(c); setOrdersSortDir(d); }} className="text-right">Realized G/L</SortableHeader>
+              <SortableHeader
+                col="occurred_at"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+              >
+                Date
+              </SortableHeader>
+              <SortableHeader
+                col="order_type"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+              >
+                Type
+              </SortableHeader>
+              <SortableHeader
+                col="symbol"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+              >
+                Symbol
+              </SortableHeader>
+              <SortableHeader
+                col="account_name"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+              >
+                Account
+              </SortableHeader>
+              <SortableHeader
+                col="quantity"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+                className="text-right"
+              >
+                Qty
+              </SortableHeader>
+              <SortableHeader
+                col="price_per_unit"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+                className="text-right"
+              >
+                Price
+              </SortableHeader>
+              <SortableHeader
+                col="gross_amount"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+                className="text-right"
+              >
+                Gross
+              </SortableHeader>
+              <SortableHeader
+                col="fees"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+                className="text-right"
+              >
+                Fees
+              </SortableHeader>
+              <SortableHeader
+                col="net_amount"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+                className="text-right"
+              >
+                Net
+              </SortableHeader>
+              <SortableHeader
+                col="realized_gain_loss"
+                activeCol={ordersSortCol}
+                dir={ordersSortDir}
+                onSort={(c, d) => {
+                  setOrdersSortCol(c);
+                  setOrdersSortDir(d);
+                }}
+                className="text-right"
+              >
+                Realized G/L
+              </SortableHeader>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-400"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700/30">
             {ordersRes.isLoading ? (
-              <tr><td colSpan={11} className="px-4 py-8 text-center text-slate-400">Loading…</td></tr>
+              <tr>
+                <td colSpan={11} className="px-4 py-8 text-center text-slate-400">
+                  Loading…
+                </td>
+              </tr>
             ) : visibleOrders.length === 0 ? (
-              <tr><td colSpan={11} className="px-4 py-8 text-center text-slate-400">No orders for this account yet.</td></tr>
+              <tr>
+                <td colSpan={11} className="px-4 py-8 text-center text-slate-400">
+                  No orders for this account yet.
+                </td>
+              </tr>
             ) : (
               visibleOrders.map((o) => {
-                const fees = toNumber(o.brokerage_fee) + toNumber(o.tax_amount) + toNumber(o.other_fees);
+                const fees =
+                  toNumber(o.brokerage_fee) + toNumber(o.tax_amount) + toNumber(o.other_fees);
                 const isBuy = o.order_type === 'buy';
                 return (
                   <tr
@@ -259,7 +459,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                       {formatDate(o.occurred_at, { fallback: 'N/A' })}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isBuy ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          isBuy
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-300'
+                        }`}
+                      >
                         {isBuy ? 'BUY' : 'SELL'}
                       </span>
                     </td>
@@ -270,23 +476,61 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                       {o.symbol}
                     </td>
                     <td className="px-4 py-3 text-slate-300">{o.account_name}</td>
-                    <td className="px-4 py-3 text-right text-slate-300">{formatQuantity(o.quantity)}</td>
                     <td className="px-4 py-3 text-right text-slate-300">
-                      {formatCurrency(toNumber(o.price_per_unit), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                      {formatQuantity(o.quantity)}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-300">
-                      {formatCurrency(toNumber(o.gross_amount), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                      {formatCurrency(
+                        toNumber(o.price_per_unit),
+                        o.currency,
+                        currencyDisplayPreference,
+                        displayLocale,
+                        decimalPlaces,
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-300">
+                      {formatCurrency(
+                        toNumber(o.gross_amount),
+                        o.currency,
+                        currencyDisplayPreference,
+                        displayLocale,
+                        decimalPlaces,
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-400">
-                      {formatCurrency(fees, o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                      {formatCurrency(
+                        fees,
+                        o.currency,
+                        currencyDisplayPreference,
+                        displayLocale,
+                        decimalPlaces,
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-white">
-                      {formatCurrency(toNumber(o.net_amount), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                      {formatCurrency(
+                        toNumber(o.net_amount),
+                        o.currency,
+                        currencyDisplayPreference,
+                        displayLocale,
+                        decimalPlaces,
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {o.realized_gain_loss != null ? (
-                        <span className={toNumber(o.realized_gain_loss) >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                          {formatCurrency(toNumber(o.realized_gain_loss), o.currency, currencyDisplayPreference, displayLocale, decimalPlaces)}
+                        <span
+                          className={
+                            toNumber(o.realized_gain_loss) >= 0
+                              ? 'text-emerald-300'
+                              : 'text-rose-300'
+                          }
+                        >
+                          {formatCurrency(
+                            toNumber(o.realized_gain_loss),
+                            o.currency,
+                            currencyDisplayPreference,
+                            displayLocale,
+                            decimalPlaces,
+                          )}
                         </span>
                       ) : (
                         <span className="text-slate-500">—</span>

@@ -43,9 +43,7 @@ describe('RegisterPage', () => {
   });
 
   it('shows generic error on registration failure', async () => {
-    server.use(
-      http.post('*/auth/register', () => new HttpResponse(null, { status: 500 })),
-    );
+    server.use(http.post('*/auth/register', () => new HttpResponse(null, { status: 500 })));
 
     renderPage();
     fireEvent.change(screen.getByPlaceholderText('Email address'), {
@@ -93,10 +91,7 @@ describe('RegisterPage', () => {
       http.post('*/auth/register', () =>
         HttpResponse.json(
           {
-            errors: [
-              { msg: 'Invalid email', loc: ['body', 'email'] },
-              { msg: 'Password too short', loc: ['body', 'password'] },
-            ],
+            errors: [{ msg: 'Password must be at least 8 characters', loc: ['body', 'password'] }],
           },
           { status: 422 },
         ),
@@ -119,19 +114,21 @@ describe('RegisterPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
 
-    expect(await screen.findByText('Invalid fields: email, password.')).toBeInTheDocument();
-    expect(emailInput).toHaveClass('border-red-500');
+    expect(await screen.findByText('Invalid fields: password.')).toBeInTheDocument();
     expect(passwordInput).toHaveClass('border-red-500');
+    expect(emailInput).toHaveClass('border-slate-600');
     expect(usernameInput).toHaveClass('border-slate-600');
   });
 
   it('shows loading state while submitting', async () => {
     let resolveRegister!: () => void;
     server.use(
-      http.post('*/auth/register', () =>
-        new Promise<Response>((resolve) => {
-          resolveRegister = () => resolve(HttpResponse.json({ ok: true }) as unknown as Response);
-        }),
+      http.post(
+        '*/auth/register',
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveRegister = () => resolve(HttpResponse.json({ ok: true }) as unknown as Response);
+          }),
       ),
     );
 

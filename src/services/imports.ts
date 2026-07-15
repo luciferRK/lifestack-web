@@ -6,11 +6,7 @@ import {
   ImportCommitResponseSchema,
   ImportValidateResponseSchema,
 } from '../types/imports';
-import type {
-  ImportCommitResponse,
-  ImportModule,
-  ImportValidateResponse,
-} from '../types/imports';
+import type { ImportCommitResponse, ImportModule, ImportValidateResponse } from '../types/imports';
 
 const PaginatedImportsSchema = paginatedSchema(ImportBatchSchema);
 
@@ -25,7 +21,7 @@ export const importsService = {
     file: File,
     targetAccountId?: string,
     filePassword?: string,
-    dateFormat?: string
+    dateFormat?: string,
   ): Promise<ImportValidateResponse> => {
     const form = new FormData();
     form.append('module', module);
@@ -48,7 +44,10 @@ export const importsService = {
     return ImportCommitResponseSchema.parse(response.data);
   },
 
-  listImports: async (limit: number = 20, offset: number = 0): Promise<z.infer<typeof PaginatedImportsSchema>> => {
+  listImports: async (
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<z.infer<typeof PaginatedImportsSchema>> => {
     const response = await api.get('/imports', { params: { limit, offset } });
     return PaginatedImportsSchema.parse(response.data);
   },

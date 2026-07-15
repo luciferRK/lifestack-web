@@ -1,6 +1,25 @@
-const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const ORDINAL_NAMES: Record<number, string> = { 1: 'first', 2: 'second', 3: 'third', 4: 'fourth', [-1]: 'last' };
-const UNIT_NAMES: Record<string, string> = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year' };
+const WEEKDAY_NAMES = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+const ORDINAL_NAMES: Record<number, string> = {
+  1: 'first',
+  2: 'second',
+  3: 'third',
+  4: 'fourth',
+  [-1]: 'last',
+};
+const UNIT_NAMES: Record<string, string> = {
+  daily: 'day',
+  weekly: 'week',
+  monthly: 'month',
+  yearly: 'year',
+};
 
 const ordinalSuffix = (n: number): string => {
   const lastTwoDigits = n % 100;
@@ -11,7 +30,8 @@ const ordinalSuffix = (n: number): string => {
   return `${n}th`;
 };
 
-const capitalize = (s: string): string => (s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+const capitalize = (s: string): string =>
+  s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
 export interface RecurrenceLike {
   frequency: string;
@@ -25,7 +45,8 @@ export interface RecurrenceLike {
  * "Every 2nd month on the first Friday" (spec-053). */
 export const describeRecurrence = (rule: RecurrenceLike): string => {
   const unit = UNIT_NAMES[rule.frequency] ?? rule.frequency;
-  const cadence = rule.interval === 1 ? `every ${unit}` : `every ${ordinalSuffix(rule.interval)} ${unit}`;
+  const cadence =
+    rule.interval === 1 ? `every ${unit}` : `every ${ordinalSuffix(rule.interval)} ${unit}`;
 
   if (rule.frequency !== 'monthly') {
     return capitalize(cadence);

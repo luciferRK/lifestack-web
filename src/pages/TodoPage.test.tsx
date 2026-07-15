@@ -231,7 +231,9 @@ describe('TodoPage', () => {
         const url = new URL(request.url);
         // Mirror the real API: completed=false excludes rows that are done,
         // so a completed parent/child drops out of the open fetch entirely.
-        const items = openItems().filter((t) => t.completed === (url.searchParams.get('completed') === 'true'));
+        const items = openItems().filter(
+          (t) => t.completed === (url.searchParams.get('completed') === 'true'),
+        );
         return HttpResponse.json({ items, total: items.length, limit: 200, offset: 0 });
       }),
       http.get('*/v1/todo/recurring/', () =>

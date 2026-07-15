@@ -33,14 +33,26 @@ const PositionBlock: React.FC<{
   locale: string;
   decimalPlaces: number;
   showUnrealized: boolean;
-}> = ({ title, metrics, annualizationReliable, holdingDays, currency, currencyDisplayPreference, locale, decimalPlaces, showUnrealized }) => (
+}> = ({
+  title,
+  metrics,
+  annualizationReliable,
+  holdingDays,
+  currency,
+  currencyDisplayPreference,
+  locale,
+  decimalPlaces,
+  showUnrealized,
+}) => (
   <div className="rounded-xl border border-slate-700/50 bg-slate-800/40 p-4">
     <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{title}</p>
     <p className="mt-2 text-xl font-bold text-white">
       {annualizationReliable && metrics.annualized_return_pct != null
         ? `${toNumber(metrics.annualized_return_pct).toFixed(1)}% p.a.`
         : metrics.total_return_pct != null
-          ? `${toNumber(metrics.total_return_pct).toFixed(1)}%${holdingDays != null ? ` · held ${formatHoldingPeriod(holdingDays)}` : ''}`
+          ? `${toNumber(metrics.total_return_pct).toFixed(1)}%${
+              holdingDays != null ? ` · held ${formatHoldingPeriod(holdingDays)}` : ''
+            }`
           : 'N/A'}
     </p>
     {/* XIRR is annualized by definition — suppressed for sub-year spans (INV-7). */}
@@ -51,14 +63,28 @@ const PositionBlock: React.FC<{
       <div className="flex justify-between">
         <span className="text-slate-400">Realized</span>
         <span className={toNumber(metrics.realized) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-          {formatCurrency(metrics.realized, currency, currencyDisplayPreference, locale, decimalPlaces)}
+          {formatCurrency(
+            metrics.realized,
+            currency,
+            currencyDisplayPreference,
+            locale,
+            decimalPlaces,
+          )}
         </span>
       </div>
       {showUnrealized && (
         <div className="flex justify-between">
           <span className="text-slate-400">Unrealized</span>
-          <span className={toNumber(metrics.unrealized) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-            {formatCurrency(metrics.unrealized, currency, currencyDisplayPreference, locale, decimalPlaces)}
+          <span
+            className={toNumber(metrics.unrealized) >= 0 ? 'text-emerald-400' : 'text-rose-400'}
+          >
+            {formatCurrency(
+              metrics.unrealized,
+              currency,
+              currencyDisplayPreference,
+              locale,
+              decimalPlaces,
+            )}
           </span>
         </div>
       )}
@@ -104,16 +130,19 @@ export const ReturnMetricsPanel: React.FC<ReturnMetricsPanelProps> = ({
           <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-400">
             Investment returns
           </h3>
-          <p
-            className="mt-1 text-2xl font-bold text-white"
-            data-testid="investing-xirr-overall"
-          >
+          <p className="mt-1 text-2xl font-bold text-white" data-testid="investing-xirr-overall">
             {overall.annualization_reliable && overall.annualized_return_pct != null
-              ? `${toNumber(overall.annualized_return_pct).toFixed(1)}% p.a. (XIRR ${formatXirr(overall.xirr)})`
+              ? `${toNumber(overall.annualized_return_pct).toFixed(1)}% p.a. (XIRR ${formatXirr(
+                  overall.xirr,
+                )})`
               : overall.total_return_pct != null
                 ? // INV-7: under a year, show the simple total return with the
                   // holding period — never an annualized figure, XIRR included.
-                  `${toNumber(overall.total_return_pct).toFixed(1)}%${overall.holding_days != null ? ` · held ${formatHoldingPeriod(overall.holding_days)}` : ''}`
+                  `${toNumber(overall.total_return_pct).toFixed(1)}%${
+                    overall.holding_days != null
+                      ? ` · held ${formatHoldingPeriod(overall.holding_days)}`
+                      : ''
+                  }`
                 : 'N/A'}
           </p>
         </div>
@@ -128,14 +157,18 @@ export const ReturnMetricsPanel: React.FC<ReturnMetricsPanelProps> = ({
       <div className="flex gap-2">
         <button
           type="button"
-          className={`rounded-lg px-3 py-1.5 text-sm ${segment === 'open' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300'}`}
+          className={`rounded-lg px-3 py-1.5 text-sm ${
+            segment === 'open' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300'
+          }`}
           onClick={() => setSegment('open')}
         >
           Current holdings
         </button>
         <button
           type="button"
-          className={`rounded-lg px-3 py-1.5 text-sm ${segment === 'closed' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300'}`}
+          className={`rounded-lg px-3 py-1.5 text-sm ${
+            segment === 'closed' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-300'
+          }`}
           onClick={() => setSegment('closed')}
         >
           Exited positions
@@ -178,13 +211,29 @@ export const ReturnMetricsPanel: React.FC<ReturnMetricsPanelProps> = ({
                     {a.annualization_reliable
                       ? formatXirr(a.xirr)
                       : a.total_return_pct != null
-                        ? `${toNumber(a.total_return_pct).toFixed(1)}% · ${formatHoldingPeriod(a.holding_days)}`
+                        ? `${toNumber(a.total_return_pct).toFixed(1)}% · ${formatHoldingPeriod(
+                            a.holding_days,
+                          )}`
                         : 'N/A'}
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  Realized {formatCurrency(a.realized, a.currency, currencyDisplayPreference, locale, decimalPlaces)} ·
-                  Unrealized {formatCurrency(a.unrealized, a.currency, currencyDisplayPreference, locale, decimalPlaces)}
+                  Realized{' '}
+                  {formatCurrency(
+                    a.realized,
+                    a.currency,
+                    currencyDisplayPreference,
+                    locale,
+                    decimalPlaces,
+                  )}{' '}
+                  · Unrealized{' '}
+                  {formatCurrency(
+                    a.unrealized,
+                    a.currency,
+                    currencyDisplayPreference,
+                    locale,
+                    decimalPlaces,
+                  )}
                 </p>
               </div>
             ))}

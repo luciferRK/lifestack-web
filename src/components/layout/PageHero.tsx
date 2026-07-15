@@ -16,7 +16,9 @@ export const PageHero: React.FC<PageHeroProps> = ({ title, subtitle, actions, cl
           <h1 className="text-3xl font-bold tracking-tight text-white">{title}</h1>
           <p className="mt-2 text-slate-400">{subtitle}</p>
         </div>
-        {actions ? <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto">{actions}</div> : null}
+        {actions ? (
+          <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto">{actions}</div>
+        ) : null}
       </div>
     </header>
   );

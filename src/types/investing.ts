@@ -42,6 +42,9 @@ export const InstrumentSchema = z.object({
   name: z.string().default(''),
   instrument_type: InstrumentTypeSchema,
   company_id: z.string().nullable().default(null),
+  ticker: z.string().nullable().default(null),
+  isin: z.string().nullable().default(null),
+  exchange: z.string().nullable().default(null),
   is_active: z.boolean().default(true),
   created_at: z.string().default(''),
   updated_at: z.string().default(''),
@@ -54,18 +57,41 @@ export interface InstrumentCreate {
   name: string;
   instrument_type: InstrumentType;
   ticker?: string;
+  isin?: string;
+  exchange?: string;
 }
 
 export interface InstrumentUpdate {
   name?: string;
   instrument_type?: InstrumentType;
+  ticker?: string;
+  isin?: string;
+  exchange?: string;
 }
 
 export interface InstrumentConstituentInput {
   company_name: string;
   company_ticker?: string;
+  company_isin?: string;
   weight: string;
 }
+
+// GET /v1/investing/reference/resolve (api spec-083 §5.4) — advisory lookup used
+// by the identifier-hint UX (spec-010 §3.1/§3.2/§3.5); the API schema/resolver
+// remain the authoritative gate (spec-010 §5), this is UI feedback only.
+export const IdentifierStatusSchema = z.enum(['resolved', 'unresolved', 'ambiguous']);
+export type IdentifierStatus = z.infer<typeof IdentifierStatusSchema>;
+
+export const ReferenceResolveResultSchema = z.object({
+  identifier_status: IdentifierStatusSchema.catch('unresolved'),
+  isin: z.string().nullable().default(null),
+  ticker: z.string().nullable().default(null),
+  exchange: z.string().nullable().default(null),
+  name: z.string().nullable().default(null),
+  security_type: z.string().nullable().default(null),
+});
+
+export type ReferenceResolveResult = z.infer<typeof ReferenceResolveResultSchema>;
 
 export interface InstrumentConstituentUpsert {
   as_of_date: string;
@@ -78,6 +104,7 @@ export const InstrumentConstituentSchema = z.object({
   company_id: z.string().default(''),
   company_name: z.string().default(''),
   company_ticker: z.string().nullable().default(null),
+  company_isin: z.string().nullable().default(null),
   weight: z.string().default('0'),
   as_of_date: z.string().default(''),
   source: z.string().default(''),

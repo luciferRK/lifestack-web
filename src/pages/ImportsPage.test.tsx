@@ -478,4 +478,93 @@ describe('ImportsPage', () => {
     expect(uploadedTargetAccountId).toBe('acc-zerodha');
     expect(uploadedPassword).toBe('ABCDE1234F');
   });
+
+  it('renders per-row identifier_status in the investing-constituents preview (spec-010 §3.4)', async () => {
+    const importId = '11111111-1111-1111-1111-111111111112';
+
+    server.use(
+      http.get('*/v1/imports', () =>
+        HttpResponse.json({
+          items: [
+            {
+              public_id: importId,
+              status: 'validated',
+              module: 'investing-constituents',
+              filename: 'constituents.csv',
+              content_type: 'text/csv',
+              file_size_bytes: 128,
+              file_sha256: 'abc',
+              storage_backend: 'db',
+              storage_key: null,
+              total_rows: 2,
+              valid_rows: 2,
+              error_rows: 0,
+              started_at: '2026-06-01T00:00:00Z',
+              validated_at: '2026-06-01T00:00:01Z',
+              committed_at: null,
+            },
+          ],
+          total: 1,
+          limit: 20,
+          offset: 0,
+        }),
+      ),
+      http.get(`*/v1/imports/${importId}`, () =>
+        HttpResponse.json({
+          import_batch: {
+            public_id: importId,
+            status: 'validated',
+            module: 'investing-constituents',
+            filename: 'constituents.csv',
+            content_type: 'text/csv',
+            file_size_bytes: 128,
+            file_sha256: 'abc',
+            storage_backend: 'db',
+            storage_key: null,
+            total_rows: 2,
+            valid_rows: 2,
+            error_rows: 0,
+            started_at: '2026-06-01T00:00:00Z',
+            validated_at: '2026-06-01T00:00:01Z',
+            committed_at: null,
+          },
+          errors: [],
+          error_summary: { total_errors: 0, returned_errors: 0, by_code: {}, by_field: {} },
+          preview_rows: [
+            {
+              row_number: 1,
+              payload_json: {
+                instrument_symbol: 'VTI',
+                company_name: 'Apple Inc',
+                company_ticker: 'AAPL',
+                company_isin: 'US0378331005',
+                weight: '0.60',
+                as_of_date: '2026-06-01',
+                identifier_status: 'resolved',
+              },
+            },
+            {
+              row_number: 2,
+              payload_json: {
+                instrument_symbol: 'VTI',
+                company_name: 'Some Private Fund',
+                company_ticker: null,
+                company_isin: null,
+                weight: '0.40',
+                as_of_date: '2026-06-01',
+                identifier_status: 'unresolved',
+              },
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderWithQuery(<ImportsPage />);
+
+    fireEvent.click(await screen.findByTestId(`imports-list-item-${importId}`));
+
+    expect(await screen.findByText('resolved')).toBeInTheDocument();
+    expect(screen.getByText('unresolved')).toBeInTheDocument();
+  });
 });

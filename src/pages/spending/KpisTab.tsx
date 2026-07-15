@@ -78,7 +78,7 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
       category_group: categoryGroupOptions,
       account: accountOptions,
     }),
-    [categoryOptions, categoryGroupOptions, accountOptions]
+    [categoryOptions, categoryGroupOptions, accountOptions],
   );
 
   const createMutation = useInvalidatingMutation(
@@ -91,8 +91,9 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
         setForm(emptyForm);
         setFormError(null);
       },
-      onError: (error) => setFormError(error instanceof Error ? error.message : 'Failed to create KPI'),
-    }
+      onError: (error) =>
+        setFormError(error instanceof Error ? error.message : 'Failed to create KPI'),
+    },
   );
 
   const deleteMutation = useInvalidatingMutation(
@@ -108,7 +109,7 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
           setOffset(0);
         }
       },
-    }
+    },
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -139,7 +140,8 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
       metric_type: form.metric_type,
       evaluation_window: form.evaluation_window,
       category_id: form.filterMode === 'category' ? form.filterValue || undefined : undefined,
-      category_group_id: form.filterMode === 'category_group' ? form.filterValue || undefined : undefined,
+      category_group_id:
+        form.filterMode === 'category_group' ? form.filterValue || undefined : undefined,
       account_id: form.filterMode === 'account' ? form.filterValue || undefined : undefined,
       target_value: form.hasTarget ? parseFloat(form.target_value) : undefined,
       target_direction: form.hasTarget ? form.target_direction : undefined,
@@ -172,7 +174,9 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
           className="space-y-4 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5"
         >
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">Name</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              Name
+            </label>
             <input
               data-testid="kpi-name-input"
               type="text"
@@ -185,7 +189,9 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">Metric</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                Metric
+              </label>
               <DropdownSelect
                 testId="kpi-metric-type"
                 value={form.metric_type}
@@ -195,7 +201,9 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">Window</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                Window
+              </label>
               <DropdownSelect
                 testId="kpi-window"
                 value={form.evaluation_window}
@@ -208,18 +216,24 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">Filter</label>
+              <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                Filter
+              </label>
               <DropdownSelect
                 testId="kpi-filter-mode"
                 value={form.filterMode}
-                onChange={(v) => setForm((f) => ({ ...f, filterMode: v as FilterMode, filterValue: '' }))}
+                onChange={(v) =>
+                  setForm((f) => ({ ...f, filterMode: v as FilterMode, filterValue: '' }))
+                }
                 options={FILTER_MODE_OPTIONS}
                 placeholder="Select filter"
               />
             </div>
             {form.filterMode !== 'none' ? (
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">Value</label>
+                <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Value
+                </label>
                 <DropdownSelect
                   testId="kpi-filter-value"
                   value={form.filterValue}
@@ -248,7 +262,9 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
           {form.hasTarget ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">Target value</label>
+                <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Target value
+                </label>
                 <input
                   data-testid="kpi-target-value"
                   type="number"
@@ -260,7 +276,9 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">Direction</label>
+                <label className="mb-1 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Direction
+                </label>
                 <DropdownSelect
                   testId="kpi-target-direction"
                   value={form.target_direction}
@@ -310,7 +328,8 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {kpis.map((kpi: Kpi) => {
             const current = parseFloat(kpi.current_value.toString());
-            const target = kpi.target_value != null ? parseFloat(kpi.target_value.toString()) : null;
+            const target =
+              kpi.target_value != null ? parseFloat(kpi.target_value.toString()) : null;
             const progress = target ? Math.min(100, Math.max(0, (current / target) * 100)) : null;
 
             return (
@@ -344,7 +363,8 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
                 <div className="mb-1 flex items-end justify-between">
                   <div>
                     <p className="text-xs text-slate-400">
-                      {METRIC_OPTIONS.find((m) => m.value === kpi.metric_type)?.label ?? kpi.metric_type}
+                      {METRIC_OPTIONS.find((m) => m.value === kpi.metric_type)?.label ??
+                        kpi.metric_type}
                     </p>
                     <p className="text-lg font-bold text-white">
                       {formatCurrency(current, kpi.currency_code, currencyDisplayPreference)}
@@ -365,14 +385,19 @@ const KpisTabImpl: React.FC<KpisTabProps> = ({
                   <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-900/50">
                     <div
                       className={`h-full rounded-full transition-all duration-1000 ${
-                        kpi.is_breached ? 'bg-red-500' : progress > 80 ? 'bg-amber-500' : 'bg-emerald-500'
+                        kpi.is_breached
+                          ? 'bg-red-500'
+                          : progress > 80
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
                       }`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 ) : null}
                 <p className="mt-2 text-xs text-slate-500">
-                  {WINDOW_OPTIONS.find((w) => w.value === kpi.evaluation_window)?.label ?? kpi.evaluation_window}
+                  {WINDOW_OPTIONS.find((w) => w.value === kpi.evaluation_window)?.label ??
+                    kpi.evaluation_window}
                 </p>
               </div>
             );

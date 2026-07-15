@@ -93,7 +93,7 @@ const renderWidget = () => {
 const openPanelAndGetSocket = (): FakeWebSocket => {
   // Trigger click to open panel
   fireEvent.click(screen.getByRole('button', { name: 'Open capture panel' }));
-  
+
   // Connection should be lazy; expect no websocket connection on open
   expect(sockets).toHaveLength(0);
 
@@ -178,12 +178,12 @@ describe('Capture panel verification', () => {
   it('toggles panel open/closed and focuses input on Ctrl+K shortcut', async () => {
     renderWidget();
     expect(useCaptureStore.getState().isOpen).toBe(false);
-    
+
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' }));
     });
     expect(useCaptureStore.getState().isOpen).toBe(true);
-    
+
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' }));
     });
@@ -192,10 +192,10 @@ describe('Capture panel verification', () => {
 
   it('hides the trigger button if the showLauncher preference is false in localStorage', () => {
     localStorage.setItem('lifestack:show-capture-launcher:null', 'false');
-    
+
     renderWidget();
     expect(screen.queryByRole('button', { name: 'Open capture panel' })).toBeNull();
-    
+
     localStorage.removeItem('lifestack:show-capture-launcher:null');
   });
 

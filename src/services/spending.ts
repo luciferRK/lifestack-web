@@ -96,7 +96,10 @@ const PaginatedKpisSchema = z.object({
 
 export const spendingService = {
   // Categories
-  getCategories: async (limit: number = 50, offset: number = 0): Promise<z.infer<typeof PaginatedCategoriesSchema>> => {
+  getCategories: async (
+    limit: number = 50,
+    offset: number = 0,
+  ): Promise<z.infer<typeof PaginatedCategoriesSchema>> => {
     const response = await api.get('/spending/categories', { params: { limit, offset } });
     return PaginatedCategoriesSchema.parse(response.data);
   },
@@ -120,7 +123,10 @@ export const spendingService = {
   },
 
   // Category Groups
-  getCategoryGroups: async (limit: number = 200, offset: number = 0): Promise<z.infer<typeof PaginatedCategoryGroupsSchema>> => {
+  getCategoryGroups: async (
+    limit: number = 200,
+    offset: number = 0,
+  ): Promise<z.infer<typeof PaginatedCategoryGroupsSchema>> => {
     const response = await api.get('/spending/category-groups', { params: { limit, offset } });
     return PaginatedCategoryGroupsSchema.parse(response.data);
   },
@@ -130,7 +136,10 @@ export const spendingService = {
     return CategoryGroupSchema.parse(response.data);
   },
 
-  updateCategoryGroup: async (publicId: string, data: CategoryGroupUpdate): Promise<CategoryGroup> => {
+  updateCategoryGroup: async (
+    publicId: string,
+    data: CategoryGroupUpdate,
+  ): Promise<CategoryGroup> => {
     const response = await api.patch(`/spending/category-groups/${publicId}`, data);
     return CategoryGroupSchema.parse(response.data);
   },
@@ -150,7 +159,7 @@ export const spendingService = {
       fromDate?: string;
       toDate?: string;
       sort?: TransactionSort;
-    }
+    },
   ): Promise<z.infer<typeof PaginatedTransactionsSchema>> => {
     const response = await api.get('/spending/transactions', {
       params: {
@@ -167,9 +176,12 @@ export const spendingService = {
     return PaginatedTransactionsSchema.parse(response.data);
   },
 
-  getTransactionSummary: async (
-    params: { fromDate: string; toDate: string; categoryId?: string; accountId?: string }
-  ): Promise<TransactionSummary> => {
+  getTransactionSummary: async (params: {
+    fromDate: string;
+    toDate: string;
+    categoryId?: string;
+    accountId?: string;
+  }): Promise<TransactionSummary> => {
     const response = await api.get('/spending/transactions/summary', {
       params: {
         from_date: params.fromDate,
@@ -199,7 +211,7 @@ export const spendingService = {
   getBudgets: async (
     limit: number = 50,
     offset: number = 0,
-    monthStart?: string
+    monthStart?: string,
   ): Promise<z.infer<typeof PaginatedBudgetsSchema>> => {
     const response = await api.get('/spending/budgets', {
       params: { limit, offset, month_start: monthStart },
@@ -217,7 +229,10 @@ export const spendingService = {
     return BudgetSchema.parse(response.data);
   },
 
-  changeBudgetAmount: async (publicId: string, data: BudgetChangeAmountRequest): Promise<Budget> => {
+  changeBudgetAmount: async (
+    publicId: string,
+    data: BudgetChangeAmountRequest,
+  ): Promise<Budget> => {
     const response = await api.post(`/spending/budgets/${publicId}/change-amount`, data);
     return BudgetSchema.parse(response.data);
   },
@@ -225,7 +240,7 @@ export const spendingService = {
   // Custom financial KPIs (spec-077)
   getKpis: async (
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
   ): Promise<z.infer<typeof PaginatedKpisSchema>> => {
     const response = await api.get('/spending/kpis', { params: { limit, offset } });
     return PaginatedKpisSchema.parse(response.data);
@@ -256,7 +271,7 @@ export const spendingService = {
     from: string,
     to: string,
     type: 'income' | 'expense' = 'expense',
-    limit: number = 10
+    limit: number = 10,
   ): Promise<CategoryBreakdownResponse> => {
     const response = await api.get('/spending/analytics/breakdown', {
       params: { from, to, type, limit },
@@ -266,7 +281,7 @@ export const spendingService = {
 
   getBudgetPerformance: async (
     fromMonth: string,
-    toMonth: string
+    toMonth: string,
   ): Promise<BudgetPerformanceResponse> => {
     const response = await api.get('/spending/analytics/budget-performance', {
       params: { from: `${fromMonth}-01`, to: `${toMonth}-01` },
@@ -274,10 +289,7 @@ export const spendingService = {
     return BudgetPerformanceResponseSchema.parse(response.data);
   },
 
-  getSavingsRate: async (
-    fromMonth: string,
-    toMonth: string
-  ): Promise<SavingsRateResponse> => {
+  getSavingsRate: async (fromMonth: string, toMonth: string): Promise<SavingsRateResponse> => {
     const response = await api.get('/spending/analytics/savings-rate', {
       params: { from: `${fromMonth}-01`, to: `${toMonth}-01` },
     });
@@ -288,7 +300,7 @@ export const spendingService = {
   getRecurring: async (
     limit: number = 50,
     offset: number = 0,
-    isActive?: boolean
+    isActive?: boolean,
   ): Promise<z.infer<typeof PaginatedRecurringSchema>> => {
     const response = await api.get('/spending/recurring', {
       params: { limit, offset, is_active: isActive },
@@ -301,7 +313,10 @@ export const spendingService = {
     return RecurringTransactionSchema.parse(response.data);
   },
 
-  updateRecurring: async (publicId: string, data: RecurringTransactionUpdate): Promise<RecurringTransaction> => {
+  updateRecurring: async (
+    publicId: string,
+    data: RecurringTransactionUpdate,
+  ): Promise<RecurringTransaction> => {
     const response = await api.patch(`/spending/recurring/${publicId}`, data);
     return RecurringTransactionSchema.parse(response.data);
   },
@@ -319,7 +334,7 @@ export const spendingService = {
 
   getAccountLedger: async (
     accountId: string,
-    params?: { limit?: number; offset?: number; from_date?: string; to_date?: string }
+    params?: { limit?: number; offset?: number; from_date?: string; to_date?: string },
   ): Promise<LedgerResponse> => {
     const response = await api.get(`/spending/accounts/${accountId}/ledger`, { params });
     return LedgerResponseSchema.parse(response.data);

@@ -19,7 +19,11 @@ const MODULE_OPTIONS: Array<{ value: ImportModule; label: string; testId?: strin
   { value: 'spending-budgets', label: 'Spending Budgets' },
   { value: 'investing-constituents', label: 'Investing Constituents' },
   { value: 'investing-orders', label: 'Investing Orders', testId: 'import-type-investing-orders' },
-  { value: 'finance-transfers', label: 'Account Transfers', testId: 'import-type-finance-transfers' },
+  {
+    value: 'finance-transfers',
+    label: 'Account Transfers',
+    testId: 'import-type-finance-transfers',
+  },
   {
     value: 'investing-cams-cas',
     label: 'CAMS CAS (Mutual Funds)',
@@ -62,10 +66,12 @@ const DATE_FORMAT_OPTIONS = [
   { value: 'dd MMM yyyy', label: 'DD MMM YYYY (05 Jan 2026)' },
 ];
 
-
 // PDF-based imports (spec-056, spec-060): no CSV template, a required
 // brokerage target account, and — for Demat CAS only — a statement password.
-const PDF_MODULES: ReadonlySet<ImportModule> = new Set(['investing-cams-cas', 'investing-demat-cas']);
+const PDF_MODULES: ReadonlySet<ImportModule> = new Set([
+  'investing-cams-cas',
+  'investing-demat-cas',
+]);
 const isPdfModule = (m: ImportModule | ''): m is ImportModule => PDF_MODULES.has(m as ImportModule);
 
 // Renders a skipped-row / corporate-action-suspected advisory entry as
@@ -79,13 +85,15 @@ const lifecycleCopy = (status: string) => {
   if (status === 'completed') {
     return {
       action: 'Roll back import',
-      description: 'Rollback deletes records created by this committed import when source metadata is available.',
+      description:
+        'Rollback deletes records created by this committed import when source metadata is available.',
     };
   }
   if (status === 'validated' || status === 'failed_validation') {
     return {
       action: 'Delete import batch',
-      description: 'Delete the validation batch, uploaded artifact, preview rows, and validation errors.',
+      description:
+        'Delete the validation batch, uploaded artifact, preview rows, and validation errors.',
     };
   }
   if (status === 'uploaded') {
@@ -156,7 +164,7 @@ export const ImportsPage: React.FC = () => {
           value: account.public_id,
           label: `${account.name} (${account.account_type.replace('_', ' ')})`,
         })),
-    [accountsResponse?.items]
+    [accountsResponse?.items],
   );
   // CAMS/Demat CAS PDFs can only target a brokerage account (backend-enforced).
   const brokerageAccountOptions = useMemo(
@@ -164,7 +172,7 @@ export const ImportsPage: React.FC = () => {
       (accountsResponse?.items ?? [])
         .filter((account) => account.is_active && account.account_type === 'brokerage')
         .map((account) => ({ value: account.public_id, label: account.name })),
-    [accountsResponse?.items]
+    [accountsResponse?.items],
   );
   // Statement reconciliation is for ledger-managed accounts only (backend-enforced).
   const walletAccountOptions = useMemo(
@@ -175,7 +183,7 @@ export const ImportsPage: React.FC = () => {
           value: account.public_id,
           label: `${account.name} (${account.account_type.replace('_', ' ')})`,
         })),
-    [accountsResponse?.items]
+    [accountsResponse?.items],
   );
 
   const { data: importsResponse, isLoading: isLoadingImports } = useQuery({
@@ -218,7 +226,8 @@ export const ImportsPage: React.FC = () => {
 
   const activeDetail = useMemo(() => {
     if (detailQuery.data) return detailQuery.data;
-    if (latestValidation && latestValidation.import_batch.public_id === selectedImportId) return latestValidation;
+    if (latestValidation && latestValidation.import_batch.public_id === selectedImportId)
+      return latestValidation;
     return null;
   }, [detailQuery.data, latestValidation, selectedImportId]);
 
@@ -228,13 +237,15 @@ export const ImportsPage: React.FC = () => {
         throw new Error('Module is required');
       }
       const needsTargetAccount =
-        module === 'spending-transactions' || module === 'finance-account-statement' || isPdfModule(module);
+        module === 'spending-transactions' ||
+        module === 'finance-account-statement' ||
+        isPdfModule(module);
       return importsService.uploadAndValidate(
         module,
         file as File,
         needsTargetAccount ? targetAccountId || undefined : undefined,
         module === 'investing-demat-cas' ? filePassword || undefined : undefined,
-        module === 'finance-account-statement' ? dateFormat || undefined : undefined
+        module === 'finance-account-statement' ? dateFormat || undefined : undefined,
       );
     },
     onSuccess: (data) => {
@@ -283,7 +294,6 @@ export const ImportsPage: React.FC = () => {
     setUploadError(null);
     uploadMutation.mutate();
   };
-
 
   const commitMutation = useMutation({
     mutationFn: (importPublicId: string) => importsService.commitImport(importPublicId),
@@ -342,7 +352,7 @@ export const ImportsPage: React.FC = () => {
       <PageHero
         title="Bulk Imports"
         subtitle="Upload CSV templates for transactions, budgets, holdings, and constituents."
-        actions={(
+        actions={
           <button
             type="button"
             onClick={() => setIsUploadModalOpen(true)}
@@ -351,10 +361,13 @@ export const ImportsPage: React.FC = () => {
             <Plus className="h-4 w-4" />
             New Import
           </button>
-        )}
+        }
       />
 
-      <Dialog open={isUploadModalOpen} onOpenChange={(open) => !open && setIsUploadModalOpen(false)}>
+      <Dialog
+        open={isUploadModalOpen}
+        onOpenChange={(open) => !open && setIsUploadModalOpen(false)}
+      >
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-4 mb-4 border-b border-slate-800">
             <DialogTitle>New Import</DialogTitle>
@@ -473,9 +486,7 @@ export const ImportsPage: React.FC = () => {
 
               {module === 'investing-demat-cas' && (
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-slate-300">
-                    Statement password
-                  </label>
+                  <label className="text-sm font-semibold text-slate-300">Statement password</label>
                   <input
                     data-testid="imports-file-password"
                     type="password"
@@ -542,9 +553,13 @@ export const ImportsPage: React.FC = () => {
               </div>
 
               {uploadError ? (
-                <p className="mt-2 text-sm text-rose-300" data-testid="imports-upload-error">{uploadError}</p>
+                <p className="mt-2 text-sm text-rose-300" data-testid="imports-upload-error">
+                  {uploadError}
+                </p>
               ) : uploadMutation.isError ? (
-                <p className="mt-2 text-sm text-rose-300">Import validation failed to submit. Check file and try again.</p>
+                <p className="mt-2 text-sm text-rose-300">
+                  Import validation failed to submit. Check file and try again.
+                </p>
               ) : null}
             </div>
           )}
@@ -559,7 +574,9 @@ export const ImportsPage: React.FC = () => {
             {!isLoadingImports && (importsResponse?.items.length ?? 0) === 0 ? (
               <div className="rounded-xl border border-slate-800 bg-slate-800/30 p-6 text-center">
                 <p className="text-slate-300">No import batches yet.</p>
-                <p className="mt-1 text-sm text-slate-500">Choose a module and upload your first CSV.</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Choose a module and upload your first CSV.
+                </p>
               </div>
             ) : null}
             {importsResponse?.items.map((item) => (
@@ -568,14 +585,19 @@ export const ImportsPage: React.FC = () => {
                 key={item.public_id}
                 type="button"
                 onClick={() => setSelectedImportId(item.public_id)}
-                className={`w-full rounded-lg border px-3 py-3 text-left ${selectedImportId === item.public_id ? 'border-cyan-500 bg-cyan-950/30' : 'border-slate-700 bg-slate-800/30 hover:bg-slate-800/60'}`}
+                className={`w-full rounded-lg border px-3 py-3 text-left ${
+                  selectedImportId === item.public_id
+                    ? 'border-cyan-500 bg-cyan-950/30'
+                    : 'border-slate-700 bg-slate-800/30 hover:bg-slate-800/60'
+                }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-white">{item.filename}</span>
                   <span className="text-xs text-slate-300">{importStatusLabel(item.status)}</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-400">
-                  {item.module} • rows {item.valid_rows}/{item.total_rows} valid • errors {item.error_rows}
+                  {item.module} • rows {item.valid_rows}/{item.total_rows} valid • errors{' '}
+                  {item.error_rows}
                 </p>
               </button>
             ))}
@@ -584,7 +606,11 @@ export const ImportsPage: React.FC = () => {
 
         <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">Import detail</h2>
-          {!selectedImportId ? <p className="text-slate-400">Select an import to inspect validation and commit state.</p> : null}
+          {!selectedImportId ? (
+            <p className="text-slate-400">
+              Select an import to inspect validation and commit state.
+            </p>
+          ) : null}
 
           {selectedImportId && activeDetail ? (
             <>
@@ -619,12 +645,23 @@ export const ImportsPage: React.FC = () => {
               })()}
 
               <div className="mb-4 rounded-lg border border-slate-700 bg-slate-800/40 p-3 text-sm text-slate-200">
-                <p>Module: <span className="font-semibold">{activeDetail.import_batch.module}</span></p>
-                <p>Status: <span className="font-semibold">{importStatusLabel(activeDetail.import_batch.status)}</span></p>
-                <p>Rows: {activeDetail.import_batch.valid_rows}/{activeDetail.import_batch.total_rows} valid</p>
+                <p>
+                  Module: <span className="font-semibold">{activeDetail.import_batch.module}</span>
+                </p>
+                <p>
+                  Status:{' '}
+                  <span className="font-semibold">
+                    {importStatusLabel(activeDetail.import_batch.status)}
+                  </span>
+                </p>
+                <p>
+                  Rows: {activeDetail.import_batch.valid_rows}/
+                  {activeDetail.import_batch.total_rows} valid
+                </p>
                 {activeDetail.error_summary ? (
                   <p>
-                    Error summary: {activeDetail.error_summary.returned_errors}/{activeDetail.error_summary.total_errors} returned
+                    Error summary: {activeDetail.error_summary.returned_errors}/
+                    {activeDetail.error_summary.total_errors} returned
                   </p>
                 ) : null}
               </div>
@@ -633,22 +670,25 @@ export const ImportsPage: React.FC = () => {
                 <div className="mb-4 rounded-lg border border-rose-700/50 bg-rose-950/40 p-3 text-sm">
                   <p className="mb-1 font-semibold text-rose-300">Apply failed</p>
                   <p className="text-rose-200">
-                    {activeDetail.import_batch.commit_error || 'An unexpected error occurred while applying the import.'}
+                    {activeDetail.import_batch.commit_error ||
+                      'An unexpected error occurred while applying the import.'}
                   </p>
                 </div>
               ) : null}
 
               {activeDetail.import_batch.module === 'investing-demat-cas' ? (
                 <p className="mb-2 text-xs text-slate-500">
-                  Applying writes a read-only verification record — it never creates or
-                  changes a holding, order, or cash balance.
+                  Applying writes a read-only verification record — it never creates or changes a
+                  holding, order, or cash balance.
                 </p>
               ) : null}
 
               <button
                 data-testid="imports-commit"
                 type="button"
-                disabled={activeDetail.import_batch.status !== 'validated' || commitMutation.isPending}
+                disabled={
+                  activeDetail.import_batch.status !== 'validated' || commitMutation.isPending
+                }
                 onClick={() => commitMutation.mutate(activeDetail.import_batch.public_id)}
                 className="mb-4 h-10 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -661,9 +701,13 @@ export const ImportsPage: React.FC = () => {
               ) : null}
 
               {/* Preview Rows Section */}
-              {activeDetail.import_batch.status === 'validated' && activeDetail.preview_rows && activeDetail.preview_rows.length > 0 ? (
+              {activeDetail.import_batch.status === 'validated' &&
+              activeDetail.preview_rows &&
+              activeDetail.preview_rows.length > 0 ? (
                 <div className="mb-6">
-                  <h3 className="mb-2 text-sm font-semibold text-white">Preview rows (first 100)</h3>
+                  <h3 className="mb-2 text-sm font-semibold text-white">
+                    Preview rows (first 100)
+                  </h3>
                   <div className="max-h-72 overflow-auto rounded-lg border border-slate-800 bg-slate-900/50">
                     <table className="min-w-full text-xs text-slate-300">
                       <thead className="border-b border-slate-800 text-slate-400 bg-slate-950/40">
@@ -690,8 +734,10 @@ export const ImportsPage: React.FC = () => {
                               <th className="px-3 py-2 text-left">ETF Symbol</th>
                               <th className="px-3 py-2 text-left">Company</th>
                               <th className="px-3 py-2 text-left">Ticker</th>
+                              <th className="px-3 py-2 text-left">ISIN</th>
                               <th className="px-3 py-2 text-left">Weight</th>
                               <th className="px-3 py-2 text-left">Date</th>
+                              <th className="px-3 py-2 text-left">Identifier</th>
                             </>
                           )}
                           {(activeDetail.import_batch.module === 'investing-orders' ||
@@ -754,42 +800,94 @@ export const ImportsPage: React.FC = () => {
                               <th className="px-3 py-2 text-left">Spd Cash</th>
                             </>
                           )}
-
                         </tr>
                       </thead>
                       <tbody>
                         {activeDetail.preview_rows.map((row) => (
-                          <tr key={row.row_number} className="border-b border-slate-800 hover:bg-slate-800/40">
-                            <td className="px-3 py-2 font-medium text-slate-400">{row.row_number}</td>
+                          <tr
+                            key={row.row_number}
+                            className="border-b border-slate-800 hover:bg-slate-800/40"
+                          >
+                            <td className="px-3 py-2 font-medium text-slate-400">
+                              {row.row_number}
+                            </td>
                             {activeDetail.import_batch.module === 'spending-transactions' && (
                               <>
                                 <td className="px-3 py-2 whitespace-nowrap">
                                   {formatDate(row.payload_json.occurred_at)}
                                 </td>
                                 <td className="px-3 py-2 uppercase whitespace-nowrap">
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${row.payload_json.type === 'income' ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}`}>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                      row.payload_json.type === 'income'
+                                        ? 'bg-emerald-950 text-emerald-300'
+                                        : 'bg-rose-950 text-rose-300'
+                                    }`}
+                                  >
                                     {row.payload_json.type}
                                   </span>
                                 </td>
                                 <td className="px-3 py-2">{row.payload_json.amount}</td>
-                                <td className="px-3 py-2">{row.payload_json.category_name ?? '-'}</td>
-                                <td className="px-3 py-2 truncate max-w-xs">{row.payload_json.description ?? '-'}</td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.category_name ?? '-'}
+                                </td>
+                                <td className="px-3 py-2 truncate max-w-xs">
+                                  {row.payload_json.description ?? '-'}
+                                </td>
                               </>
                             )}
                             {activeDetail.import_batch.module === 'spending-budgets' && (
                               <>
                                 <td className="px-3 py-2">{row.payload_json.month_start}</td>
-                                <td className="px-3 py-2">{row.payload_json.category_name ?? '-'}</td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.category_name ?? '-'}
+                                </td>
                                 <td className="px-3 py-2">{row.payload_json.amount}</td>
                               </>
                             )}
                             {activeDetail.import_batch.module === 'investing-constituents' && (
                               <>
-                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.instrument_symbol}</td>
+                                <td className="px-3 py-2 font-semibold text-white">
+                                  {row.payload_json.instrument_symbol}
+                                </td>
                                 <td className="px-3 py-2">{row.payload_json.company_name}</td>
-                                <td className="px-3 py-2">{row.payload_json.company_ticker ?? '-'}</td>
-                                <td className="px-3 py-2">{row.payload_json.weight && !isNaN(parseFloat(row.payload_json.weight)) ? (parseFloat(row.payload_json.weight) * 100).toFixed(2) + '%' : '-'}</td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.company_ticker ?? '-'}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.company_isin ?? '-'}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.weight &&
+                                  !isNaN(parseFloat(row.payload_json.weight))
+                                    ? (parseFloat(row.payload_json.weight) * 100).toFixed(2) + '%'
+                                    : '-'}
+                                </td>
                                 <td className="px-3 py-2">{row.payload_json.as_of_date}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {row.payload_json.identifier_status ? (
+                                    <span
+                                      title={
+                                        row.payload_json.identifier_status === 'resolved'
+                                          ? 'Matched a known security.'
+                                          : row.payload_json.identifier_status === 'ambiguous'
+                                            ? 'Matched more than one security — confirm the identifier.'
+                                            : 'No match found — the row is accepted but flagged for review.'
+                                      }
+                                      className={`px-1.5 py-0.5 rounded text-[10px] uppercase ${
+                                        row.payload_json.identifier_status === 'resolved'
+                                          ? 'bg-emerald-950 text-emerald-300'
+                                          : row.payload_json.identifier_status === 'ambiguous'
+                                            ? 'bg-amber-950 text-amber-300'
+                                            : 'bg-amber-950 text-amber-300'
+                                      }`}
+                                    >
+                                      {row.payload_json.identifier_status}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
                               </>
                             )}
                             {(activeDetail.import_batch.module === 'investing-orders' ||
@@ -799,12 +897,22 @@ export const ImportsPage: React.FC = () => {
                                   {formatDate(row.payload_json.occurred_at)}
                                 </td>
                                 <td className="px-3 py-2 uppercase whitespace-nowrap">
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] ${row.payload_json.order_type === 'buy' ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}`}>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                      row.payload_json.order_type === 'buy'
+                                        ? 'bg-emerald-950 text-emerald-300'
+                                        : 'bg-rose-950 text-rose-300'
+                                    }`}
+                                  >
                                     {row.payload_json.order_type}
                                   </span>
                                 </td>
-                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.symbol}</td>
-                                <td className="px-3 py-2">{row.payload_json.account_name ?? '-'}</td>
+                                <td className="px-3 py-2 font-semibold text-white">
+                                  {row.payload_json.symbol}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.account_name ?? '-'}
+                                </td>
                                 <td className="px-3 py-2">{row.payload_json.quantity}</td>
                                 <td className="px-3 py-2">{row.payload_json.price_per_unit}</td>
                                 <td className="px-3 py-2 uppercase">{row.payload_json.currency}</td>
@@ -812,8 +920,12 @@ export const ImportsPage: React.FC = () => {
                             )}
                             {activeDetail.import_batch.module === 'investing-demat-cas' && (
                               <>
-                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.isin}</td>
-                                <td className="px-3 py-2">{row.payload_json.security_name ?? '-'}</td>
+                                <td className="px-3 py-2 font-semibold text-white">
+                                  {row.payload_json.isin}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.security_name ?? '-'}
+                                </td>
                                 <td className="px-3 py-2 uppercase whitespace-nowrap">
                                   <span
                                     className={`px-1.5 py-0.5 rounded text-[10px] ${
@@ -834,8 +946,12 @@ export const ImportsPage: React.FC = () => {
                                     </span>
                                   ) : null}
                                 </td>
-                                <td className="px-3 py-2">{row.payload_json.depository_quantity ?? '-'}</td>
-                                <td className="px-3 py-2">{row.payload_json.lifestack_quantity ?? '-'}</td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.depository_quantity ?? '-'}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.lifestack_quantity ?? '-'}
+                                </td>
                               </>
                             )}
                             {activeDetail.import_batch.module === 'finance-transfers' && (
@@ -843,44 +959,76 @@ export const ImportsPage: React.FC = () => {
                                 <td className="px-3 py-2 whitespace-nowrap">
                                   {formatDate(row.payload_json.occurred_at)}
                                 </td>
-                                <td className="px-3 py-2">{row.payload_json.from_account ?? '-'}</td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.from_account ?? '-'}
+                                </td>
                                 <td className="px-3 py-2">{row.payload_json.to_account ?? '-'}</td>
                                 <td className="px-3 py-2">{row.payload_json.gross_amount}</td>
-                                <td className="px-3 py-2">{row.payload_json.net_amount_received}</td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.net_amount_received}
+                                </td>
                                 <td className="px-3 py-2 uppercase">
-                                  {row.payload_json.from_currency === row.payload_json.to_currency 
-                                    ? row.payload_json.from_currency 
+                                  {row.payload_json.from_currency === row.payload_json.to_currency
+                                    ? row.payload_json.from_currency
                                     : `${row.payload_json.from_currency} → ${row.payload_json.to_currency}`}
                                 </td>
                               </>
                             )}
                             {activeDetail.import_batch.module === 'investing-dividends' && (
                               <>
-                                <td className="px-3 py-2">{row.payload_json.account_name ?? '-'}</td>
-                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.symbol}</td>
-                                <td className="px-3 py-2 capitalize">{row.payload_json.income_type}</td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.account_name ?? '-'}
+                                </td>
+                                <td className="px-3 py-2 font-semibold text-white">
+                                  {row.payload_json.symbol}
+                                </td>
+                                <td className="px-3 py-2 capitalize">
+                                  {row.payload_json.income_type}
+                                </td>
                                 <td className="px-3 py-2">{row.payload_json.gross_amount}</td>
-                                <td className="px-3 py-2">{row.payload_json.tax_withheld ?? '-'}</td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.tax_withheld ?? '-'}
+                                </td>
                                 <td className="px-3 py-2 uppercase">{row.payload_json.currency}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.pay_date)}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {formatDate(row.payload_json.pay_date)}
+                                </td>
                               </>
                             )}
                             {activeDetail.import_batch.module === 'finance-fx-rates' && (
                               <>
-                                <td className="px-3 py-2 uppercase font-semibold text-white">{row.payload_json.base_currency_code}</td>
-                                <td className="px-3 py-2 uppercase">{row.payload_json.quote_currency_code}</td>
+                                <td className="px-3 py-2 uppercase font-semibold text-white">
+                                  {row.payload_json.base_currency_code}
+                                </td>
+                                <td className="px-3 py-2 uppercase">
+                                  {row.payload_json.quote_currency_code}
+                                </td>
                                 <td className="px-3 py-2">{row.payload_json.rate}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.as_of_date)}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {formatDate(row.payload_json.as_of_date)}
+                                </td>
                               </>
                             )}
                             {activeDetail.import_batch.module === 'finance-net-worth-history' && (
                               <>
-                                <td className="px-3 py-2 whitespace-nowrap">{formatDate(row.payload_json.date)}</td>
-                                <td className="px-3 py-2 uppercase">{row.payload_json.reporting_currency}</td>
-                                <td className="px-3 py-2 font-semibold text-white">{row.payload_json.total_net_worth}</td>
-                                <td className="px-3 py-2">{row.payload_json.holdings_value ?? '-'}</td>
-                                <td className="px-3 py-2">{row.payload_json.investing_cash ?? '-'}</td>
-                                <td className="px-3 py-2">{row.payload_json.spending_cash ?? '-'}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">
+                                  {formatDate(row.payload_json.date)}
+                                </td>
+                                <td className="px-3 py-2 uppercase">
+                                  {row.payload_json.reporting_currency}
+                                </td>
+                                <td className="px-3 py-2 font-semibold text-white">
+                                  {row.payload_json.total_net_worth}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.holdings_value ?? '-'}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.investing_cash ?? '-'}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {row.payload_json.spending_cash ?? '-'}
+                                </td>
                               </>
                             )}
                           </tr>
@@ -891,7 +1039,8 @@ export const ImportsPage: React.FC = () => {
                 </div>
               ) : null}
 
-              {activeDetail.corporate_action_suspected && activeDetail.corporate_action_suspected.length > 0 ? (
+              {activeDetail.corporate_action_suspected &&
+              activeDetail.corporate_action_suspected.length > 0 ? (
                 <div className="mb-4 rounded-lg border border-amber-800/50 bg-amber-950/20 p-3 text-sm">
                   <p className="mb-1 font-semibold text-amber-300">
                     Possible un-applied corporate action
@@ -914,7 +1063,8 @@ export const ImportsPage: React.FC = () => {
               {activeDetail.skipped && activeDetail.skipped.length > 0 ? (
                 <details className="mb-4 rounded-lg border border-slate-700 bg-slate-800/30 p-3 text-sm">
                   <summary className="cursor-pointer font-semibold text-slate-300">
-                    {activeDetail.skipped.length} row{activeDetail.skipped.length === 1 ? '' : 's'} skipped
+                    {activeDetail.skipped.length} row{activeDetail.skipped.length === 1 ? '' : 's'}{' '}
+                    skipped
                   </summary>
                   <ul className="mt-2 space-y-1 text-xs text-slate-400">
                     {activeDetail.skipped.map((entry, idx) => (
@@ -937,7 +1087,10 @@ export const ImportsPage: React.FC = () => {
                     </thead>
                     <tbody>
                       {errors.map((error, idx) => (
-                        <tr key={`${error.row_number}-${error.field_name}-${idx}`} className="border-b border-rose-900/30 text-rose-100">
+                        <tr
+                          key={`${error.row_number}-${error.field_name}-${idx}`}
+                          className="border-b border-rose-900/30 text-rose-100"
+                        >
                           <td className="px-3 py-2">{error.row_number}</td>
                           <td className="px-3 py-2">{error.field_name ?? '-'}</td>
                           <td className="px-3 py-2">{error.message}</td>
@@ -958,14 +1111,20 @@ export const ImportsPage: React.FC = () => {
       <ConfirmDialog
         open={isDeleteConfirmOpen}
         onOpenChange={setIsDeleteConfirmOpen}
-        title={activeDetail?.import_batch.status === 'completed' ? 'Roll back import?' : 'Delete import batch?'}
+        title={
+          activeDetail?.import_batch.status === 'completed'
+            ? 'Roll back import?'
+            : 'Delete import batch?'
+        }
         description={
           activeDetail
             ? lifecycleCopy(activeDetail.import_batch.status).description
             : 'This cannot be undone.'
         }
         confirmLabel={activeDetail?.import_batch.status === 'completed' ? 'Roll back' : 'Delete'}
-        pendingLabel={activeDetail?.import_batch.status === 'completed' ? 'Rolling back…' : 'Deleting…'}
+        pendingLabel={
+          activeDetail?.import_batch.status === 'completed' ? 'Rolling back…' : 'Deleting…'
+        }
         isPending={deleteMutation.isPending}
         isError={deleteMutation.isError}
         errorMessage="Delete or rollback failed. Refresh import details and retry."

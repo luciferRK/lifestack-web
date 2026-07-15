@@ -15,7 +15,7 @@ export const authService = {
     const formData = new URLSearchParams();
     formData.append('username', email); // OAuth2PasswordRequestForm expects username
     formData.append('password', password);
-    
+
     // Uses form-urlencoded for login because FastAPI OAuth2PasswordRequestForm expects it
     const response = await api.post('/auth/login', formData, {
       headers: {
@@ -24,7 +24,7 @@ export const authService = {
     });
     return response.data;
   },
-  
+
   register: async (email: string, password: string, username: string) => {
     const response = await api.post('/auth/register', {
       email,
@@ -38,22 +38,21 @@ export const authService = {
     const response = await api.get('/auth/me');
     return AuthUserSchema.parse(response.data);
   },
-  
+
   logout: async () => {
     await api.post('/auth/logout');
   },
-  
+
   forgotPassword: async (email: string) => {
     const response = await api.post('/auth/forgot-password', { email });
     return response.data;
   },
-  
+
   resetPassword: async (token: string, newPassword: string) => {
     const response = await api.post('/auth/reset-password', {
       token,
       new_password: newPassword,
     });
     return response.data;
-  }
+  },
 };
-

@@ -15,7 +15,9 @@ export const WeightTrendChart: React.FC<WeightTrendChartProps> = ({ entries }) =
     return (
       <div className="rounded-xl border border-slate-700/60 bg-slate-800/30 p-6 text-center">
         <Scale className="mx-auto mb-2 h-6 w-6 text-slate-500" />
-        <p className="text-sm text-slate-400">Log a couple more entries to see a trend line here.</p>
+        <p className="text-sm text-slate-400">
+          Log a couple more entries to see a trend line here.
+        </p>
       </div>
     );
   }
@@ -37,27 +39,48 @@ export const WeightTrendChart: React.FC<WeightTrendChartProps> = ({ entries }) =
   const minVal = Math.min(...values);
   const range = maxVal - minVal || 1;
 
-  const getX = (index: number) => paddingX + (index / Math.max(points.length - 1, 1)) * (width - 2 * paddingX);
+  const getX = (index: number) =>
+    paddingX + (index / Math.max(points.length - 1, 1)) * (width - 2 * paddingX);
   const getY = (val: number) => {
     const scale = (height - 2 * paddingY) / range;
     return height - paddingY - (val - minVal) * scale;
   };
 
   const path = points.map((p, i) => `${getX(i)},${getY(p.value)}`).join(' L ');
-  const area = `M ${getX(0)},${height - paddingY} L ${path} L ${getX(points.length - 1)},${height - paddingY} Z`;
+  const area = `M ${getX(0)},${height - paddingY} L ${path} L ${getX(points.length - 1)},${
+    height - paddingY
+  } Z`;
 
   return (
     <div className="rounded-xl border border-slate-700/60 bg-slate-800/30 p-4">
       <div className="relative w-full overflow-x-auto">
-        <svg className="w-full min-w-[480px]" viewBox={`0 0 ${width} ${height}`} data-testid="weight-trend-chart">
+        <svg
+          className="w-full min-w-[480px]"
+          viewBox={`0 0 ${width} ${height}`}
+          data-testid="weight-trend-chart"
+        >
           <defs>
             <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.35" />
               <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <line x1={paddingX} x2={width - paddingX} y1={getY(maxVal)} y2={getY(maxVal)} stroke="#334155" strokeDasharray="4 4" />
-          <line x1={paddingX} x2={width - paddingX} y1={getY(minVal)} y2={getY(minVal)} stroke="#334155" strokeDasharray="4 4" />
+          <line
+            x1={paddingX}
+            x2={width - paddingX}
+            y1={getY(maxVal)}
+            y2={getY(maxVal)}
+            stroke="#334155"
+            strokeDasharray="4 4"
+          />
+          <line
+            x1={paddingX}
+            x2={width - paddingX}
+            y1={getY(minVal)}
+            y2={getY(minVal)}
+            stroke="#334155"
+            strokeDasharray="4 4"
+          />
           <path d={area} fill="url(#weightGradient)" />
           <path d={`M ${path}`} fill="none" stroke="#06b6d4" strokeWidth={2} />
           {points.map((p, i) => (

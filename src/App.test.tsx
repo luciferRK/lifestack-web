@@ -109,9 +109,7 @@ describe('App shell', () => {
   it('opens and closes mobile navigation without losing the active route', async () => {
     server.use(
       ...defaultHandlers,
-      http.get('*/v1/platform/workspaces/', () =>
-        HttpResponse.json({ items: [workspaceA] }),
-      ),
+      http.get('*/v1/platform/workspaces/', () => HttpResponse.json({ items: [workspaceA] })),
     );
 
     renderApp();

@@ -3,11 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { investingService } from '../../services/investing';
-import type {
-  Dividend,
-  DividendCreate,
-  DividendIncomeType,
-} from '../../types/investing';
+import type { Dividend, DividendCreate, DividendIncomeType } from '../../types/investing';
 import { DIVIDEND_INCOME_TYPES } from '../../types/investing';
 import type { Account } from '../../types/finance';
 import { formatCurrency } from '../../utils/numberFormat';
@@ -113,7 +109,6 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
     { successMessage: 'Dividend deleted', onSuccess: () => setPendingDelete(null) },
   );
 
-
   const selectedAccount = brokerageAccounts.find((a) => a.public_id === form.account_id);
 
   const onSubmit = (e: React.FormEvent) => {
@@ -135,7 +130,6 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
     });
   };
 
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -143,11 +137,7 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
           Dividends / Income ({dividendsTotal})
         </h3>
         <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            asChild
-          >
+          <Button variant="secondary" size="sm" asChild>
             <Link to="/imports?module=investing-dividends">
               <Upload className="h-4 w-4 mr-1" /> Bulk import
             </Link>
@@ -186,7 +176,11 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
             </thead>
             <tbody>
               {dividends.map((d) => (
-                <tr key={d.public_id} data-testid={`dividend-row-${d.public_id}`} className="border-t border-border/60">
+                <tr
+                  key={d.public_id}
+                  data-testid={`dividend-row-${d.public_id}`}
+                  className="border-t border-border/60"
+                >
                   <td className="px-3 py-2">{d.account_name}</td>
                   <td className="px-3 py-2 text-muted-foreground">{d.symbol ?? '—'}</td>
                   <td className="px-3 py-2 text-muted-foreground">{d.income_type}</td>
@@ -336,7 +330,6 @@ export const DividendsSection: React.FC<DividendsSectionProps> = ({
           </form>
         </DialogContent>
       </Dialog>
-
 
       <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <DialogContent>
